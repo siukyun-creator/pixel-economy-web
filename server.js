@@ -88,6 +88,7 @@ io.on('connection', socket => {
       if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
       const storeName=String(a.name||'').trim().slice(0,16), sign=String(a.sign||storeName).trim().slice(0,20), food=String(a.food||'bread'), product=foodProducts[String(a.productId||'')];
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
+      if(wholesaleShop&&wholesaleShop.ownerId===socket.id)return msg(socket,'이미 도매상을 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
       if(p.money<storeFee)return msg(socket,'가게 개설에는 '+storeFee+'원이 필요해요.');
       const index=stores.length, x=-48+(index%7)*6, z=-12+Math.floor(index/7)*6;
@@ -110,6 +111,7 @@ io.on('connection', socket => {
     if(a.type==='createWholesale'){
        if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 도매상을 창업할 수 없어요.');
        if(wholesaleShop)return msg(socket,'이미 도매상이 운영 중이에요.');
+        if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
        const name=String(a.name||'').trim().slice(0,16);if(!name)return msg(socket,'도매상 이름을 입력해 주세요.');
        const fee=80000;if(p.money<fee)return msg(socket,'도매상 창업에는 80,000원이 필요해요.');
        const inventory={};Object.keys(foodProducts).forEach(id=>{const cost=ingredientCosts[id]||1000;inventory[id]={stock:0,cost,price:Math.ceil(cost*1.3/100)*100};});
