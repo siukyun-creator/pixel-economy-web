@@ -81,11 +81,12 @@ io.on('connection', socket => {
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
-      const index=stores.length, x=-120+(index%10)*24, z=95+Math.floor(index/10)*16;
+      const index=stores.length, x=-48+(index%8)*14, z=48+Math.floor(index/8)*14;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,price:20,stock:10,color,x,z};
       p.money-=250;p.storeId=st.id;stores.push(st);
+      socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
     }
     else if(a.type==='storeBuy'){
