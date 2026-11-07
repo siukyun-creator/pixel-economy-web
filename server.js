@@ -89,7 +89,7 @@ io.on('connection', socket => {
     else return;
     broadcast();
   });
-  socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.emit('teacherOK',snapshot()); });
+  socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',snapshot()); });
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
     if(c.type==='news')news=String(c.value||'').slice(0,100);
