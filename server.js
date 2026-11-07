@@ -108,7 +108,7 @@ io.on('connection', socket => {
     const n=bounded(a.amount,1,10),item=String(a.item||'');
 
     if(a.type==='wholesaleBuy'){
-       if(!p.insideWholesale)return msg(socket,'도매상 건물 안에서만 재료를 살 수 있어요.');
+       if(!p.insideWholesale||Math.hypot(p.x-35,p.z-22)>11)return msg(socket,'도매상 건물 안에서만 재료를 살 수 있어요.');
        const st=stores.find(v=>v.ownerId===socket.id);if(!st)return msg(socket,'먼저 내 가게를 만들어 주세요.');
        const productId=String(a.productId||''),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'내 가게 업종에 맞는 재료를 골라 주세요.');
        const qty=Number(a.amount);if(!Number.isInteger(qty)||qty<1||qty>20)return msg(socket,'재료 수량은 1~20개로 입력해 주세요.');
