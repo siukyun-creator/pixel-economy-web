@@ -13,6 +13,8 @@ const players = new Map();
 const market = { apple: 10, bread: 20, toy: 35 };
 const stocks = { SKY: { name: '하늘항공', price: 50 }, PIX: { name: '픽셀상사', price: 35 } };
 const companies = [];
+const stores = [];
+const foods = { apple:{name:'사과',emoji:'🍎'}, bread:{name:'빵',emoji:'🍞'}, juice:{name:'주스',emoji:'🧃'}, pizza:{name:'피자',emoji:'🍕'} };
 const stockHistory = { SKY: [50], PIX: [35] };
 const properties = [
   { id: 'house1', name: '작은 집', price: 500, owner: null },
@@ -30,7 +32,7 @@ function randomSeat() {
 }
 function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const tax=Math.floor(amount*taxRate);p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;return {amount,tax,net:amount-tax};}
 const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, properties, news, taxRate, gameStatus });
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, properties, news, taxRate, gameStatus });
 const broadcast = () => io.to(ROOM).emit('state', snapshot());
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
@@ -39,7 +41,7 @@ io.on('connection', socket => {
     if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
     if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
     const seat = randomSeat();
-    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: 500, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null };
+    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: 500, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null };
     players.set(socket.id, p);
     socket.join(ROOM);
     socket.emit('joined', {id: socket.id});
@@ -62,11 +64,46 @@ io.on('connection', socket => {
     p.z = Math.max(-42, Math.min(42, p.z + Math.max(-1,Math.min(1,Number(d.dy)||0))*0.7));
     broadcast();
   });
+  socket.on('enterStore', storeId => {
+    const p=players.get(socket.id), st=stores.find(v=>v.id===String(storeId));
+    if(!p||!st)return msg(socket,'가게를 찾을 수 없어요.');
+    if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 이용할 수 있어요.');
+    if(Math.hypot(p.x-st.x,p.z-st.z)>10)return msg(socket,'가게 입구까지 걸어와 주세요.');
+    p.insideStore=st.id;p.x=st.x;p.z=st.z;socket.emit('storeEntered',{...st});broadcast();
+  });
+  socket.on('exitStore',()=>{const p=players.get(socket.id);if(!p)return;p.insideStore=null;socket.emit('storeExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
     if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
     const n=bounded(a.amount,1,10),item=String(a.item||'');
-    if(a.type==='work'){const paid=credit(p,100);p.job='마을 아르바이트';msg(socket,`✅ 일하기 성공! +100원 · 세금 ${paid.tax}원 · 실제 수령 ${paid.net}원 · 잔액 ${p.money}원`);}
+    if(a.type==='createStore'){
+      const storeName=safeName(a.name), sign=safeName(a.sign||storeName), food=String(a.food||'apple');
+      if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
+      if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
+      if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
+      const index=stores.length, x=-34+(index%6)*12, z=30+Math.floor(index/6)*9;
+      const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
+      const color=palette[index%palette.length];
+      const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,price:20,stock:10,color,x,z};
+      p.money-=250;p.storeId=st.id;stores.push(st);
+      msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
+    }
+    else if(a.type==='storeBuy'){
+      const st=stores.find(v=>v.id===String(a.storeId));
+      if(!st||p.insideStore!==st.id)return msg(socket,'가게 안에 들어가야 구매할 수 있어요.');
+      if(st.ownerId===p.id)return msg(socket,'내 가게에서는 내 물건을 살 수 없어요.');
+      if(st.stock<1)return msg(socket,'품절됐어요. 가게 주인에게 재고를 채워 달라고 해 주세요.');
+      if(p.money<st.price)return msg(socket,'돈이 부족해요. 가격 '+st.price+'원 · 보유 '+p.money+'원');
+      p.money-=st.price;st.stock--;const owner=players.get(st.ownerId);if(owner)owner.money+=st.price;
+      msg(socket,'🛍️ '+st.name+'에서 '+foods[st.food].name+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
+    }
+    else if(a.type==='storeRestock'){
+      const st=stores.find(v=>v.id===String(a.storeId));
+      if(!st||st.ownerId!==p.id)return msg(socket,'내 가게에서만 재고를 채울 수 있어요.');
+      const cost=50;if(p.money<cost)return msg(socket,'재고 5개 준비에는 50원이 필요해요.');
+      p.money-=cost;st.stock+=5;msg(socket,'📦 재고 보충! '+foods[st.food].name+' 5개 추가 · 잔액 '+p.money+'원');
+    }
+    else if(a.type==='work'){const paid=credit(p,100);p.job='마을 아르바이트';msg(socket,`✅ 일하기 성공! +100원 · 세금 ${paid.tax}원 · 실제 수령 ${paid.net}원 · 잔액 ${p.money}원`);}
     else if(a.type==='buy'||a.type==='sell'){
       if(Math.hypot(p.x+13,p.z+12)>9)return msg(socket,'🏪 상점 앞까지 직접 걸어와야 거래할 수 있어요.');
       if(!Object.prototype.hasOwnProperty.call(market,item)||!Object.prototype.hasOwnProperty.call(p.inventory,item))return msg(socket,'상품을 찾을 수 없어요.');
