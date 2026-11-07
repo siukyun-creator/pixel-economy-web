@@ -74,9 +74,8 @@ io.on('connection', socket => {
   socket.on('exitStore',()=>{const p=players.get(socket.id);if(!p)return;p.insideStore=null;socket.emit('storeExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
-    if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
-    const n=bounded(a.amount,1,10),item=String(a.item||'');
     if(a.type==='createStore'){
+      if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 가게를 만들 수 없어요.');
       const storeName=safeName(a.name), sign=safeName(a.sign||storeName), food=String(a.food||'apple');
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
@@ -88,8 +87,11 @@ io.on('connection', socket => {
       p.money-=250;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
+      broadcast();return;
     }
-    else if(a.type==='storeBuy'){
+    if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
+    const n=bounded(a.amount,1,10),item=String(a.item||'');
+    if(a.type==='storeBuy'){
       const st=stores.find(v=>v.id===String(a.storeId));
       if(!st||p.insideStore!==st.id)return msg(socket,'가게 안에 들어가야 구매할 수 있어요.');
       if(st.ownerId===p.id)return msg(socket,'내 가게에서는 내 물건을 살 수 없어요.');
