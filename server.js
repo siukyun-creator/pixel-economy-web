@@ -26,7 +26,7 @@ let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
   const cells=[];
-  for(let x=-16;x<=16;x+=4) for(let z=-12;z<=8;z+=4) cells.push({x,z});
+  for(let x=-40;x<=-8;x+=4) for(let z=-24;z<=-8;z+=4) cells.push({x,z});
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
@@ -82,7 +82,7 @@ io.on('connection', socket => {
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
-      const index=stores.length, x=-17.5+(index%6)*7, z=15+Math.floor(index/6)*7;
+      const index=stores.length, x=-42+(index%6)*7, z=-5+Math.floor(index/6)*7;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
