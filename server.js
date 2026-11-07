@@ -34,7 +34,9 @@ function randomSeat() {
 function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const tax=Math.floor(amount*taxRate);p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;return {amount,tax,net:amount-tax};}
 const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
 let shopsEnabled = true;
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, properties, news, taxRate, gameStatus, shopsEnabled });
+let startingMoney = 500;
+let storeFee = 250;
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee });
 const broadcast = () => io.to(ROOM).emit('state', snapshot());
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
@@ -43,7 +45,7 @@ io.on('connection', socket => {
     if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
     if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
     const seat = randomSeat();
-    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: 500, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null };
+    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null };
     players.set(socket.id, p);
     socket.join(ROOM);
     socket.emit('joined', {id: socket.id});
@@ -82,13 +84,13 @@ io.on('connection', socket => {
       const storeName=String(a.name||'').trim().slice(0,16), sign=String(a.sign||storeName).trim().slice(0,20), food=String(a.food||'bread'), product=foodProducts[String(a.productId||'')];
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
-      if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
-      const index=stores.length, x=-42+(index%6)*7, z=-5+Math.floor(index/6)*7;
+      if(p.money<storeFee)return msg(socket,'가게 개설에는 '+storeFee+'원이 필요해요.');
+      const index=stores.length, x=-17+(index%6)*6, z=-16+Math.floor(index/6)*6;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,color,x,z};
-      p.money-=250;p.storeId=st.id;stores.push(st);
+      p.money-=storeFee;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;
@@ -153,7 +155,9 @@ io.on('connection', socket => {
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1,5000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
     if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=io.sockets.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
     if(c.type==='shopPrice'){const price=bounded(c.value,5,1000);stores.forEach(st=>st.price=price);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=500;p.bank=0;p.taxPaid=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;});stores.splice(0,stores.length);companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;}
+    if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000);players.forEach(p=>p.money=startingMoney);}
+    if(c.type==='storeFee'){storeFee=bounded(c.value,0,2000);}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=500;p.bank=0;p.taxPaid=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;});stores.splice(0,stores.length);companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=500;storeFee=250;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
