@@ -28,14 +28,27 @@ io.on('connection', socket => {
   socket.on('join', data => {
     if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
     if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
-    const p = { id: socket.id, name: safeName(data.name), x: 390 + Math.random()*30, y: 280 + Math.random()*30, money: 500, bank: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [] };
-    players.set(socket.id, p); socket.join(ROOM); socket.emit('joined', {id: socket.id}); broadcast();
+    const p = { id: socket.id, name: safeName(data.name), x: (Math.random() - 0.5) * 5, z: (Math.random() - 0.5) * 5, jump: false, money: 500, bank: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [] };
+    players.set(socket.id, p);
+    socket.join(ROOM);
+    socket.emit('joined', {id: socket.id});
+    broadcast();
     io.to(ROOM).emit('notice', `${p.name} 입장!`);
   });
+  socket.on('move3d', d => {
+    const p = players.get(socket.id);
+    if (!p || !d) return;
+    p.x = Math.max(-42, Math.min(42, Number(d.x) || 0));
+    p.z = Math.max(-42, Math.min(42, Number(d.z) || 0));
+    p.jump = !!d.jump;
+    broadcast();
+  });
+  // 이전 버전 호환용 이동 이벤트
   socket.on('move', d => {
-    const p = players.get(socket.id); if (!p || !d) return;
-    p.x = Math.max(25, Math.min(775, p.x + Math.max(-1,Math.min(1,Number(d.dx)||0))*7));
-    p.y = Math.max(25, Math.min(475, p.y + Math.max(-1,Math.min(1,Number(d.dy)||0))*7));
+    const p = players.get(socket.id);
+    if (!p || !d) return;
+    p.x = Math.max(-42, Math.min(42, p.x + Math.max(-1,Math.min(1,Number(d.dx)||0))*0.7));
+    p.z = Math.max(-42, Math.min(42, p.z + Math.max(-1,Math.min(1,Number(d.dy)||0))*0.7));
     broadcast();
   });
   socket.on('action', a => {
@@ -64,4 +77,4 @@ io.on('connection', socket => {
   });
   socket.on('disconnect',()=>{players.delete(socket.id);broadcast();});
 });
-server.listen(PORT,'0.0.0.0',()=>console.log('Pixel Economy listening on '+PORT));
+server.listen(PORT,'0.0.0.0',()=>console.log('Pixel Economy 3D listening on '+PORT));
