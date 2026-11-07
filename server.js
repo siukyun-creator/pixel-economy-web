@@ -34,7 +34,7 @@ function randomSeat() {
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
-function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const tax=Math.floor(amount*taxRate);p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;return {amount,tax,net:amount-tax};}
+function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const rawTax=Math.floor(amount*taxRate);const relief=Math.min(rawTax,Math.max(0,Math.floor(p.taxRelief||0)));p.taxRelief=Math.max(0,(p.taxRelief||0)-relief);const tax=rawTax-relief;p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;p.earnedTotal=(p.earnedTotal||0)+(amount-tax);return {amount,tax,relief,net:amount-tax};}
 const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
 let shopsEnabled = true;
 let startingMoney = 200000;
@@ -48,7 +48,7 @@ io.on('connection', socket => {
     if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
     if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
     const seat = randomSeat();
-    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, taxRelief:0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     players.set(socket.id, p);if(wholesaleShop&&wholesaleShop.owner===p.name)wholesaleShop.ownerId=socket.id;
     socket.join(ROOM);
     socket.emit('joined', {id: socket.id});
@@ -145,7 +145,7 @@ io.on('connection', socket => {
        for(const row of a.items){const id=String(row?.productId||''),qty=Number(row?.amount),product=foodProducts[id],item=wholesaleShop.inventory[id];if(!product||product.category!==st.food||!item||!Number.isInteger(qty)||qty<1||qty>99)return msg(socket,'상품 또는 수량을 다시 확인해 주세요.');if(item.stock<qty)return msg(socket,product.name+' 재고가 부족해요. 현재 '+item.stock+'개 있어요.');lines.push({productId:id,name:product.name,quantity:qty,unitPrice:item.price,subtotal:item.price*qty});total+=item.price*qty;}
        if(p.money<total)return msg(socket,'결제 금액이 부족해요. '+total.toLocaleString('ko-KR')+'원 필요 · 보유 '+p.money.toLocaleString('ko-KR')+'원');
        lines.forEach(line=>{wholesaleShop.inventory[line.productId].stock-=line.quantity;st.products=st.products||{};st.products[line.productId]=st.products[line.productId]||{stock:0,price:retailPrices[line.productId]||3500,ingredients:0};st.products[line.productId].ingredients=(st.products[line.productId].ingredients||0)+line.quantity;});
-       p.money-=total;const seller=players.get(wholesaleShop.ownerId);if(seller)seller.money+=total;
+       p.money-=total;const seller=players.get(wholesaleShop.ownerId);if(seller){seller.money+=total;seller.earnedTotal=(seller.earnedTotal||0)+total;}
        socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:wholesaleShop.name,buyer:p.name,lines,total,payment:'현금',balance:p.money});
        msg(socket,'🧾 결제 완료! '+total.toLocaleString('ko-KR')+'원 · 영수증을 발급했어요.');broadcast();return;
      }
@@ -166,7 +166,7 @@ io.on('connection', socket => {
       const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'판매 메뉴를 찾을 수 없어요.');
       st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20,ingredients:0}};st.products[productId]=st.products[productId]||{stock:0,price:retailPrices[productId]||3500,ingredients:0};const item=st.products[productId],qty=bounded(a.amount,1,10),cost=item.price*qty;
       if(!Number.isInteger(Number(a.amount))||Number(a.amount)<1||Number(a.amount)>10)return msg(socket,'구매 수량은 1~10개로 입력해 주세요.');if(item.stock<qty)return msg(socket,'재고가 부족해요. 현재 '+item.stock+'개 있어요.');if(p.money<cost)return msg(socket,'돈이 부족해요. 필요 '+cost+'원 · 보유 '+p.money+'원');
-      p.money-=cost;item.stock-=qty;if(productId===st.productId)st.stock=item.stock;const owner=players.get(st.ownerId);if(owner)owner.money+=cost;msg(socket,'🛍️ '+product.name+' '+qty+'개 구매 성공! -'+cost.toLocaleString('ko-KR')+'원 · 잔액 '+p.money.toLocaleString('ko-KR')+'원 · 남은 재고 '+item.stock+'개');socket.emit('storePurchaseResult',{store:st});socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:st.name,buyer:p.name,lines:[{productId,name:product.name,quantity:qty,unitPrice:item.price,subtotal:cost}],total:cost,payment:'현금',balance:p.money});
+      p.money-=cost;item.stock-=qty;if(productId===st.productId)st.stock=item.stock;st.salesHistory=st.salesHistory||[];st.salesHistory.push({at:Date.now(),amount:cost});if(st.salesHistory.length>30)st.salesHistory.shift();const owner=players.get(st.ownerId);if(owner){owner.money+=cost;owner.earnedTotal=(owner.earnedTotal||0)+cost;}msg(socket,'🛍️ '+product.name+' '+qty+'개 구매 성공! -'+cost.toLocaleString('ko-KR')+'원 · 잔액 '+p.money.toLocaleString('ko-KR')+'원 · 남은 재고 '+item.stock+'개');socket.emit('storePurchaseResult',{store:st});socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:st.name,buyer:p.name,lines:[{productId,name:product.name,quantity:qty,unitPrice:item.price,subtotal:cost}],total:cost,payment:'현금',balance:p.money});
     }
         else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
@@ -183,6 +183,9 @@ io.on('connection', socket => {
     }
     else if(a.type==='deposit'){const v=n*10000;if(p.money<v)return msg(socket,'❌ 현금이 부족해요.');p.money-=v;p.bank+=v;msg(socket,`🏦 예금 성공! ${v}원 입금 · 현금 ${p.money}원 · 예금 ${p.bank}원`);}
     else if(a.type==='withdraw'){const v=n*10000;if(p.bank<v)return msg(socket,'❌ 예금이 부족해요.');p.bank-=v;p.money+=v;msg(socket,`🏦 출금 성공! ${v}원 출금 · 현금 ${p.money}원 · 예금 ${p.bank}원`);}
+    else if(a.type==='loan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<10000||v>100000||v%10000!==0)return msg(socket,'대출은 10,000원 단위로 10,000~100,000원까지 신청할 수 있어요.');if((p.loan||0)+v>200000)return msg(socket,'대출 한도는 총 200,000원이에요.');p.loan=(p.loan||0)+v;p.money+=v;msg(socket,`🏦 대출 완료! ${v.toLocaleString('ko-KR')}원 · 갚을 돈 ${p.loan.toLocaleString('ko-KR')}원`);}
+    else if(a.type==='repayLoan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>200000)return msg(socket,'상환 금액을 확인해 주세요.');const pay=Math.min(v,p.loan||0);if(!pay)return msg(socket,'갚을 대출금이 없어요.');if(p.money<pay)return msg(socket,'현금이 부족해요.');p.money-=pay;p.loan-=pay;msg(socket,`🏦 대출 상환! ${pay.toLocaleString('ko-KR')}원 · 남은 빚 ${p.loan.toLocaleString('ko-KR')}원`);}
+    else if(a.type==='donate'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>100000)return msg(socket,'기부는 1,000~100,000원 사이로 입력해 주세요.');if(p.money<v)return msg(socket,'기부할 현금이 부족해요.');p.money-=v;p.socialDonated=(p.socialDonated||0)+v;const relief=Math.floor(v*.1);p.taxRelief=(p.taxRelief||0)+relief;msg(socket,`💛 사회공헌 완료! ${v.toLocaleString('ko-KR')}원 기부 · 앞으로 낼 세금 ${relief.toLocaleString('ko-KR')}원 감면권 획득`);}
     else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
     else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if((p.shares[item]||0)<n)return msg(socket,`❌ 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
@@ -203,7 +206,7 @@ io.on('connection', socket => {
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
