@@ -26,7 +26,7 @@ let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
   const cells=[];
-  for(let x=-20;x<=20;x+=4) for(let z=-20;z<=20;z+=4) cells.push({x,z});
+  for(let x=-80;x<=80;x+=8) for(let z=-80;z<=80;z+=8) cells.push({x,z});
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
@@ -51,8 +51,8 @@ io.on('connection', socket => {
   socket.on('move3d', d => {
     const p = players.get(socket.id);
     if (!p || !d || gameStatus !== 'running') return;
-    p.x = Math.max(-42, Math.min(42, Number(d.x) || 0));
-    p.z = Math.max(-42, Math.min(42, Number(d.z) || 0));
+    p.x = Math.max(-140, Math.min(140, Number(d.x) || 0));
+    p.z = Math.max(-140, Math.min(140, Number(d.z) || 0));
     p.jump = !!d.jump;
     broadcast();
   });
@@ -60,8 +60,8 @@ io.on('connection', socket => {
   socket.on('move', d => {
     const p = players.get(socket.id);
     if (!p || !d || gameStatus !== 'running') return;
-    p.x = Math.max(-42, Math.min(42, p.x + Math.max(-1,Math.min(1,Number(d.dx)||0))*0.7));
-    p.z = Math.max(-42, Math.min(42, p.z + Math.max(-1,Math.min(1,Number(d.dy)||0))*0.7));
+    p.x = Math.max(-140, Math.min(140, p.x + Math.max(-1,Math.min(1,Number(d.dx)||0))*0.7));
+    p.z = Math.max(-140, Math.min(140, p.z + Math.max(-1,Math.min(1,Number(d.dy)||0))*0.7));
     broadcast();
   });
   socket.on('enterStore', storeId => {
@@ -81,7 +81,7 @@ io.on('connection', socket => {
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
-      const index=stores.length, x=-34+(index%6)*12, z=30+Math.floor(index/6)*9;
+      const index=stores.length, x=-120+(index%10)*24, z=95+Math.floor(index/10)*16;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,price:20,stock:10,color,x,z};
@@ -127,7 +127,7 @@ io.on('connection', socket => {
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && gameStatus==='waiting')gameStatus='running';
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended'))gameStatus='running';
     if(c.type==='pause' && gameStatus==='running')gameStatus='paused';
     if(c.type==='resume' && gameStatus==='paused')gameStatus='running';
     if(c.type==='end')gameStatus='ended';
@@ -139,6 +139,7 @@ io.on('connection', socket => {
     }
     if(c.type==='price'){const item=String(c.item||'');const v=bounded(c.value,1,500);if(market[item])market[item]=v;}
     broadcast();
+    socket.emit('teacherCommandResult',{ok:true,gameStatus,news});
   });
   socket.on('disconnect',()=>{players.delete(socket.id);broadcast();});
 });
