@@ -46,14 +46,32 @@ function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number
 io.on('connection', socket => {
   socket.on('join', data => {
     if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
-    if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
-    const seat = randomSeat();
-    const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, taxRelief:0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
-    players.set(socket.id, p);if(wholesaleShop&&wholesaleShop.owner===p.name)wholesaleShop.ownerId=socket.id;
+    const name = safeName(data.name);
+    if (!name) return msg(socket, '이름을 입력해 주세요.');
+    const saved = [...players.values()].find(v => v.name.toLocaleLowerCase('ko-KR') === name.toLocaleLowerCase('ko-KR'));
+    if (saved && saved.connected) return msg(socket, '같은 이름의 학생이 이미 접속 중이에요.');
+    if (!saved && players.size >= MAX) return msg(socket, '등록된 학생이 30명이에요. 선생님께 문의해 주세요.');
+    let p;
+    if (saved) {
+      const oldId = saved.id;
+      players.delete(oldId);
+      saved.id = socket.id;
+      saved.connected = true;
+      saved.insideStore = null;
+      saved.insideWholesale = false;
+      p = saved;
+      stores.forEach(st => { if (st.ownerId === oldId) st.ownerId = socket.id; });
+      if (wholesaleShop && wholesaleShop.ownerId === oldId) wholesaleShop.ownerId = socket.id;
+      if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
+    } else {
+      const seat = randomSeat();
+      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, taxRelief:0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+    }
+    players.set(socket.id, p);
     socket.join(ROOM);
-    socket.emit('joined', {id: socket.id});
+    socket.emit('joined', {id: socket.id, resumed: !!saved});
     broadcast();
-    io.to(ROOM).emit('notice', `${p.name} 입장!`);
+    io.to(ROOM).emit('notice', saved ? `${p.name} 다시 입장! 이전 기록을 불러왔어요.` : `${p.name} 입장!`);
   });
   socket.on('move3d', d => {
     const p = players.get(socket.id);
@@ -224,7 +242,7 @@ io.on('connection', socket => {
     broadcast();
     socket.emit('teacherCommandResult',{ok:true,gameStatus,news,shopsEnabled});
   });
-  socket.on('disconnect',()=>{players.delete(socket.id);broadcast();});
+  socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
 setInterval(() => {
   for (const [ticker, stock] of Object.entries(stocks)) {
