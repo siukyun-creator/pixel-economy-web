@@ -21,9 +21,9 @@ const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',em
 const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'},steak:{category:'meat',name:'직화 스테이크'},samgyeopsal:{category:'meat',name:'삼겹살 구이'},galbi:{category:'meat',name:'양념 갈비'}};
 const stockHistory = { SKY: [50000], PIX: [35000] };
 const properties = [
-  { id: 'house1', name: '작은 집', price: 500, owner: null },
-  { id: 'shop1', name: '상점 건물', price: 900, owner: null },
-  { id: 'house2', name: '강변 집', price: 1200, owner: null }
+  { id: 'house1', name: '작은 집', price: 50000000, owner: null },
+  { id: 'shop1', name: '상점 건물', price: 90000000, owner: null },
+  { id: 'house2', name: '강변 집', price: 120000000, owner: null }
 ];
 let news = '마을 경제가 시작됐어요!';
 let taxRate = 0.05;
@@ -49,7 +49,7 @@ io.on('connection', socket => {
     if (players.size >= MAX) return msg(socket, '30명이 모두 입장했어요.');
     const seat = randomSeat();
     const p = { id: socket.id, name: safeName(data.name), x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
-    players.set(socket.id, p);
+    players.set(socket.id, p);if(wholesaleShop&&wholesaleShop.owner===p.name)wholesaleShop.ownerId=socket.id;
     socket.join(ROOM);
     socket.emit('joined', {id: socket.id});
     broadcast();
@@ -125,13 +125,13 @@ io.on('connection', socket => {
        if(!product||!item)return msg(socket,'상품을 확인해 주세요.');
        if(!Number.isInteger(qty)||qty<1||qty>100)return msg(socket,'입고 수량은 1~100개로 입력해 주세요.');
        const cost=item.cost*qty;if(p.money<cost)return msg(socket,'입고 비용이 부족해요. 총 '+cost.toLocaleString('ko-KR')+'원이 필요해요.');
-       p.money-=cost;item.stock+=qty;msg(socket,'📦 '+product.name+' '+qty+'개 입고 완료 · 입고비 '+cost.toLocaleString('ko-KR')+'원');broadcast();return;
+       p.money-=cost;item.stock+=qty;msg(socket,'📦 '+product.name+' '+qty+'개 입고 완료 · 입고비 '+cost.toLocaleString('ko-KR')+'원');socket.emit('wholesaleAdminResult');broadcast();return;
      }
      if(a.type==='setWholesalePrice'){
        if(!wholesaleShop||wholesaleShop.ownerId!==socket.id)return msg(socket,'도매상 주인만 가격을 바꿀 수 있어요.');
        const id=String(a.productId||''),item=wholesaleShop.inventory[id],price=Number(a.amount);
        if(!item||!Number.isInteger(price)||price<500||price>50000)return msg(socket,'판매 가격은 500~50,000원 사이로 입력해 주세요.');
-       item.price=price;msg(socket,'🏷️ 도매 판매 가격을 '+price.toLocaleString('ko-KR')+'원으로 바꿨어요.');broadcast();return;
+       item.price=price;msg(socket,'🏷️ 도매 판매 가격을 '+price.toLocaleString('ko-KR')+'원으로 바꿨어요.');socket.emit('wholesaleAdminResult');broadcast();return;
      }
      if(a.type==='wholesaleCheckout'){
        if(!p.insideWholesale||Math.hypot(p.x-35,p.z-22)>11)return msg(socket,'도매상 안에서 결제해 주세요.');
