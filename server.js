@@ -125,7 +125,7 @@ io.on('connection', socket => {
        if(!product||!item)return msg(socket,'상품을 확인해 주세요.');
        if(!Number.isInteger(qty)||qty<1||qty>100)return msg(socket,'입고 수량은 1~100개로 입력해 주세요.');
        const cost=item.cost*qty;if(p.money<cost)return msg(socket,'입고 비용이 부족해요. 총 '+cost.toLocaleString('ko-KR')+'원이 필요해요.');
-       p.money-=cost;item.stock+=qty;msg(socket,'📦 '+product.name+' '+qty+'개 입고 완료 · 입고비 '+cost.toLocaleString('ko-KR')+'원');socket.emit('wholesaleAdminResult');broadcast();return;
+       p.money-=cost;item.stock+=qty;msg(socket,'📦 '+product.name+' '+qty+'개 입고 완료 · 입고비 '+cost.toLocaleString('ko-KR')+'원');socket.emit('wholesaleAdminResult',wholesaleShop);broadcast();return;
      }
      if(a.type==='setWholesalePrice'){
        if(!wholesaleShop||wholesaleShop.ownerId!==socket.id)return msg(socket,'도매상 주인만 가격을 바꿀 수 있어요.');
