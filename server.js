@@ -14,8 +14,8 @@ const market = { apple: 10, bread: 20, toy: 35 };
 const stocks = { SKY: { name: '하늘항공', price: 50 }, PIX: { name: '픽셀상사', price: 35 } };
 const companies = [];
 const stores = [];
-const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'} };
-const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'}};
+const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'}, meat:{name:'고깃집',emoji:'🥩'} };
+const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'},steak:{category:'meat',name:'직화 스테이크'},samgyeopsal:{category:'meat',name:'삼겹살 구이'},galbi:{category:'meat',name:'양념 갈비'}};
 const stockHistory = { SKY: [50], PIX: [35] };
 const properties = [
   { id: 'house1', name: '작은 집', price: 500, owner: null },
@@ -96,7 +96,7 @@ io.on('connection', socket => {
       const awningStyle=['stripe','solid','scallop'].includes(String(a.awningStyle))?String(a.awningStyle):'stripe';
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,color,wallColor,signColor,signStyle,awningStyle,decor,x,z};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20}},color,wallColor,signColor,signStyle,awningStyle,decor,x,z};
       p.money-=storeFee;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -106,30 +106,25 @@ io.on('connection', socket => {
     const n=bounded(a.amount,1,10),item=String(a.item||'');
 
     if(a.type==='cook'){
-      const st=stores.find(v=>v.ownerId===socket.id);
-      if(!st||p.storeId!==st.id)return msg(socket,'먼저 내 가게를 만들어 주세요.');
-      const score=bounded(a.score,0,100);
-      if(p.money<15)return msg(socket,'요리 재료비 15원이 필요해요.');
-      p.money-=15;
-      if(score<35){msg(socket,'🍳 요리가 아쉬워요! 점수 '+score+'점 · 재료비 15원');}
-      else {const made=Math.max(1,Math.floor(score/20));st.stock+=made;msg(socket,'✨ '+st.productName+' 요리 성공! '+score+'점 · '+made+'개 완성 · 가게 재고 '+st.stock+'개');}
-      broadcast();return;
+      const st=stores.find(v=>v.ownerId===socket.id);if(!st||p.storeId!==st.id)return msg(socket,'먼저 내 가게를 만들어 주세요.');
+      const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'이 가게에서 만들 수 없는 메뉴예요.');
+      const score=bounded(a.score,0,100);if(p.money<15)return msg(socket,'🍳 요리 재료비 15원이 필요해요.');p.money-=15;
+      st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20}};st.products[productId]=st.products[productId]||{stock:0,price:20};
+      if(score<35)msg(socket,'🍳 요리가 아쉬워요! 점수 '+score+'점 · 재료비 15원');else{const made=Math.max(1,Math.floor(score/20));st.products[productId].stock+=made;if(productId===st.productId)st.stock=st.products[productId].stock;msg(socket,'✨ '+product.name+' '+made+'개 완성! 재고 '+st.products[productId].stock+'개');}broadcast();return;
     }
     if(a.type==='setStorePrice'){
-      const st=stores.find(v=>v.ownerId===socket.id);
-      if(!st)return msg(socket,'내 가게를 먼저 만들어 주세요.');
-      st.price=bounded(a.amount,5,1000);msg(socket,'🏷️ 판매 가격을 '+st.price+'원으로 바꿨어요.');broadcast();return;
+      const st=stores.find(v=>v.ownerId===socket.id);if(!st)return msg(socket,'내 가게를 먼저 만들어 주세요.');
+      const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'메뉴를 확인해 주세요.');
+      st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20}};st.products[productId]=st.products[productId]||{stock:0,price:20};st.products[productId].price=bounded(a.amount,5,1000);if(productId===st.productId)st.price=st.products[productId].price;msg(socket,'🏷️ '+product.name+' 가격을 '+st.products[productId].price+'원으로 변경!');broadcast();return;
     }
     if(a.type==='storeBuy'){
-      const st=stores.find(v=>v.id===String(a.storeId));
-      if(!st||p.insideStore!==st.id)return msg(socket,'가게 안에 들어가야 구매할 수 있어요.');
-      if(st.ownerId===p.id)return msg(socket,'내 가게에서는 내 물건을 살 수 없어요.');
-      if(st.stock<1)return msg(socket,'품절됐어요. 가게 주인에게 재고를 채워 달라고 해 주세요.');
-      if(p.money<st.price)return msg(socket,'돈이 부족해요. 가격 '+st.price+'원 · 보유 '+p.money+'원');
-      p.money-=st.price;st.stock--;const owner=players.get(st.ownerId);if(owner)owner.money+=st.price;
-      msg(socket,'🛍️ '+st.name+'에서 '+(st.productName||foodProducts[st.productId]?.name||foods[st.food].name)+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
+      const st=stores.find(v=>v.id===String(a.storeId));if(!st||p.insideStore!==st.id)return msg(socket,'가게 안에 들어가야 구매할 수 있어요.');if(st.ownerId===p.id)return msg(socket,'내 가게에서는 내 물건을 살 수 없어요.');
+      const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'판매 메뉴를 찾을 수 없어요.');
+      st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20}};st.products[productId]=st.products[productId]||{stock:0,price:20};const item=st.products[productId],qty=bounded(a.amount,1,10),cost=item.price*qty;
+      if(item.stock<qty)return msg(socket,'재고가 부족해요. 현재 '+item.stock+'개 있어요.');if(p.money<cost)return msg(socket,'돈이 부족해요. 필요 '+cost+'원 · 보유 '+p.money+'원');
+      p.money-=cost;item.stock-=qty;if(productId===st.productId)st.stock=item.stock;const owner=players.get(st.ownerId);if(owner)owner.money+=cost;msg(socket,'🛍️ '+product.name+' '+qty+'개 구매! -'+cost+'원 · 남은 재고 '+item.stock+'개');
     }
-    else if(a.type==='storeRestock'){
+        else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
       if(!st||st.ownerId!==p.id)return msg(socket,'내 가게에서만 재고를 채울 수 있어요.');
       const cost=50;if(p.money<cost)return msg(socket,'재고 5개 준비에는 50원이 필요해요.');
