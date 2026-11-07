@@ -148,56 +148,62 @@ input::placeholder{color:#91a9c0}
 #teacher .tile{border:1px solid #4f7392;border-radius:13px;background:linear-gradient(145deg,#294764,#192f47)!important;padding:12px!important}
 @media(max-width:600px){header{padding:7px 9px}header .menus{gap:4px}header .menus button{font-size:12px;padding:8px 9px}#menuPanel.menu-fullscreen{padding:12px!important}.foodChoices{grid-template-columns:repeat(2,minmax(0,1fr))}.foodChoice{padding:10px!important;min-height:66px!important}.foodChoice span{font-size:25px!important}}
 #receiptOverlay{display:none;position:fixed;inset:0;z-index:500;background:#071321dd;align-items:center;justify-content:center;padding:16px}#receiptOverlay.show{display:flex}.receiptPaper{width:min(420px,100%);max-height:90dvh;overflow:auto;background:#fffdf5;color:#202a32;padding:24px;border-radius:8px;box-shadow:0 20px 80px #0009;font-family:ui-monospace,monospace}.receiptPaper h2{text-align:center;margin:0 0 4px}.receiptSub{text-align:center;color:#64717b;font-size:12px}.receiptPaper hr{border:0;border-top:1px dashed #9ba4aa;margin:14px 0}.receiptLine{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px}.receiptTotal{font-size:20px;font-weight:900}.receiptActions{display:flex;gap:8px;margin-top:16px}.receiptActions button{flex:1}.receiptButton{background:#247b57}.wholesaleHero{padding:20px;border-radius:18px;background:linear-gradient(120deg,#244967,#163047);color:white;margin-bottom:16px}.wholesaleGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.wholesaleCard{padding:15px;border-radius:15px;background:#f2f7fb;color:#20394e;border:1px solid #bfd4e4;display:flex;flex-direction:column;gap:8px}.wholesaleCard input{width:100%;background:white;color:#182c3e;border:1px solid #c3d3df}.wholesaleCard .unitPrice{font-weight:900;color:#b06c20}.wholesaleCart{margin-top:18px;padding:18px;border-radius:16px;background:#eaf3f9;color:#18364e}
-/* PIXEL TOWN 2026 VISUAL REDESIGN */
-:root{color-scheme:dark;--ink:#edf7ff;--muted:#a9c2d7;--panel:#10263beF;--line:#42627e;--mint:#83e0b0;--gold:#ffd477}
-body{font-family:Inter,"Noto Sans KR",system-ui,sans-serif;background:#0b1725;color:var(--ink)}
-header{top:10px;left:10px;right:10px;min-height:64px;padding:10px 14px;border-radius:20px;background:linear-gradient(110deg,#10263bea,#1d4260eF);border:1px solid #9bd5f044;box-shadow:0 12px 36px #06111dbb;backdrop-filter:blur(22px);gap:12px}
-header h1{font-size:16px;letter-spacing:1.5px;color:#eaf8ff;text-shadow:none}
-.menus{gap:6px}.menus button{padding:10px 13px;background:#ffffff10;color:#dceeff;border:1px solid #ffffff16;border-radius:12px!important;font-size:12px;box-shadow:none}
-.menus button:hover{background:#4c8ab455;border-color:#a9dfff66}
-header .refreshBtn{background:#f2bd59;color:#34250d;border:0;border-radius:12px!important;padding:10px 12px;box-shadow:0 3px 0 #a66c2d}
-#connection{color:#9de8c0;font-weight:800}
-#hud{top:88px;left:14px;width:205px;padding:16px;border-radius:20px;background:linear-gradient(145deg,#102a40ee,#0b1d30ed)!important;border:1px solid #a7d8f044;box-shadow:0 14px 40px #06111d88}
-.hudMoney span{font-size:11px;color:#9dbbd0;letter-spacing:.5px}.hudMoney b{font-size:28px;color:#ffe09a;margin:5px 0 12px}
-.hudStats span{background:#ffffff12;color:#d8ebf8;border:1px solid #ffffff0c;border-radius:9px}
-#mapPanel{right:14px;bottom:14px;width:230px;padding:11px;border-radius:20px;background:#10283bec;color:#eaf7ff;border:1px solid #a8d9f055;box-shadow:0 14px 40px #07142199;backdrop-filter:blur(15px)}
-#mapPanel p{color:#a9c5d8}#mapPanel canvas{border:1px solid #8bb9a4;border-radius:12px}
-#menuPanel{background:linear-gradient(145deg,#15344dF7,#0b1d30F8)!important;border:1px solid #80b9d655!important;border-radius:24px!important;box-shadow:0 25px 90px #020b15cc!important;color:#eff8ff}
-#menuPanel.menu-fullscreen{background:radial-gradient(ellipse at 50% 0,#244d69,#0b1a2a 72%)!important}
-#menuPanel>.row:first-child{padding:8px 4px 15px;border-bottom:1px solid #ffffff20;margin-bottom:10px}
-#menuTitle{font-size:clamp(22px,3vw,32px)!important;color:#f6fbff;letter-spacing:-.6px;border:0!important}
-#menuContent{color:#eaf5ff}
-#menuContent label{color:#bcd6e8}
-#menuContent input,#menuContent select,#menuContent textarea{background:#091b2b!important;color:#f3f9ff!important;border:1px solid #456783!important;border-radius:13px!important}
-button{border-radius:12px!important;box-shadow:0 3px 0 #07142155;font-weight:850;letter-spacing:-.2px}
-button:not(.secondary):not(.foodChoice):not(.lessonChoice){background:linear-gradient(135deg,#3989b8,#23628c);color:#fff}
-button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+
+/* PIXEL TOWN: WHITE & SUNSHINE YELLOW UI */
+:root{color-scheme:light;--ink:#30343b;--muted:#777b82;--panel:#fffdf7;--line:#eadcae;--mint:#65a981;--gold:#f5c928}
+body{font-family:Inter,"Noto Sans KR",system-ui,sans-serif;background:#fffdf6;color:#30343b}
+header{top:10px;left:10px;right:10px;min-height:64px;padding:10px 14px;border-radius:20px;background:#fffefaF2;border:1px solid #f0dfa0;box-shadow:0 10px 30px #6b57151c;backdrop-filter:blur(18px);gap:12px}
+header h1{font-size:16px;letter-spacing:1.2px;color:#4b4638;text-shadow:none}
+.menus{gap:6px}.menus button{padding:10px 13px;background:#fff;color:#514b3d;border:1px solid #eee5cc;border-radius:12px!important;font-size:12px;box-shadow:none}
+.menus button:hover{background:#fff4bf;border-color:#e9c94b}
+header .refreshBtn{background:#ffdc55;color:#493b12;border:1px solid #edc63b;border-radius:12px!important;padding:10px 12px;box-shadow:0 3px 0 #d4a92a}
+#connection{color:#39845a;font-weight:850}
+#hud{top:88px;left:14px;width:205px;padding:16px;border-radius:20px;background:#fffef9!important;border:1px solid #eedc9e;box-shadow:0 12px 32px #66531c1c}
+.hudMoney span{font-size:11px;color:#89816c;letter-spacing:.5px}.hudMoney b{font-size:28px;color:#bd8d00;margin:5px 0 12px}
+.hudStats span{background:#fff6d8;color:#655526;border:1px solid #f0e1ad;border-radius:9px}
+#mapPanel{right:14px;bottom:14px;width:230px;padding:11px;border-radius:20px;background:#fffef9;color:#4a463b;border:1px solid #eadcae;box-shadow:0 12px 32px #66531c22;backdrop-filter:blur(15px)}
+#mapPanel p{color:#81795f}#mapPanel canvas{border:1px solid #e8d58a;border-radius:12px}
+#menuPanel{background:#fffefa!important;border:1px solid #eadcae!important;border-radius:24px!important;box-shadow:0 24px 80px #4d401c30!important;color:#35332d}
+#menuPanel.menu-fullscreen{background:radial-gradient(ellipse at 50% 0,#fff9dc,#fffdf7 68%)!important}
+#menuPanel>.row:first-child{padding:8px 4px 15px;border-bottom:1px solid #eee5cc;margin-bottom:10px}
+#menuTitle{font-size:clamp(22px,3vw,32px)!important;color:#39362e;letter-spacing:-.6px;border:0!important}
+#menuContent{color:#454239}
+#menuContent label{color:#6e6240}
+#menuContent input,#menuContent select,#menuContent textarea{background:#fff!important;color:#35332d!important;border:1px solid #e5d9b7!important;border-radius:13px!important}
+button{border-radius:12px!important;box-shadow:0 2px 0 #9c7d1c22;font-weight:850;letter-spacing:-.2px}
+button:not(.secondary):not(.foodChoice):not(.lessonChoice){background:linear-gradient(135deg,#ffdf62,#f5c52b);color:#493b12;border:1px solid #e9c13b}
+button:hover{filter:brightness(1.025);transform:translateY(-1px)}
 button:active{transform:translateY(1px) scale(.98)!important}
-.secondary{background:#314b60!important;color:#eaf5ff!important;border:1px solid #66829a!important}
-.productCard,.stockCard,.wholesaleCard,.cookCard,.storeCustomize,.tile{background:linear-gradient(145deg,#1d405a,#122b42)!important;color:#eef8ff!important;border:1px solid #4d7897!important;border-radius:18px!important;box-shadow:0 10px 25px #06152366}
-.productCard small,.stockCard small,.small{color:#b2cadd}
-.productCard span,.stockCard strong{color:#ffdc8b}
+.secondary{background:#fff!important;color:#5b5138!important;border:1px solid #e8dcb9!important}
+.productCard,.stockCard,.wholesaleCard,.cookCard,.storeCustomize,.tile{background:#fff!important;color:#3c3931!important;border:1px solid #eee2bf!important;border-radius:18px!important;box-shadow:0 8px 22px #67551b12}
+.productCard small,.stockCard small,.small{color:#837d6c}
+.productCard span,.stockCard strong{color:#b18400}
 .productGrid,.stockGrid,.wholesaleGrid{gap:14px}
-.foodChoice{background:#17364e!important;color:#f1f8ff!important;border:1px solid #4b718c!important;border-radius:16px!important}
-.foodChoice.active{background:linear-gradient(145deg,#70552b,#21455b)!important;border-color:#ffd477!important}
-#foodPreview{background:radial-gradient(ellipse,#effaff,#b8d8e8)!important;border:2px solid #8bc3dc!important}
-.foodName{color:#ffdf99!important}
-#lobbyOverlay{width:min(480px,calc(100vw - 30px));padding:30px;border-radius:26px;background:linear-gradient(145deg,#12344ceF,#0b1d30F5)!important;border:1px solid #9bdcff88!important;box-shadow:0 25px 90px #061321aa}
-#lobbyOverlay h2{font-size:clamp(23px,4vw,34px);color:#fff}
-#lobbyOverlay p{color:#c1dcec}
-#touchPad button{background:#12334de8!important;color:#fff;border:1px solid #bce8ff66;border-radius:16px!important}
-#jump{background:linear-gradient(145deg,#ffe08a,#f0a53e)!important;color:#49300b;border:3px solid #fff8}
-#cameraHint,#moveHint{background:#0d263bdc;border:1px solid #ffffff2b;color:#eaf6ff;padding:9px 15px}
-#notice{background:#12344af2!important;border:1px solid #ffd477;color:#ffe7ad}
-#teacher.teacher-fullscreen{background:radial-gradient(ellipse at 50% 0,#234d68,#0b1b2b 70%)!important;color:#eff8ff}
-#teacher .teacherCard,#teacher .teacherStats>div,#teacher .studentRow,#teacher .teacherTools>div{background:#17364e!important;color:#eff8ff!important;border:1px solid #456b86!important;border-radius:16px}
-#teacher h2,#teacher h3,#teacher .teacherCard h3{color:#f2f8ff}
-#teacher p,#teacher small,#teacher label{color:#b5ccdc}
-#teacher input{background:#0b2032!important;color:#fff!important;border-color:#456b86!important}
-#teacher .teacherStats b{color:#ffdc8b}
-#mapPanel .mapHead button{background:#315d78;color:white}
+.foodChoice{background:#fff!important;color:#403d34!important;border:1px solid #e9dfc5!important;border-radius:16px!important}
+.foodChoice.active{background:#fff4c3!important;border-color:#e6bf29!important;box-shadow:0 0 0 3px #f4d34b30!important}
+#foodPreview{background:radial-gradient(ellipse,#fff,#fff2c6)!important;border:2px solid #efdfaa!important}
+.foodName{color:#a57b00!important}
+#lobbyOverlay{width:min(480px,calc(100vw - 30px));padding:30px;border-radius:26px;background:#fffef7!important;border:1px solid #e9d88f!important;box-shadow:0 25px 75px #51451f35;color:#39362e}
+#lobbyOverlay h2{font-size:clamp(23px,4vw,34px);color:#39362e}
+#lobbyOverlay p{color:#77705d}
+#touchPad button{background:#fff9e5!important;color:#5a4813;border:1px solid #e9d27a;border-radius:16px!important}
+#jump{background:linear-gradient(145deg,#ffe77c,#f5c12b)!important;color:#49370b;border:2px solid #fff}
+#cameraHint,#moveHint{background:#fffef2eF;border:1px solid #e9dcae;color:#5d543d;padding:9px 15px;box-shadow:0 4px 14px #4e421522}
+#notice{background:#fff9df!important;border:1px solid #e8c94b;color:#665018;box-shadow:0 10px 28px #51451f22}
+#teacher.teacher-fullscreen{background:linear-gradient(145deg,#fffdf5,#fff8df)!important;color:#39362e}
+#teacher .teacherCard,#teacher .teacherStats>div,#teacher .studentRow,#teacher .teacherTools>div,#teacher .tile{background:#fff!important;color:#403d34!important;border:1px solid #eadfbe!important;border-radius:16px;box-shadow:0 6px 18px #62521a10}
+#teacher h2,#teacher h3,#teacher .teacherCard h3{color:#39362e}
+#teacher p,#teacher small,#teacher label{color:#77705e}
+#teacher input{background:#fff!important;color:#39362e!important;border-color:#e4d7b2!important}
+#teacher .teacherStats b{color:#a77c00}
+#mapPanel .mapHead button{background:#ffdf62;color:#4b3c10;border:1px solid #e9c94b}
 #receiptOverlay{backdrop-filter:blur(8px)}
 .receiptPaper{border-radius:18px}
+.wholesaleHero{background:linear-gradient(120deg,#fff4c4,#fffdf4)!important;color:#49412d!important;border:1px solid #efdf9e}
+.wholesaleCard{background:#fff!important;color:#38362f!important;border:1px solid #ebdfbd}
+.wholesaleCard input{background:#fff!important;color:#38362f!important}
+.wholesaleCard .unitPrice{color:#a47a00}
+.wholesaleCart{background:#fff8dc!important;color:#514626!important;border:1px solid #eedb91}
 @media(max-width:700px){
  header{top:6px;left:6px;right:6px;border-radius:16px;padding:8px}
  header h1{font-size:13px}
