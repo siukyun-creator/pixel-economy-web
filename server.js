@@ -117,7 +117,7 @@ io.on('connection', socket => {
       if(st.stock<1)return msg(socket,'품절됐어요. 가게 주인에게 재고를 채워 달라고 해 주세요.');
       if(p.money<st.price)return msg(socket,'돈이 부족해요. 가격 '+st.price+'원 · 보유 '+p.money+'원');
       p.money-=st.price;st.stock--;const owner=players.get(st.ownerId);if(owner)owner.money+=st.price;
-      msg(socket,'🛍️ '+st.name+'에서 '+foods[st.food].name+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
+      msg(socket,'🛍️ '+st.name+'에서 '+(st.productName||foods[st.food].name)+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
     }
     else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
