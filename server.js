@@ -63,32 +63,27 @@ io.on('connection', socket => {
     broadcast();
   });
   socket.on('action', a => {
-    const p = players.get(socket.id); if (!p || !a) return;
-    if (gameStatus !== 'running') return msg(socket, gameStatus === 'paused' ? '수업이 잠시 멈췄어요.' : '선생님이 수업을 시작할 때까지 기다려 주세요.');
-    const n = bounded(a.amount, 1, 10); const item = String(a.item || '');
-    if (a.type === 'work') { const paid=credit(p,100); p.job = '마을 아르바이트'; msg(socket,`일해서 100원을 벌었어요! 세금 ${paid.tax}원, 실제 수령 ${paid.net}원`); }
-    else if (a.type === 'buy') { const cost=(market[item]||0)*n; if (!cost || p.money<cost) return msg(socket,'돈이 부족해요.'); p.money-=cost; p.inventory[item]+=n; }
-    else if (a.type === 'sell') { if (!p.inventory[item] || p.inventory[item]<n) return msg(socket,'판매할 물건이 부족해요.'); p.inventory[item]-=n; credit(p,Math.floor(market[item]*n*.8)); }
-    else if (a.type === 'deposit') { const v=n*100; if(p.money<v)return msg(socket,'현금이 부족해요.'); p.money-=v;p.bank+=v; }
-    else if (a.type === 'withdraw') { const v=n*100;if(p.bank<v)return msg(socket,'예금이 부족해요.');p.bank-=v;p.money+=v; }
-    else if (a.type === 'stockBuy') { const s=stocks[item];if(!s||p.money<s.price*n)return msg(socket,'돈이 부족해요.');p.money-=s.price*n;p.shares[item]+=n; }
-    else if (a.type === 'stockSell') { const s=stocks[item];if(!s||p.shares[item]<n)return msg(socket,'보유 주식이 부족해요.');p.shares[item]-=n;credit(p,s.price*n); }
-    else if (a.type === 'property') { const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'구매할 수 없는 부동산이에요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id); }
-    else if (a.type === 'startup') {
-      const companyName = safeName(a.item);
-      if (p.company) return msg(socket, '이미 창업한 회사가 있어요.');
-      if (companyName === '학생' || p.money < 300) return msg(socket, '회사 이름을 입력하고 창업 비용 300원을 준비해 주세요.');
-      const ticker = 'CO' + String(companies.length + 1).padStart(2, '0');
-      p.money -= 300; p.company = ticker; p.shares[ticker] = 10;
-      stocks[ticker] = { name: companyName, price: 100, owner: p.name };
-      stockHistory[ticker] = [100];
-      companies.push({ ticker, name: companyName, owner: p.name, price: 100 });
-      msg(socket, companyName + ' 창업 성공! 시작 주식 10주를 받았어요.');
+    const p=players.get(socket.id);if(!p||!a)return;
+    if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
+    const n=bounded(a.amount,1,10),item=String(a.item||'');
+    if(a.type==='work'){const paid=credit(p,100);p.job='마을 아르바이트';msg(socket,`✅ 일하기 성공! +100원 · 세금 ${paid.tax}원 · 실제 수령 ${paid.net}원 · 잔액 ${p.money}원`);}
+    else if(a.type==='buy'||a.type==='sell'){
+      if(Math.hypot(p.x+13,p.z+12)>9)return msg(socket,'🏪 상점 앞까지 직접 걸어와야 거래할 수 있어요.');
+      if(!Object.prototype.hasOwnProperty.call(market,item)||!Object.prototype.hasOwnProperty.call(p.inventory,item))return msg(socket,'상품을 찾을 수 없어요.');
+      if(a.type==='buy'){const cost=market[item]*n;if(p.money<cost)return msg(socket,`❌ 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.inventory[item]+=n;msg(socket,`🛍️ 구매 성공! ${item==='apple'?'사과':item==='bread'?'빵':'장난감'} ${n}개 · -${cost}원 · 잔액 ${p.money}원`);}
+      else{if(p.inventory[item]<n)return msg(socket,'❌ 판매할 물건이 부족해요.');p.inventory[item]-=n;const paid=credit(p,Math.floor(market[item]*n*.8));msg(socket,`💰 판매 성공! ${n}개 판매 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 잔액 ${p.money}원`);}
     }
-    else if (a.type === 'transfer') { const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,500);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`${target.name}에게 ${v}원을 보냈어요.`); }
+    else if(a.type==='deposit'){const v=n*100;if(p.money<v)return msg(socket,'❌ 현금이 부족해요.');p.money-=v;p.bank+=v;msg(socket,`🏦 예금 성공! ${v}원 입금 · 현금 ${p.money}원 · 예금 ${p.bank}원`);}
+    else if(a.type==='withdraw'){const v=n*100;if(p.bank<v)return msg(socket,'❌ 예금이 부족해요.');p.bank-=v;p.money+=v;msg(socket,`🏦 출금 성공! ${v}원 출금 · 현금 ${p.money}원 · 예금 ${p.bank}원`);}
+    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
+    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if((p.shares[item]||0)<n)return msg(socket,`❌ 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
+    else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
+    else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(companyName==='학생'||p.money<300)return msg(socket,'회사 이름을 입력하고 창업 비용 300원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=300;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:100,owner:p.name};stockHistory[ticker]=[100];companies.push({ticker,name:companyName,owner:p.name,price:100});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
+    else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,500);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
     else return;
     broadcast();
   });
+  socket.on('sync',()=>{if(players.has(socket.id))socket.emit('state',snapshot());});
   socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',snapshot()); });
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
