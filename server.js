@@ -14,7 +14,8 @@ const market = { apple: 10, bread: 20, toy: 35 };
 const stocks = { SKY: { name: '하늘항공', price: 50 }, PIX: { name: '픽셀상사', price: 35 } };
 const companies = [];
 const stores = [];
-const foods = { apple:{name:'사과',emoji:'🍎'}, bread:{name:'빵',emoji:'🍞'}, juice:{name:'주스',emoji:'🧃'}, pizza:{name:'피자',emoji:'🍕'} };
+const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'} };
+const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'}};
 const stockHistory = { SKY: [50], PIX: [35] };
 const properties = [
   { id: 'house1', name: '작은 집', price: 500, owner: null },
@@ -78,18 +79,18 @@ io.on('connection', socket => {
     if(a.type==='createStore'){
       if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 가게를 만들 수 없어요.');
       if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
-      const storeName=safeName(a.name), sign=safeName(a.sign||storeName), food=String(a.food||'apple');
+      const storeName=String(a.name||'').trim().slice(0,16), sign=String(a.sign||storeName).trim().slice(0,20), food=String(a.food||'bread'), product=foodProducts[String(a.productId||'')];
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
-      if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
+      if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
       const index=stores.length, x=-42+(index%6)*7, z=-5+Math.floor(index/6)*7;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,productName:safeName(a.productName||foods[food].name),pixelArt:pixels,price:20,stock:10,color,x,z};
+      const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,color,x,z};
       p.money-=250;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
-      msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
+      msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;
     }
     if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
@@ -117,7 +118,7 @@ io.on('connection', socket => {
       if(st.stock<1)return msg(socket,'품절됐어요. 가게 주인에게 재고를 채워 달라고 해 주세요.');
       if(p.money<st.price)return msg(socket,'돈이 부족해요. 가격 '+st.price+'원 · 보유 '+p.money+'원');
       p.money-=st.price;st.stock--;const owner=players.get(st.ownerId);if(owner)owner.money+=st.price;
-      msg(socket,'🛍️ '+st.name+'에서 '+(st.productName||foods[st.food].name)+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
+      msg(socket,'🛍️ '+st.name+'에서 '+(st.productName||foodProducts[st.productId]?.name||foods[st.food].name)+' 구매 성공! -'+st.price+'원 · 남은 재고 '+st.stock+'개');
     }
     else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
