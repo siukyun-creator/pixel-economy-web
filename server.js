@@ -169,7 +169,7 @@ io.on('connection', socket => {
         else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
       if(!st||st.ownerId!==p.id)return msg(socket,'내 가게에서만 재고를 채울 수 있어요.');
-      const cost=50;if(p.money<cost)return msg(socket,'재고 5개 준비에는 50원이 필요해요.');
+      const cost=5000;if(p.money<cost)return msg(socket,'재고 5개 준비에는 5,000원이 필요해요.');
       p.money-=cost;st.stock+=5;msg(socket,'📦 재고 보충! '+foods[st.food].name+' 5개 추가 · 잔액 '+p.money+'원');
     }
     else if(a.type==='work'){const paid=credit(p,10000);p.job='마을 아르바이트';msg(socket,`✅ 일하기 성공! +10,000원 · 세금 ${paid.tax.toLocaleString('ko-KR')}원 · 실제 수령 ${paid.net.toLocaleString('ko-KR')}원 · 잔액 ${p.money.toLocaleString('ko-KR')}원`);}
@@ -185,7 +185,7 @@ io.on('connection', socket => {
     else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if((p.shares[item]||0)<n)return msg(socket,`❌ 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
     else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
-    else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1000,500000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
+    else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
     else return;
     broadcast();
   });
@@ -198,12 +198,12 @@ io.on('connection', socket => {
     if(c.type==='clearStores'){stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1000,500000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
     if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=io.sockets.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
-    if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>st.price=price);}
+    if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
     if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
-    if(c.type==='bonus'){const v=bounded(c.value,0,1000);players.forEach(p=>p.money+=v);}
+    if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
     if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended'))gameStatus='running';
     if(c.type==='pause' && gameStatus==='running')gameStatus='paused';
