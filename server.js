@@ -83,7 +83,7 @@ io.on('connection', socket => {
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
       const index=stores.length, x=-34+(index%6)*12, z=30+Math.floor(index/6)*9;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
-      const color=palette[index%palette.length];
+      const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,price:20,stock:10,color,x,z};
       p.money-=250;p.storeId=st.id;stores.push(st);
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
