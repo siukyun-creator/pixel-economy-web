@@ -26,13 +26,14 @@ let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
   const cells=[];
-  for(let x=-80;x<=80;x+=8) for(let z=-80;z<=80;z+=8) cells.push({x,z});
+  for(let x=-16;x<=16;x+=4) for(let z=-12;z<=8;z+=4) cells.push({x,z});
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
 function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const tax=Math.floor(amount*taxRate);p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;return {amount,tax,net:amount-tax};}
 const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, properties, news, taxRate, gameStatus });
+let shopsEnabled = true;
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, properties, news, taxRate, gameStatus, shopsEnabled });
 const broadcast = () => io.to(ROOM).emit('state', snapshot());
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
@@ -76,14 +77,16 @@ io.on('connection', socket => {
     const p=players.get(socket.id);if(!p||!a)return;
     if(a.type==='createStore'){
       if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 가게를 만들 수 없어요.');
+      if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
       const storeName=safeName(a.name), sign=safeName(a.sign||storeName), food=String(a.food||'apple');
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(!foods[food])return msg(socket,'판매할 음식을 선택해 주세요.');
       if(p.money<250)return msg(socket,'가게 개설에는 250원이 필요해요.');
-      const index=stores.length, x=-48+(index%8)*14, z=48+Math.floor(index/8)*14;
+      const index=stores.length, x=-17.5+(index%6)*7, z=15+Math.floor(index/6)*7;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
-      const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,price:20,stock:10,color,x,z};
+      const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
+      const st={id:'store-'+socket.id,ownerId:socket.id,owner:p.name,name:storeName,sign,food,productName:safeName(a.productName||foods[food].name),pixelArt:pixels,price:20,stock:10,color,x,z};
       p.money-=250;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+foods[food].name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -91,6 +94,22 @@ io.on('connection', socket => {
     }
     if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
     const n=bounded(a.amount,1,10),item=String(a.item||'');
+
+    if(a.type==='cook'){
+      const st=stores.find(v=>v.ownerId===socket.id);
+      if(!st||p.storeId!==st.id)return msg(socket,'먼저 내 가게를 만들어 주세요.');
+      const score=bounded(a.score,0,100);
+      if(p.money<15)return msg(socket,'요리 재료비 15원이 필요해요.');
+      p.money-=15;
+      if(score<35){msg(socket,'🍳 요리가 아쉬워요! 점수 '+score+'점 · 재료비 15원');}
+      else {const made=Math.max(1,Math.floor(score/20));st.stock+=made;msg(socket,'✨ '+st.productName+' 요리 성공! '+score+'점 · '+made+'개 완성 · 가게 재고 '+st.stock+'개');}
+      broadcast();return;
+    }
+    if(a.type==='setStorePrice'){
+      const st=stores.find(v=>v.ownerId===socket.id);
+      if(!st)return msg(socket,'내 가게를 먼저 만들어 주세요.');
+      st.price=bounded(a.amount,5,1000);msg(socket,'🏷️ 판매 가격을 '+st.price+'원으로 바꿨어요.');broadcast();return;
+    }
     if(a.type==='storeBuy'){
       const st=stores.find(v=>v.id===String(a.storeId));
       if(!st||p.insideStore!==st.id)return msg(socket,'가게 안에 들어가야 구매할 수 있어요.');
@@ -127,6 +146,13 @@ io.on('connection', socket => {
   socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',snapshot()); });
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
+
+    if(c.type==='shops')shopsEnabled=!!c.value;
+    if(c.type==='clearStores'){stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
+    if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1,5000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
+    if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=io.sockets.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
+    if(c.type==='shopPrice'){const price=bounded(c.value,5,1000);stores.forEach(st=>st.price=price);}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=500;p.bank=0;p.taxPaid=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;});stores.splice(0,stores.length);companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
@@ -142,7 +168,7 @@ io.on('connection', socket => {
     }
     if(c.type==='price'){const item=String(c.item||'');const v=bounded(c.value,1,500);if(market[item])market[item]=v;}
     broadcast();
-    socket.emit('teacherCommandResult',{ok:true,gameStatus,news});
+    socket.emit('teacherCommandResult',{ok:true,gameStatus,news,shopsEnabled});
   });
   socket.on('disconnect',()=>{players.delete(socket.id);broadcast();});
 });
