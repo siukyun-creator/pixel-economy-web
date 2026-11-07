@@ -112,13 +112,13 @@ io.on('connection', socket => {
 });
 setInterval(() => {
   for (const [ticker, stock] of Object.entries(stocks)) {
-    stock.price = Math.max(5, stock.price + Math.floor(Math.random() * 11) - 5);
+    stock.price = Math.max(5, stock.price + Math.floor(Math.random() * 5) - 2);
     stockHistory[ticker] ||= [];
     stockHistory[ticker].push(stock.price);
-    if (stockHistory[ticker].length > 30) stockHistory[ticker].shift();
+    if (stockHistory[ticker].length > 60) stockHistory[ticker].shift();
     const company = companies.find(c => c.ticker === ticker);
     if (company) company.price = stock.price;
   }
   broadcast();
-}, 30000);
+}, 10000);
 server.listen(PORT,'0.0.0.0',()=>console.log('Pixel Economy 3D listening on '+PORT));
