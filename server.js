@@ -147,16 +147,8 @@ io.on('connection', socket => {
        socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:wholesaleShop.name,buyer:p.name,lines,total,payment:'현금',balance:p.money});
        msg(socket,'🧾 결제 완료! '+total.toLocaleString('ko-KR')+'원 · 영수증을 발급했어요.');broadcast();return;
      }
-     if(a.type==='wholesaleBuy'){
-       if(!p.insideWholesale||Math.hypot(p.x-35,p.z-22)>11)return msg(socket,'도매상 건물 안에서만 재료를 살 수 있어요.');
-       const st=stores.find(v=>v.ownerId===socket.id);if(!st)return msg(socket,'먼저 내 가게를 만들어 주세요.');
-       const productId=String(a.productId||''),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'내 가게 업종에 맞는 재료를 골라 주세요.');
-       const qty=Number(a.amount);if(!Number.isInteger(qty)||qty<1||qty>20)return msg(socket,'재료 수량은 1~20개로 입력해 주세요.');
-       const cost=qty*(wholesaleShop?.inventory?.[productId]?.price||1000);if(p.money<cost)return msg(socket,'재료비가 부족해요. '+qty+'개는 '+cost.toLocaleString('ko-KR')+'원이에요.');
-       st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20,ingredients:0}};st.products[productId]=st.products[productId]||{stock:0,price:20,ingredients:0};st.products[productId].ingredients=(Number(st.products[productId].ingredients)||0)+qty;p.money-=cost;
-       msg(socket,'📦 '+product.name+' 재료 '+qty+'개 구매! -'+cost+'원 · 남은 재료 '+st.products[productId].ingredients+'개');socket.emit('wholesalePurchaseResult',{store:st});broadcast();return;
-     }
-     if(a.type==='cook'){
+     if(a.type==='wholesaleBuy')return msg(socket,'새 장바구니 결제 기능을 이용해 주세요.');
+      if(a.type==='cook'){
       const st=stores.find(v=>v.ownerId===socket.id);if(!st||p.storeId!==st.id)return msg(socket,'먼저 내 가게를 만들어 주세요.');
       const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'이 가게에서 만들 수 없는 메뉴예요.');
       const score=bounded(a.score,0,100);
