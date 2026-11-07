@@ -88,8 +88,15 @@ io.on('connection', socket => {
       const index=stores.length, x=-48+(index%7)*6, z=-12+Math.floor(index/7)*6;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
+      const wallPalette=['#f4e3c1','#d8e8f5','#f3d6df','#d9ebd1','#d9d1ef','#e6dcae'];
+      const signPalette=['#fff4d6','#263b59','#f7d66b','#f7a8bd','#b7e7ff','#202020'];
+      const wallColor=wallPalette.includes(String(a.wallColor))?String(a.wallColor):'#f4e3c1';
+      const signColor=signPalette.includes(String(a.signColor))?String(a.signColor):'#fff4d6';
+      const signStyle=['classic','wood','neon'].includes(String(a.signStyle))?String(a.signStyle):'classic';
+      const awningStyle=['stripe','solid','scallop'].includes(String(a.awningStyle))?String(a.awningStyle):'stripe';
+      const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,color,x,z};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,color,wallColor,signColor,signStyle,awningStyle,decor,x,z};
       p.money-=storeFee;p.storeId=st.id;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
