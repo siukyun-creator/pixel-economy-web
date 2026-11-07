@@ -30,7 +30,7 @@ let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
   const cells=[];
-  for(let x=-40;x<=-8;x+=4) for(let z=-24;z<=-8;z+=4) cells.push({x,z});
+  for(let x=-20;x<=20;x+=4) for(let z=-6;z<=6;z+=3) cells.push({x,z});
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
@@ -97,7 +97,7 @@ io.on('connection', socket => {
     p.insideStore=st.id;p.x=st.x;p.z=st.z;socket.emit('storeEntered',{...st});broadcast();
   });
   socket.on('exitStore',()=>{const p=players.get(socket.id);if(!p)return;p.insideStore=null;socket.emit('storeExited');broadcast()});
-  socket.on('enterWholesale',()=>{const p=players.get(socket.id);if(!p)return;if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 이용할 수 있어요.');if(Math.hypot(p.x-35,p.z-22)>11)return msg(socket,'도매상 입구까지 걸어와 주세요.');p.insideWholesale=true;p.insideStore=null;p.x=35;p.z=22;socket.emit('wholesaleEntered');broadcast()});
+  socket.on('enterWholesale',()=>{const p=players.get(socket.id);if(!p)return;if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 이용할 수 있어요.');if(Math.hypot(p.x+22,p.z-17)>11)return msg(socket,'도매상 입구까지 걸어와 주세요.');p.insideWholesale=true;p.insideStore=null;p.x=-22;p.z=17;socket.emit('wholesaleEntered');broadcast()});
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
@@ -109,7 +109,7 @@ io.on('connection', socket => {
       if(wholesaleShop&&wholesaleShop.ownerId===socket.id)return msg(socket,'이미 도매상을 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
       if(p.money<storeFee)return msg(socket,'가게 개설에는 '+storeFee+'원이 필요해요.');
-      const index=stores.length, x=-48+(index%7)*6, z=-12+Math.floor(index/7)*6;
+      const index=stores.length, slot=index<15?{x:-16-7.5*index,z:-15,face:1}:index<30?{x:-33-7.5*(index-15),z:15,face:-1}:{x:-16-7.5*((index-30)%15),z:-25,face:1}, x=slot.x, z=slot.z, face=slot.face;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const wallPalette=['#f4e3c1','#d8e8f5','#f3d6df','#d9ebd1','#d9d1ef','#e6dcae'];
@@ -120,7 +120,7 @@ io.on('connection', socket => {
       const awningStyle=['stripe','solid','scallop'].includes(String(a.awningStyle))?String(a.awningStyle):'stripe';
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},color,wallColor,signColor,signStyle,awningStyle,decor,x,z};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -133,7 +133,7 @@ io.on('connection', socket => {
        const name=String(a.name||'').trim().slice(0,16);if(!name)return msg(socket,'도매상 이름을 입력해 주세요.');
        const fee=80000;if(p.money<fee)return msg(socket,'도매상 창업에는 80,000원이 필요해요.');
        const inventory={};Object.keys(foodProducts).forEach(id=>{const cost=ingredientCosts[id]||1000;inventory[id]={stock:0,cost,price:Math.ceil(cost*1.3/100)*100};});
-       p.money-=fee;wholesaleShop={id:'wholesale-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name,inventory,x:35,z:22};
+       p.money-=fee;wholesaleShop={id:'wholesale-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name,inventory,x:-22,z:17};
        socket.emit('wholesaleBusinessCreated',{ok:true,shop:wholesaleShop});msg(socket,'📦 '+name+' 창업 완료! 창업비 80,000원 · 잔액 '+p.money.toLocaleString('ko-KR')+'원');broadcast();return;
      }
      if(gameStatus!=='running')return msg(socket,gameStatus==='paused'?'⏸ 수업이 잠시 멈췄어요.':'⏳ 선생님이 수업을 시작할 때까지 기다려 주세요.');
@@ -154,7 +154,7 @@ io.on('connection', socket => {
        item.price=price;msg(socket,'🏷️ 도매 판매 가격을 '+price.toLocaleString('ko-KR')+'원으로 바꿨어요.');socket.emit('wholesaleAdminResult');broadcast();return;
      }
      if(a.type==='wholesaleCheckout'){
-       if(!p.insideWholesale||Math.hypot(p.x-35,p.z-22)>11)return msg(socket,'도매상 안에서 결제해 주세요.');
+       if(!p.insideWholesale||Math.hypot(p.x+22,p.z-17)>11)return msg(socket,'도매상 안에서 결제해 주세요.');
        if(!wholesaleShop)return msg(socket,'아직 운영 중인 도매상이 없어요.');
        if(wholesaleShop.ownerId===socket.id)return msg(socket,'내 도매상에서는 직접 구매할 수 없어요.');
        const st=stores.find(v=>v.ownerId===socket.id);if(!st)return msg(socket,'재료를 구매하려면 먼저 식품 가게를 만들어 주세요.');
@@ -234,7 +234,7 @@ io.on('connection', socket => {
     if(c.type==='end')gameStatus='ended';
     if(c.type==='reset')gameStatus='waiting';
     if(c.type==='randomize'){
-      const cells=[];for(let x=-20;x<=20;x+=4)for(let z=-20;z<=20;z+=4)cells.push({x,z});
+      const cells=[];for(let x=-24;x<=24;x+=4)for(let z=-6;z<=6;z+=3)cells.push({x,z});
       for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
       [...players.values()].forEach((p,i)=>{p.x=cells[i%cells.length].x;p.z=cells[i%cells.length].z;p.jump=false;});
     }
