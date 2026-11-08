@@ -448,9 +448,29 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
  #menuPanel.menu-fullscreen:not(.cook-fullscreen){inset:8px auto auto 50%!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px)!important;padding:12px!important;border-radius:18px!important}
  #menuPanel.menu-fullscreen:not(.cook-fullscreen) #menuContent{padding:0 2px 18px!important}
 }
+#stockHoldings{margin-top:16px;padding:16px 18px;border:1px solid #e8dfc7;border-radius:18px;background:linear-gradient(145deg,#fffefa,#fff9e8)}
+.stockHoldingsHeading,.stockHoldingRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stockHoldingsHeading h3{margin:3px 0 0;color:#3b403b}
+.stockHoldingsTotal{color:#987000;font-size:18px}
+.stockHoldingsList{display:grid;gap:8px;margin-top:12px}
+.stockHoldingRow{padding:10px 12px;border:1px solid #eee6d4;border-radius:12px;background:#fff}
+.stockHoldingRow span{display:grid;gap:3px}.stockHoldingRow small{color:#858071}
+.stockHoldingRow strong{white-space:nowrap;color:#987000}
+.communityReport{padding:clamp(18px,3vw,30px)!important;background:linear-gradient(145deg,#fffef9,#fff9e9)!important;border:1px solid #e9debd!important;border-radius:22px!important}
+.communityReport h3{font-size:clamp(21px,2.4vw,27px);margin:8px 0;color:#383c37}
+.communityReport>p{line-height:1.8}
+.communityConcepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:16px 0}
+.communityConcept{padding:16px;border:1px solid #e9e1d0;border-radius:16px;background:#fff}
+.communityConcept p{line-height:1.7;color:#68675f}
+.donationLedger{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0}
+.donationLedger>div{display:grid;gap:5px;padding:12px;border-radius:13px;background:#fff5d5}
+.donationCause{display:grid;gap:6px;margin:15px 0}
+.donationCause select{width:100%;padding:12px}
+.donationCauseNote{padding:12px 14px;border-left:3px solid #e4bd37;border-radius:8px;background:#fff9e6;line-height:1.7}
+@media(max-width:600px){.stockHoldingRow{align-items:flex-start}.communityReport{padding:16px!important}}
 </style></head><body>
 <header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('leaderboard')">🏆 순위표</button><button onclick="openMenu('inventory')">🎒 가방</button><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도 숨기기</button><button class="refreshBtn" onclick="fullScreenGame()">⛶ 전체 화면</button><button class="refreshBtn" onclick="syncGame()">↻ 새로고침</button><span id="connection">서버 연결 중</span></header>
-<section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 PIN (2468)"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 PIN 2468을 입력하면 새 교실과 새 4자리 코드가 만들어져요. 기존 교실 관리 기능은 제거했어요.</p></section>
+<section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 인증 코드"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 인증 코드를 입력하면 새 교실과 4자리 접속 코드가 만들어져요.</p></section>
 <section id="gameArea"><div id="hud"><div class="hudMoney"><span>내 보유 현금</span><b id="cash">500원</b></div><div class="hudStats"><span>🏦 <b id="bank">0원</b></span><span>💼 <b id="job">무직</b></span><span>👥 <b id="count">0/30</b></span></div></div><div id="game"></div><div id="mapPanel"><div class="mapHead"><b>🗺️ 실시간 마을 지도</b><button onclick="toggleMapSize()">크게 보기 ⛶</button></div><canvas id="townMap" width="420" height="420" onclick="toggleMapSize()" title="눌러서 크게/작게 보기"></canvas><p class="mapLegend"><span><i class="lgMe"></i>나</span><span><i class="lgFriend"></i>친구</span><span><i class="lgStore"></i>가게</span><span class="lgTip">지도를 누르면 크게 보여요</span></p></div><div id="cameraHint">🖱️ 화면을 드래그해 시점 회전</div><div id="moveHint">WASD / 방향키 이동 · 스페이스 점프</div><button id="storePrompt" onclick="enterNearbyStore()">🚪 가게 들어가기</button><button id="wholesalePrompt" onclick="enterNearbyWholesale()">📦 도매상 들어가기</button><div id="lobbyOverlay"><h2 id="lobbyTitle">⏳ 수업 시작 대기 중</h2><p id="lobbyMessage">선생님이 시작 버튼을 누르면 마을 경제가 시작돼요.</p></div>
 <div id="touchPad"><span class="empty"></span><button data-dir="forward">▲</button><span class="empty"></span><button data-dir="left">◀</button><button data-dir="back">▼</button><button data-dir="right">▶</button></div><button id="jump" onpointerdown="jumpStart()" onpointerup="jumpEnd()" onpointerleave="jumpEnd()">점프</button>
 <div id="menuPanel" class="panel"><div class="row" style="justify-content:space-between"><h3 id="menuTitle">메뉴</h3><button onclick="closeMenu()">닫기 ✕</button></div><div id="menuContent"></div></div>
@@ -497,7 +517,7 @@ const ECONOMY_LESSONS=[
 {title:'6. 기업과 일자리',desc:'기업은 사람을 고용해 물건과 서비스를 만들고, 소비자는 상품을 선택해요.',question:'동네 카페가 직원을 고용하고 커피를 판매하면 생기는 효과는?',choices:['일자리와 서비스가 생긴다','모든 물건이 공짜가 된다','세금이 없어져요'],answer:0,why:'기업 활동은 생산, 일자리, 소득과 연결돼요.'}
 ];
 let economyQuizIndex=0,economyQuizDone={};
-const FOOD_VOXEL_COLORS={b:0xd99a52,c:0x8b542f,w:0xffedc7,r:0xe95762,y:0xf5c84c,g:0x65a85a,p:0xf18ab2,o:0xf28b32,k:0x65402e,i:0x9bd5e4,a:0x523429,e:0xc9f3ff,h:0xd8f6fb,s:0x39271f};
+const FOOD_VOXEL_COLORS={b:0xe7a94f,c:0x9b5234,w:0xfff0cc,r:0xef6876,y:0xffce4c,g:0x69aa5d,p:0xf48cae,o:0xf28a45,k:0x754633,i:0xa7e3ef,a:0x533527,e:0xd7f8ff,h:0xfff3d9,s:0x3e2d29};
 let cookFrame=0,cookTarget=50,cookRunning=false,cookRaf=0;let myId=null,teacherPin='',teacher=false,players=[],scene,renderer,camera,world,me,remote=new Map(),keys={},jumping=false,vy=0,lastSend=0,lastX=0,lastZ=0,lastJump=false,menu='inventory',latestState=null,lastChartDraw=0,selectedStore=null,nearbyStore=null,nearbyWholesale=false;let wholesaleCart=[];const storeVisuals=new Map(),businessVisuals=new Map();let activeBuildGroup=null;let camYaw=0,camPitch=.42,camDistance=9,dragPointer=null,dragX=0,dragY=0,moveVX=0,moveVZ=0,lastFrame=0;let moveSpeed=7.2,cameraSensitivity=0.006,gameBrightness=1.08;
 const $=id=>document.getElementById(id);
 function connectClassroom(namespace,onConnected){
@@ -528,7 +548,7 @@ function join(){
 }
 function createClassroom(){
  const pin=$('pin').value.trim(),button=document.querySelector('button[onclick="createClassroom()"]');
- if(pin!=='2468'){$('loginNotice').textContent='교사 PIN이 틀렸어요. 기본 PIN은 2468이에요.';return}
+ if(!/^\d{4}$/.test(pin)){$('loginNotice').textContent='교사 인증 코드를 입력해 주세요.';return}
  if(button){button.disabled=true;button.textContent='교실 만드는 중...'}
  $('loginNotice').textContent='새 교실 서버를 만드는 중...';
  managerSocket.timeout(10000).emit('createClassroom',{pin},(err,result)=>{
@@ -590,7 +610,17 @@ for(let i=-4;i<=4;i++){makeBlock(.3,.04,1.2,0x477f47,i*5,.02,6);makeBlock(1.2,.0
 for(let i=0;i<42;i++){const x=(Math.random()-.5)*180,z=(Math.random()-.5)*180;if((Math.abs(x)<25&&Math.abs(z)<25)||Math.abs(z)<30)continue;makeBlock(.65,2.3,.65,0x805333,x,1.15,z);const crown=new THREE.Mesh(new THREE.BoxGeometry(2.7,2.5,2.7),new THREE.MeshStandardMaterial({color:i%3===0?0x4b9b55:0x39854a,roughness:1}));crown.position.set(x,3.3,z);crown.castShadow=true;crown.receiveShadow=true;world.add(crown);const crown2=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.8,1.9),new THREE.MeshStandardMaterial({color:0x5aa95d,roughness:1}));crown2.position.set(x,4.35,z);crown2.castShadow=true;world.add(crown2)}
 if(!teacher&&myId){me=makePlayer(myId,$('name').value||'나',0xf0c64b);scene.add(me);me.position.set(0,0,0)}else{me=null;camera.position.set(0,34,42);camera.lookAt(0,0,0)}
 window.addEventListener('resize',resize3D);requestAnimationFrame(loop)}
+let centerBenchesRemoved=false;
+function removeCenterBenches(){
+ if(!world||centerBenchesRemoved)return;
+ world.children.filter(object=>{
+  const color=object.material?.color?.getHex(),x=Math.round(object.position.x),z=Math.abs(object.position.z);
+  return color===0x8a5a35&&Math.abs(x)===7&&Math.abs(z-5)<.3;
+ }).forEach(object=>world.remove(object));
+ centerBenchesRemoved=true;
+}
 function syncStoreBuildings(stores){
+ removeCenterBenches();
  const active=new Set(stores.map(st=>st.id));
  for(const [id,group] of storeVisuals){if(!active.has(id)){world.remove(group);storeVisuals.delete(id)}}
  for(const st of stores){
@@ -599,10 +629,10 @@ function syncStoreBuildings(stores){
   const x=0,z=0;group.position.set(st.x,0,st.z);if(st.face===-1)group.rotation.y=Math.PI;
   const colorOf=(v,fallback)=>Number.parseInt(String(v||fallback).replace('#','0x'))||0xf4e3c1;
   const wall=colorOf(st.wallColor,'#f4e3c1'),accent=colorOf(st.color,'#e5a84b');
-  const trim=0x76543b,glass=0x9bdcf3;
+  const trim=0x52667b,glass=0xa9e6f4;
   // 바닥과 테두리
-  makeBlock(6.4,.32,6.2,0x80694f,x,.16,z);
-  makeBlock(6.05,.12,5.85,0xe9d8b9,x,.36,z);
+  makeBlock(6.4,.32,6.2,0xc9c7bc,x,.16,z);
+  makeBlock(6.05,.12,5.85,0xf5edda,x,.36,z);
   // 뒷벽과 양쪽 벽
   makeBlock(5.8,3.65,.28,wall,x,2.15,z-2.85);
   makeBlock(.28,3.65,5.7,wall,x-2.9,2.15,z);
@@ -611,7 +641,8 @@ function syncStoreBuildings(stores){
   makeBlock(.34,3.7,.38,wall,x-2.72,2.15,z+2.75);
   makeBlock(.34,3.7,.38,wall,x+2.72,2.15,z+2.75);
   makeBlock(6.45,.42,6.35,accent,x,4.12,z);
-  makeBlock(6.6,.18,6.5,0xf1dfbd,x,4.39,z);
+  makeBlock(6.6,.18,6.5,0xfaf5e9,x,4.39,z);
+  makeBlock(6.25,.13,6.05,0xffffff,x,4.52,z);
   makeBlock(6.5,.2,.24,trim,x,3.83,z+3.08);
   // 앞쪽 유리창과 문
   makeBlock(1.25,1.45,.12,glass,x-1.55,2.2,z+2.94);
@@ -620,7 +651,7 @@ function syncStoreBuildings(stores){
   makeBlock(.08,1.6,.16,trim,x-.9,2.2,z+3.02);
   makeBlock(.08,1.6,.16,trim,x+.9,2.2,z+3.02);
   makeBlock(.08,1.6,.16,trim,x+2.2,2.2,z+3.02);
-  makeBlock(1.1,2.35,.18,0x8b5b3d,x,1.55,z+2.98);
+  makeBlock(1.1,2.35,.18,0x6a8291,x,1.55,z+2.98);
   makeBlock(.12,.12,.1,0xffd36b,x+.35,1.6,z+3.1);
   // 차양
   makeBlock(5.9,.32,.72,accent,x,3.45,z+3.15);
@@ -638,9 +669,14 @@ function syncStoreBuildings(stores){
   ctx.font='bold 66px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(st.sign||st.name).slice(0,14),320,82);
   const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv)}));sign.position.set(x,5.05,z+3.28);sign.scale.set(5.4,1.35,1);group.add(sign);
   // 카운터와 큼직한 3D 대표 음식
-  makeBlock(3.6,.78,.8,0x98603b,x,.85,z+1.95);
-  makeBlock(3.8,.12,.9,0xf0cf91,x,1.3,z+1.95);
+  makeBlock(3.6,.78,.8,0x91a8a9,x,.85,z+1.95);
+  makeBlock(3.8,.12,.9,0xfff8e7,x,1.3,z+1.95);
+  makeBlock(3.9,.08,.98,0xe4b946,x,1.38,z+1.95);
   addVoxelFood(group,st.productId||'milk_bread',x,1.48,z+1.65,.78);
+  makeBlock(.09,1.45,.1,0xf5d779,x-2.36,2.15,z+3.04);
+  makeBlock(.09,1.45,.1,0xf5d779,x+2.36,2.15,z+3.04);
+  makeBlock(1.5,.12,.12,0xf5d779,x,2.94,z+3.04);
+  const shopLight=new THREE.PointLight(0xffedba,.45,10);shopLight.position.set(x,3,z+1.7);group.add(shopLight);
   // 선택한 외부 장식
   if(st.decor==='plant'||st.decor==='flower'){
    for(const side of [-1,1]){
@@ -764,9 +800,11 @@ live.filter(p=>p.id!==myId).forEach(p=>{const X=sx(clx(p.x)),Y=sy(cl(p.z));x.beg
 const me=live.find(p=>p.id===myId);if(me){const X=sx(clx(me.x)),Y=sy(cl(me.z)),mr=(big?8:small?5.5:6.5)*u;x.beginPath();x.arc(X,Y,mr*2,0,Math.PI*2);x.fillStyle='rgba(245,184,0,.28)';x.fill();x.beginPath();x.arc(X,Y,mr,0,Math.PI*2);x.fillStyle='#f5b800';x.fill();x.strokeStyle='#5a4300';x.lineWidth=2*u;x.stroke();pill('나',X,Y-mr*2-(big?9:6)*u,big?12:small?8:9,'#5a4300','#fff')}
 rr(u,u,w-2*u,h-2*u,10*u);x.strokeStyle='#8fae86';x.lineWidth=2*u;x.stroke()}
 window.addEventListener('resize',()=>{if(typeof drawTownMap==='function')drawTownMap()});
-function drawStockChart(){const canvas=$('stockChart');if(!canvas||!latestState)return;const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const histories=latestState.stockHistory||{},entries=Object.entries(histories).filter(([,v])=>v&&v.length);if(!entries.length)return;const all=entries.flatMap(([,v])=>v),min=Math.max(0,Math.min(...all)-8),max=Math.max(...all)+8,range=Math.max(12,max-min),left=48,right=w-16,top=30,bottom=h-28;ctx.font='13px sans-serif';ctx.textAlign='right';ctx.fillStyle='#9eb4ca';for(let i=0;i<=4;i++){const y=top+(bottom-top)*i/4,val=Math.round(max-(max-min)*i/4);ctx.strokeStyle='#344b64';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillText(val+'원',left-7,y+4)}const colors=['#62c7ff','#ffbd69','#9be28b','#d6a0ff','#ff8c9d'];entries.forEach(([ticker,values],idx)=>{const color=colors[idx%colors.length],pts=values.map((v,i)=>({x:left+(right-left)*i/Math.max(1,values.length-1),y:bottom-(v-min)/range*(bottom-top)}));if(!pts.length)return;ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else{const prev=pts[i-1],mx=(prev.x+p.x)/2;ctx.quadraticCurveTo(prev.x,prev.y,mx,(prev.y+p.y)/2);if(i===pts.length-1)ctx.lineTo(p.x,p.y)}});ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=7;ctx.stroke();ctx.shadowBlur=0;const fill=ctx.createLinearGradient(0,top,0,bottom);fill.addColorStop(0,color+'55');fill.addColorStop(1,color+'00');ctx.lineTo(pts[pts.length-1].x,bottom);ctx.lineTo(pts[0].x,bottom);ctx.closePath();ctx.fillStyle=fill;ctx.fill();const point=pts[pts.length-1];ctx.beginPath();ctx.arc(point.x,point.y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();const stock=latestState.stocks[ticker];ctx.fillStyle=color;ctx.textAlign='left';ctx.font='bold 14px sans-serif';ctx.fillText(ticker+' '+(stock?.price??values[values.length-1])+'원',left+idx*150,17)})}
+function drawStockChart(){const canvas=$('stockChart');if(!canvas||!latestState)return;if(!document.getElementById('stockHoldings'))updateStockCards(latestState);const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const histories=latestState.stockHistory||{},entries=Object.entries(histories).filter(([,v])=>v&&v.length);if(!entries.length)return;const all=entries.flatMap(([,v])=>v),min=Math.max(0,Math.min(...all)-8),max=Math.max(...all)+8,range=Math.max(12,max-min),left=48,right=w-16,top=30,bottom=h-28;ctx.font='13px sans-serif';ctx.textAlign='right';ctx.fillStyle='#9eb4ca';for(let i=0;i<=4;i++){const y=top+(bottom-top)*i/4,val=Math.round(max-(max-min)*i/4);ctx.strokeStyle='#344b64';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillText(val+'원',left-7,y+4)}const colors=['#62c7ff','#ffbd69','#9be28b','#d6a0ff','#ff8c9d'];entries.forEach(([ticker,values],idx)=>{const color=colors[idx%colors.length],pts=values.map((v,i)=>({x:left+(right-left)*i/Math.max(1,values.length-1),y:bottom-(v-min)/range*(bottom-top)}));if(!pts.length)return;ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else{const prev=pts[i-1],mx=(prev.x+p.x)/2;ctx.quadraticCurveTo(prev.x,prev.y,mx,(prev.y+p.y)/2);if(i===pts.length-1)ctx.lineTo(p.x,p.y)}});ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=7;ctx.stroke();ctx.shadowBlur=0;const fill=ctx.createLinearGradient(0,top,0,bottom);fill.addColorStop(0,color+'55');fill.addColorStop(1,color+'00');ctx.lineTo(pts[pts.length-1].x,bottom);ctx.lineTo(pts[0].x,bottom);ctx.closePath();ctx.fillStyle=fill;ctx.fill();const point=pts[pts.length-1];ctx.beginPath();ctx.arc(point.x,point.y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();const stock=latestState.stocks[ticker];ctx.fillStyle=color;ctx.textAlign='left';ctx.font='bold 14px sans-serif';ctx.fillText(ticker+' '+(stock?.price??values[values.length-1])+'원',left+idx*150,17)})}
 function updateStockCards(state){
  if(!state?.stocks)return;
+ const stockIntro=document.querySelector('#menuContent > p');
+ if(stockIntro?.textContent.includes('10초'))stockIntro.textContent='실시간 주가 · 약 3초마다 변동';
  document.querySelectorAll('#menuContent .stockCard').forEach(card=>{
   const ticker=card.querySelector('.ticker')?.textContent.trim(),stock=state.stocks[ticker];
   if(!ticker||!stock)return;
@@ -778,19 +816,35 @@ function updateStockCards(state){
   change.classList.toggle('up',delta>0);change.classList.toggle('down',delta<0);
   change.textContent=delta>0?'▲ +'+delta.toLocaleString('ko-KR')+'원':delta<0?'▼ '+delta.toLocaleString('ko-KR')+'원':'변동 대기 중';
  });
+ let holdings=document.getElementById('stockHoldings');
+ if(!holdings){
+  const anchor=document.querySelector('#menuContent .stockGrid')||document.querySelector('#menuContent .stockCard:last-child');
+  if(anchor){anchor.insertAdjacentHTML('afterend','<section id="stockHoldings" class="stockHoldings"><div class="stockHoldingsHeading"><div><span class="lessonKicker">내 투자 현황</span><h3>보유 주식</h3></div><strong class="stockHoldingsTotal">0원</strong></div><div class="stockHoldingsList"></div></section>');holdings=document.getElementById('stockHoldings')}
+ }
+ const list=holdings?.querySelector('.stockHoldingsList'),player=state.players?.find(value=>value.id===myId);
+ if(list&&player){
+  const rows=Object.entries(player.shares||{}).filter(([,quantity])=>quantity>0);
+  list.innerHTML=rows.length?rows.map(([ticker,quantity])=>{const stock=state.stocks[ticker],value=(stock?.price||0)*quantity;return '<div class="stockHoldingRow" data-ticker="'+esc(ticker)+'"><span><b>'+esc(stock?.name||ticker)+'</b><small>'+esc(ticker)+' · '+quantity+'주</small></span><strong>'+value.toLocaleString('ko-KR')+'원</strong></div>'}).join(''):'<p class="small">아직 보유한 주식이 없어요. 위 종목에서 매수하면 이곳에 표시돼요.</p>';
+  const total=rows.reduce((sum,[ticker,quantity])=>sum+(state.stocks[ticker]?.price||0)*quantity,0);
+  holdings.querySelector('.stockHoldingsTotal').textContent=total.toLocaleString('ko-KR')+'원';
+ }
 }
 function updateMenuData(p,s){if(menu==='stocks'&&$('menuPanel').style.display==='block'){drawStockChart();updateStockCards(s)}if(menu==='myStore'&&$('menuPanel').style.display==='block')drawMyStoreSalesChart();if(menu==='inventory'&&$('menuPanel').style.display==='block'){$('menuContent').innerHTML='<p>사과 '+p.inventory.apple+'개 · 빵 '+p.inventory.bread+'개 · 장난감 '+p.inventory.toy+'개</p><p>하늘항공 '+p.shares.SKY+'주 · 픽셀상사 '+p.shares.PIX+'주</p>'}}
 function drawMyStoreMenu(){
  const st=latestState?.stores?.find(v=>v.ownerId===myId),p=players.find(v=>v.id===myId),sales=(st?.salesHistory||[]).reduce((sum,row)=>sum+row.amount,0);
- const storeCard=st?'<section class="cookCard"><h2>🏪 '+esc(st.name)+'</h2><p>총 판매액 <b>'+sales.toLocaleString('ko-KR')+'원</b> · 누적 판매 '+(st.salesHistory||[]).length+'건</p><canvas id="myStoreSalesChart" width="720" height="250" style="width:100%;max-height:250px"></canvas><p>최근 판매 기록을 확인해요.</p><button onclick="openMenu(&quot;kitchen&quot;)">🍳 주방 열기</button></section>':'<section class="cookCard"><h2>🏪 내 가게 관리</h2><p>아직 운영 중인 가게가 없어요. 창업을 시작하려면 사업 시작 메뉴를 이용해 주세요.</p><button onclick="openMenu(&quot;businessHub&quot;)">🏗️ 사업 시작</button></section>';
- return storeCard+'<section class="communityReport"><span class="lessonKicker">6학년 사회 · 경제생활과 공동체</span><h3>💛 사회공헌과 나눔</h3><p>사회공헌은 우리 주변의 문제를 살피고, 개인·기업·공동체가 책임 있게 참여하는 활동이에요. 기부는 자발적으로 나누는 것이고 세금은 법과 제도에 따라 공공서비스에 쓰이는 돈이라는 점이 달라요.</p><div class="communityConcepts"><div class="communityConcept"><b>자발적 기부</b><p>내가 낼 금액을 정해 이웃을 돕는 선택이에요. 게임에서는 기부액의 10%가 세금 감면권으로 기록돼요.</p></div><div class="communityConcept"><b>세금과 공공서비스</b><p>세금은 학교·도로·공원처럼 모두에게 필요한 일을 위해 모아요. 기부금이 세금이나 특정 공공사업으로 자동 배정되는 것은 아니에요.</p></div></div><div class="donationLedger"><div><span>누적 기부</span><strong>'+(p?.socialDonated||0).toLocaleString('ko-KR')+'원</strong></div><div><span>남은 게임 내 세금 감면권</span><strong>'+(p?.taxRelief||0).toLocaleString('ko-KR')+'원</strong></div></div><label for="donationAmount">기부할 금액 (1,000~100,000원)</label><input id="donationAmount" type="number" min="1000" max="100000" step="1000" value="10000"><p class="donationEstimate">예: 10,000원을 기부하면 게임 규칙에 따라 1,000원의 세금 감면권이 생겨요. 실제 세금이 생길 때 적용되며, 기부금이 공공예산으로 전달되는 기능은 아니에요.</p><button onclick="donateToTown()">💛 자발적으로 기부하기</button><p class="communityQuestion">생각해 보기: 우리 마을에 모두에게 필요한 시설이 있다면, 세금과 자발적 기부는 각각 어떤 역할을 할까요?</p></section>';
+ const storeCard=st?'<section class="cookCard"><h2>🏪 '+esc(st.name)+'</h2><p>총 판매액 <b>'+sales.toLocaleString('ko-KR')+'원</b> · 누적 판매 '+(st.salesHistory||[]).length+'건</p><canvas id="myStoreSalesChart" width="720" height="250" style="width:100%;max-height:250px"></canvas><p>최근 판매 기록을 확인해요.</p><button onclick="openMenu(&quot;kitchen&quot;)">🍳 주방 열기</button></section>':'<section class="cookCard"><h2>🏪 내 가게 관리</h2><p>아직 가게를 운영하지 않아요. 사업을 시작하려면 사업 시작 메뉴를 이용해 주세요.</p><button onclick="openMenu(&quot;businessHub&quot;)">🏗️ 사업 시작</button></section>';
+ const donations=p?.donations||{};
+ const causeCards=[['disability','장애인 지원','이동·정보 접근성을 높이는 환경을 마련하고, 장애인이 지역사회 활동에 참여할 기회를 넓히는 데 관심을 가져요.'],['seniors','어르신 지원','어르신의 건강과 안전, 세대 간 교류를 돕는 활동을 살펴보고 필요한 도움을 함께 생각해요.'],['inclusiveEmployment','장애인 고용 지원','장애인이 능력에 맞는 일을 선택하고 정당한 보수와 편의 지원을 받으며 일할 수 있는 포용적인 일터를 응원해요.']];
+return storeCard+'<section class="communityReport"><span class="lessonKicker">초등 사회 · 경제생활과 공동체</span><h3>💛 사회공헌과 나눔</h3><p>사회공헌은 개인과 기업이 공동체의 문제를 살피고 책임 있게 참여하는 활동이에요. 기부는 자발적으로 나누는 것이며, 세금은 법에 따라 모아 공공서비스에 사용하는 돈이에요. 두 활동은 목적과 운영 방식이 서로 달라요.</p><div class="communityConcepts">'+causeCards.map(([key,title,description])=>'<article class="communityConcept"><b>'+title+'</b><p>'+description+'</p><small>누적 '+(donations[key]||0).toLocaleString('ko-KR')+'원</small></article>').join('')+'<article class="communityConcept"><b>세금과 공공서비스</b><p>세금은 학교·도로·공원처럼 많은 사람이 함께 이용하는 공공서비스에 쓰여요. 이 게임의 기부금은 실제 기관이나 공공사업으로 전달되지 않아요.</p></article></div><div class="donationLedger"><div><span>누적 기부</span><strong>'+(p?.socialDonated||0).toLocaleString('ko-KR')+'원</strong></div><div><span>게임 규칙상 세금 감면권</span><strong>'+(p?.taxRelief||0).toLocaleString('ko-KR')+'원</strong></div></div><label class="donationCause" for="donationCause">기부 목적 선택<select id="donationCause" onchange="updateDonationCauseNote()"><option value="disability">장애인 지원</option><option value="seniors">어르신 지원</option><option value="inclusiveEmployment">장애인 고용 지원</option><option value="community">지역사회 지원</option></select></label><div id="donationCauseNote" class="donationCauseNote">선택한 목적에 대한 설명이 여기에 표시돼요.</div><label for="donationAmount">기부할 금액 (1,000~100,000원)</label><input id="donationAmount" type="number" min="1000" max="100000" step="1000" value="10000"><p class="donationEstimate">기부액의 10%는 게임 안에서 세금 감면권으로 기록돼요. 이는 학습용 규칙이며, 실제 세금·기부금 전달을 뜻하지 않아요.</p><button onclick="donateToTown()">💛 선택한 목적으로 기부하기</button><p class="communityQuestion">생각해 보기: 장애인의 고용 기회를 넓히려면 일터와 지역사회가 어떤 지원을 할 수 있을까요?</p></section>';
 }
+function updateDonationCauseNote(){const note=$('donationCauseNote'),cause=$('donationCause')?.value;if(!note)return;note.textContent=({disability:'장애인의 이동·정보 접근성을 높이고 지역사회 참여 기회를 넓히는 지원을 생각해요.',seniors:'어르신의 건강과 안전, 세대 간 교류를 돕는 지원을 살펴봐요.',inclusiveEmployment:'장애인이 정당한 보수와 필요한 편의 지원을 받으며 일할 수 있는 포용적인 일터를 응원해요.',community:'우리 지역에서 함께 해결할 문제와 모두에게 필요한 지원을 생각해요.'})[cause]||''}
+function donateToTown(){const amount=Number($('donationAmount')?.value||0),cause=$('donationCause')?.value||'community';if(!Number.isInteger(amount)||amount<1000||amount>100000){showNotice('기부는 1,000~100,000원 사이로 입력해 주세요.');return}if(!confirm(amount.toLocaleString('ko-KR')+'원을 선택한 목적으로 기부할까요?'))return;socket.emit('action',{type:'donate',amount,cause})}
 function openMenu(m){
  menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');
  if(m==='businessHub'){drawBusinessHub();return}
  drawMenu();if(m==='stocks')updateStockCards(latestState);if(m==='createStore')wireStoreStylePreview();
 }
-const FOOD_ART_COLORS={b:'#d99a52',c:'#8b542f',w:'#ffedc7',r:'#e95762',y:'#f5c84c',g:'#65a85a',p:'#f18ab2',o:'#f28b32',k:'#65402e',i:'#9bd5e4',a:'#523429',e:'#c9f3ff',s:'#39271f'};
+const FOOD_ART_COLORS={b:'#e7a94f',c:'#9b5234',w:'#fff0cc',r:'#ef6876',y:'#ffce4c',g:'#69aa5d',p:'#f48cae',o:'#f28a45',k:'#754633',i:'#a7e3ef',a:'#533527',e:'#d7f8ff',h:'#fff3d9',s:'#3e2d29'};
 function createFoodPixelArt(productId,small=false){
  const product=Object.values(FOOD_PRODUCTS).flat().find(item=>item.id===productId);
  if(!product)return null;
@@ -831,7 +885,7 @@ function decorateFoodMenu(root=document){
   }else card.prepend(image);
  });
 }
-const foodMenuObserver=new MutationObserver(()=>decorateFoodMenu($('menuContent')||document));
+const foodMenuObserver=new MutationObserver(()=>{const root=$('menuContent')||document;decorateFoodMenu(root);if(root.querySelector('.stockCard')&&!root.querySelector('#stockHoldings'))updateStockCards(latestState)});
 foodMenuObserver.observe($('menuContent'),{childList:true,subtree:true});
 decorateFoodMenu();
 </script></body></html>

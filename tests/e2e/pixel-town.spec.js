@@ -37,8 +37,9 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
   collectBrowserErrors(page);
 
   await page.goto(baseURL);
+  await expect(page.locator('#login')).not.toContainText('6582');
   await test.step('교사가 새 교실을 만들고 수업을 시작한다', async () => {
-    await page.locator('#pin').fill('2468');
+    await page.locator('#pin').fill('6582');
     await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
     await expect(page.locator('#teacher')).toBeVisible();
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
@@ -86,7 +87,11 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /내 가게/ }).click();
   await expect(page.locator('.communityReport')).toContainText('사회공헌과 나눔');
-  await expect(page.locator('.communityReport')).toContainText('기부금이 세금이나 특정 공공사업으로 자동 배정되는 것은 아니에요.');
+  await expect(page.locator('.communityReport')).toContainText('장애인 고용 지원');
+  await expect(page.locator('.communityReport')).toContainText('어르신 지원');
+  await page.locator('#donationCause').selectOption('inclusiveEmployment');
+  await expect(page.locator('#donationCauseNote')).toContainText('정당한 보수');
+  await expect(page.locator('.communityReport')).toContainText('실제 기관이나 공공사업으로 전달되지 않아요.');
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
@@ -185,7 +190,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
   const teacherPage = await browser.newPage({ viewport: { width: 960, height: 600 } });
   collectBrowserErrors(teacherPage);
   await teacherPage.goto(baseURL);
-  await teacherPage.locator('#pin').fill('2468');
+  await teacherPage.locator('#pin').fill('6582');
   await teacherPage.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
   await expect(teacherPage.locator('#teacher')).toBeVisible();
   await expect(teacherPage.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
@@ -204,6 +209,13 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect(page.locator('#game canvas').first()).toBeVisible();
     await expect(page.locator('#lobbyOverlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(0);
+    await expect.poll(() => page.evaluate(() =>
+      world.children.filter(object =>
+        object.material?.color?.getHex() === 0x8a5a35 &&
+        Math.abs(Math.round(object.position.x)) === 7 &&
+        Math.abs(Math.abs(object.position.z) - 5) < 0.3
+      ).length
+    )).toBe(0);
 
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
     await page.screenshot({
@@ -239,6 +251,13 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const previousPrice = await price.textContent();
     await expect(price).not.toHaveText(previousPrice, { timeout: 10000 });
     await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/(▲|▼)/);
+    await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
+    await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="SKY"]')).toContainText('1주');
+    await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
+    await page.screenshot({
+      path: path.join(resultsDir, 'screenshots', 'pixel-town-stock-holdings.png'),
+      fullPage: false
+    });
     await page.getByRole('button', { name: '닫기 ✕' }).click();
   });
 

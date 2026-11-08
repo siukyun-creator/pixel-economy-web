@@ -23,7 +23,7 @@ module.exports = async function globalSetup() {
 
   const server = spawn(process.execPath, [path.join(projectRoot, 'server.js')], {
     cwd: projectRoot,
-    env: { ...process.env, PORT: port },
+    env: { ...process.env, PORT: port, TEACHER_PIN: '6582' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let spawnError;

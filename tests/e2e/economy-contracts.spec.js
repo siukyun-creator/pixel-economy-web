@@ -17,7 +17,7 @@ function createClassroom(baseURL) {
   return new Promise((resolve, reject) => {
     manager.once('connect_error', reject);
     manager.once('connect', () => {
-      manager.timeout(10000).emit('createClassroom', { pin: '2468' }, (error, result) => {
+      manager.timeout(10000).emit('createClassroom', { pin: '6582' }, (error, result) => {
         if (error || !result?.ok) {
           manager.disconnect();
           reject(new Error(result?.message || error?.message || '교실 생성 실패'));
@@ -77,7 +77,7 @@ function startClassroom(baseURL, roomCode) {
   return new Promise((resolve, reject) => {
     teacher.once('connect_error', reject);
     teacher.once('connect', () => {
-      teacher.timeout(7000).emit('teacherLogin', '2468', (loginError, login) => {
+      teacher.timeout(7000).emit('teacherLogin', '6582', (loginError, login) => {
         if (loginError || !login?.ok) {
           teacher.disconnect();
           reject(new Error(login?.message || loginError?.message || '교사 접속 실패'));
@@ -87,7 +87,7 @@ function startClassroom(baseURL, roomCode) {
           if (result?.gameStatus === 'running') resolve(teacher);
           else reject(new Error('수업 시작 실패'));
         });
-        teacher.emit('teacherCommand', { pin: '2468', type: 'start', value: 1 });
+        teacher.emit('teacherCommand', { pin: '6582', type: 'start', value: 1 });
       });
     });
   });
@@ -161,8 +161,9 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     state = await act(student, { type: 'repayLoan', amount: 10000 });
     expect(playerFrom(state).loan).toBe(0);
 
-    state = await act(student, { type: 'donate', amount: 1000 });
+    state = await act(student, { type: 'donate', amount: 1000, cause: 'disability' });
     expect(playerFrom(state).socialDonated).toBe(1000);
+    expect(playerFrom(state).donations.disability).toBe(1000);
     expect(playerFrom(state).taxRelief).toBe(100);
 
     state = await new Promise(resolve => {
@@ -308,13 +309,19 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
 
     const resetStatePromise = new Promise(resolve => student.once('state', resolve));
     const resetResultPromise = new Promise(resolve => teacher.once('teacherCommandResult', resolve));
-    teacher.emit('teacherCommand', { pin: '2468', type: 'resetEconomy' });
+    teacher.emit('teacherCommand', { pin: '6582', type: 'resetEconomy' });
     const resetResult = await resetResultPromise;
     expect(resetResult.ok).toBe(true);
     const resetState = await resetStatePromise;
     expect(resetState.companies).toHaveLength(0);
     expect(resetState.stocks[ticker]).toBeUndefined();
     expect(playerFrom(resetState).company).toBeNull();
+    expect(playerFrom(resetState).donations).toEqual({
+      community: 0,
+      disability: 0,
+      seniors: 0,
+      inclusiveEmployment: 0
+    });
     expect(playerFrom(resetState).shares).toEqual({ SKY: 0, PIX: 0 });
   } finally {
     extraStudents.forEach(client => client.disconnect());

@@ -44,7 +44,7 @@ test('30명의 동시 학생 접속은 허용하고 31번째 신규 접속은 �
     const roomCode = await new Promise((resolve, reject) => {
       manager.once('connect_error', reject);
       manager.once('connect', () => {
-        manager.timeout(10000).emit('createClassroom', { pin: '2468' }, (error, result) => {
+        manager.timeout(10000).emit('createClassroom', { pin: '6582' }, (error, result) => {
           if (error || !result?.ok) {
             reject(new Error(result?.message || error?.message || '부하 테스트 교실 생성 실패'));
           } else {
