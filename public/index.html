@@ -280,7 +280,7 @@ function connectClassroom(namespace,onConnected){
 function join(){
  const name=$('name').value.trim(),code=$('room').value.trim(),button=$('joinButton');
  if(!name){$('loginNotice').textContent='이름을 먼저 입력해 주세요.';return}
- if(!/^\\d{4}$/.test(code)){$('loginNotice').textContent='교실 코드는 숫자 4자리예요.';return}
+ if(!/^\d{4}$/.test(code)){$('loginNotice').textContent='교실 코드는 숫자 4자리예요.';return}
  if(button){button.disabled=true;button.textContent='교실 찾는 중...'}
  $('loginNotice').textContent='교실 서버를 찾고 있어요...';
  managerSocket.timeout(7000).emit('openClassroom',{roomCode:code},(err,result)=>{
@@ -297,17 +297,22 @@ function join(){
 }
 function teacherLogin(){
  teacherPin=$('pin').value.trim();const code=$('room').value.trim();
- if(!/^\\d{4}$/.test(code)){$('loginNotice').textContent='관리할 교실의 4자리 코드를 먼저 입력해 주세요.';return}
- if(!/^\\d{4}$/.test(teacherPin)){$('loginNotice').textContent='교사 PIN은 숫자 4자리예요.';return}
+ if(!/^\d{4}$/.test(code)){$('loginNotice').textContent='관리할 교실의 4자리 코드를 먼저 입력해 주세요.';return}
+ if(!/^\d{4}$/.test(teacherPin)){$('loginNotice').textContent='교사 PIN은 숫자 4자리예요.';return}
  $('loginNotice').textContent='교실 관리자 인증 중...';
  managerSocket.timeout(7000).emit('openClassroom',{roomCode:code},(err,result)=>{
   if(err||!result?.ok){$('loginNotice').textContent=result?.message||'교실 서버에 연결할 수 없어요.';return}
-  connectClassroom(result.namespace,target=>target.emit('teacherLogin',teacherPin));
+  connectClassroom(result.namespace,target=>{
+   target.timeout(7000).emit('teacherLogin',teacherPin,(loginErr,answer)=>{
+    if(loginErr)$('loginNotice').textContent='교사 인증 응답이 없어요. 새로고침 후 다시 시도해 주세요.';
+    else if(answer&&!answer.ok)$('loginNotice').textContent=answer.message||'교사 PIN을 확인해 주세요.';
+   });
+  });
  });
 }
 function createClassroom(){
  const pin=$('pin').value.trim();
- if(!/^\\d{4}$/.test(pin)){$('loginNotice').textContent='먼저 교사 PIN 4자리를 입력해 주세요.';return}
+ if(!/^\d{4}$/.test(pin)){$('loginNotice').textContent='먼저 교사 PIN 4자리를 입력해 주세요.';return}
  $('loginNotice').textContent='새 교실 서버를 만드는 중...';
  managerSocket.timeout(7000).emit('createClassroom',{pin},(err,result)=>{
   if(err||!result?.ok){$('loginNotice').textContent=result?.message||'새 교실을 만들지 못했어요.';return}
