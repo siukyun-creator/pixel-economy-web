@@ -225,7 +225,7 @@ roomIo.on('connection', socket => {
     broadcast();
   });
   socket.on('sync',()=>socket.emit('state',snapshot()));
-  socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',{...snapshot(),roomCode:ROOM}); });
+  socket.on('teacherLogin', (pin, ack) => { if(String(pin)!==TEACHER_PIN){if(typeof ack==='function')ack({ok:false,message:'교사 PIN이 틀렸어요. Render의 TEACHER_PIN 설정을 확인해 주세요.'});return msg(socket,'교사 PIN이 틀렸어요.');}socket.join(ROOM);if(typeof ack==='function')ack({ok:true});socket.emit('teacherOK',{...snapshot(),roomCode:ROOM}); });
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
 
