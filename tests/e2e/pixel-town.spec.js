@@ -92,6 +92,12 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await page.getByRole('button', { name: '가게 만들기' }).click();
   await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(3);
+  const foodChoices = page.locator('#foodProductChoices [role="radio"]');
+  await expect(foodChoices).toHaveCount(3);
+  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
+  await foodChoices.nth(1).click();
+  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
+  await expect(page.locator('#foodProductChoices')).toHaveAttribute('data-selected', 'croissant');
   const breadArt = await page.locator('.foodChoices .foodPixelArt').evaluateAll(images =>
     images.map(image => image.src)
   );
@@ -103,6 +109,39 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   );
   expect(new Set(cafeArt).size).toBe(3);
   expect(cafeArt).not.toEqual(breadArt);
+  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
+  const coffeeModel = await page.evaluate(() => {
+    const product = FOOD_PRODUCTS.cafe[0];
+    const pixels = new Set(product.layers.flatMap(layer => layer.flatMap(row => Array.from(row))));
+    const canvas = document.querySelector('#foodPreview');
+    const ctx = canvas.getContext('2d');
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let minY = canvas.height, maxY = 0, minX = canvas.width, maxX = 0;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const index = (y * canvas.width + x) * 4;
+        if (image.data[index] !== 234 || image.data[index + 1] !== 245 || image.data[index + 2] !== 255) {
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+        }
+      }
+    }
+    return {
+      layers: product.layers.length,
+      materials: [...pixels].filter(pixel => pixel !== '.'),
+      width: maxX - minX + 1,
+      height: maxY - minY + 1
+    };
+  });
+  expect(coffeeModel.layers).toBeGreaterThanOrEqual(12);
+  expect(coffeeModel.materials).toEqual(expect.arrayContaining(['i', 'a', 'e', 'h', 's']));
+  expect(coffeeModel.height).toBeGreaterThan(coffeeModel.width * 0.7);
+  await page.screenshot({
+    path: path.join(resultsDir, 'screenshots', 'pixel-town-iced-americano.png'),
+    fullPage: false
+  });
 
   const artworkResponses = await Promise.all([
     '/assets/food/pixel-bread.svg',
@@ -193,6 +232,16 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(1);
   }, { timeout: 45000 });
 
+  await test.step('주식 가격이 변하고 화면에 갱신된다', async () => {
+    await page.getByRole('button', { name: /주식/ }).click();
+    const price = page.locator('#menuContent .stockCard .stockPrice').first();
+    await expect(price).toBeVisible();
+    const previousPrice = await price.textContent();
+    await expect(price).not.toHaveText(previousPrice, { timeout: 10000 });
+    await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/(▲|▼)/);
+    await page.getByRole('button', { name: '닫기 ✕' }).click();
+  });
+
   await test.step('사업 시작 허브에서 기업과 도매상을 창업한다', async () => {
     await page.getByRole('button', { name: /사업 시작/ }).click();
     await expect(page.locator('.businessChoice')).toHaveCount(3);
@@ -200,12 +249,23 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.getByRole('button', { name: '기업 창업하기' }).click();
     await expect.poll(() => page.evaluate(() => latestState.companies.length)).toBe(1);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(1);
+    await expect(page.locator('.businessChoice').nth(0)).toContainText('이미 회사');
+    await expect(page.locator('.businessChoice').nth(1)).toContainText('이미 회사');
 
-    await page.locator('#hubWholesaleName').fill('E2E도매');
-    await page.getByRole('button', { name: '도매상 창업하기' }).click();
-    await expect.poll(() => page.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
+    const wholesalePage = await browser.newPage({ viewport: { width: 960, height: 600 } });
+    collectBrowserErrors(wholesalePage);
+    await wholesalePage.goto(baseURL);
+    await wholesalePage.locator('#name').fill('E2E도매학생');
+    await wholesalePage.locator('#room').fill(roomCode);
+    await wholesalePage.locator('#joinButton').click();
+    await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden();
+    await wholesalePage.getByRole('button', { name: /사업 시작/ }).click();
+    await wholesalePage.locator('#hubWholesaleName').fill('E2E도매');
+    await wholesalePage.getByRole('button', { name: '도매상 창업하기' }).click();
+    await expect.poll(() => wholesalePage.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
-    await expect(page.locator('.businessChoice').nth(1)).toContainText('내가 운영 중인 도매상');
+    await expect(wholesalePage.locator('.businessChoice').nth(1)).toContainText('내 도매상을 운영');
+    await wholesalePage.close();
   });
 
   await page.goto('about:blank');

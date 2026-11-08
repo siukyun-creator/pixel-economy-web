@@ -118,6 +118,7 @@ roomIo.on('connection', socket => {
       if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
       const storeName=String(a.name||'').trim().slice(0,16), sign=String(a.sign||storeName).trim().slice(0,20), food=String(a.food||'bread'), product=foodProducts[String(a.productId||'')];
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
+      if(p.company)return msg(socket,'회사 또는 다른 사업을 창업한 학생은 추가로 가게를 만들 수 없어요.');
       if(wholesaleShop&&wholesaleShop.ownerId===socket.id)return msg(socket,'이미 도매상을 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
       if(p.money<storeFee)return msg(socket,'가게 개설에는 '+storeFee+'원이 필요해요.');
@@ -142,6 +143,7 @@ roomIo.on('connection', socket => {
        if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 도매상을 창업할 수 없어요.');
        if(wholesaleShop)return msg(socket,'이미 도매상이 운영 중이에요.');
         if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
+       if(p.company)return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');
        const name=String(a.name||'').trim().slice(0,16);if(!name)return msg(socket,'도매상 이름을 입력해 주세요.');
        const fee=80000;if(p.money<fee)return msg(socket,'도매상 창업에는 80,000원이 필요해요.');
        const inventory={};Object.keys(foodProducts).forEach(id=>{const cost=ingredientCosts[id]||1000;inventory[id]={stock:0,cost,price:Math.ceil(cost*1.3/100)*100};});
@@ -219,7 +221,7 @@ roomIo.on('connection', socket => {
     else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
     else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if((p.shares[item]||0)<n)return msg(socket,`❌ 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
-    else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
+    else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
     else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
     else return;
     broadcast();
@@ -247,7 +249,7 @@ roomIo.on('connection', socket => {
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={SKY:0,PIX:0};p.company=null;p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){if(/^CO\d+$/.test(ticker)){delete stocks[ticker];delete stockHistory[ticker];}}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
@@ -269,7 +271,9 @@ roomIo.on('connection', socket => {
 });
 setInterval(() => {
   for (const [ticker, stock] of Object.entries(stocks)) {
-    stock.price = Math.max(1000, stock.price + (Math.floor(Math.random() * 2001) - 1000));
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const movement = 250 + Math.floor(Math.random() * 751);
+    stock.price = Math.max(1000, stock.price + direction * movement);
     stockHistory[ticker] ||= [];
     stockHistory[ticker].push(stock.price);
     if (stockHistory[ticker].length > 60) stockHistory[ticker].shift();
@@ -277,7 +281,7 @@ setInterval(() => {
     if (company) company.price = stock.price;
   }
   broadcast();
-}, 10000);
+}, 3000);
   return roomIo;
 }
 const initialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : makeRoomCode();

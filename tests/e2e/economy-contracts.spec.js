@@ -181,11 +181,6 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(playerFrom(state).shares.SKY).toBe(0);
     expect(playerFrom(state).taxPaid).toBeGreaterThan(500);
 
-    state = await act(student, { type: 'startup', item: '경제회사' });
-    const ticker = playerFrom(state).company;
-    expect(ticker).toMatch(/^CO\d+$/);
-    expect(playerFrom(state).shares[ticker]).toBe(10);
-
     const storeCreationPromise = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('가게 생성 응답 시간 초과')), 5000);
       student.once('storeCreated', result => {
@@ -206,6 +201,31 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(storeCreation?.ok).toBe(true);
     const store = state.stores.find(entry => entry.id === storeCreation.store.id);
     expect(store).toBeTruthy();
+    const companyNotice = new Promise(resolve => student.once('notice', resolve));
+    student.emit('action', { type: 'startup', item: '두 번째 회사' });
+    expect(await companyNotice).toContain('한 학생은');
+
+    const entrepreneur = io(`${baseURL}/classrooms/${roomCode}`, {
+      transports: ['websocket'],
+      reconnection: false,
+      timeout: 10000
+    });
+    extraStudents.push(entrepreneur);
+    let entrepreneurState = await joinStudent(entrepreneur, '경제창업학생', roomCode);
+    const entrepreneurId = entrepreneurState.players.find(player => player.name === '경제창업학생').id;
+    const entrepreneurFrom = current => current.players.find(player => player.id === entrepreneurId);
+    entrepreneurState = await act(entrepreneur, { type: 'startup', item: '경제회사' });
+    const ticker = entrepreneurFrom(entrepreneurState).company;
+    expect(ticker).toMatch(/^CO\d+$/);
+    expect(entrepreneurFrom(entrepreneurState).shares[ticker]).toBe(10);
+    const secondBusinessNotice = new Promise(resolve => entrepreneur.once('notice', resolve));
+    entrepreneur.emit('action', {
+      type: 'createStore',
+      name: '두 번째 사업',
+      food: 'bread',
+      productId: 'milk_bread'
+    });
+    expect(await secondBusinessNotice).toContain('한 학생은');
 
     state = await act(student, { type: 'storeRestock', storeId: store.id });
     expect(state.stores.find(entry => entry.id === store.id).stock).toBe(store.stock + 5);
@@ -282,8 +302,20 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     });
     state = await act(wholesaler, { type: 'storeBuy', storeId: store.id, productId: 'milk_bread', amount: 1 });
     expect(wholesalerFrom(state).money).toBeLessThan(120000);
+    const moneyBeforeTransfer = playerFrom(state).money;
     state = await act(student, { type: 'transfer', item: '경제유통학생', amount: 1000 });
-    expect(playerFrom(state).money).toBeLessThan(100000);
+    expect(playerFrom(state).money).toBe(moneyBeforeTransfer - 1000);
+
+    const resetStatePromise = new Promise(resolve => student.once('state', resolve));
+    const resetResultPromise = new Promise(resolve => teacher.once('teacherCommandResult', resolve));
+    teacher.emit('teacherCommand', { pin: '2468', type: 'resetEconomy' });
+    const resetResult = await resetResultPromise;
+    expect(resetResult.ok).toBe(true);
+    const resetState = await resetStatePromise;
+    expect(resetState.companies).toHaveLength(0);
+    expect(resetState.stocks[ticker]).toBeUndefined();
+    expect(playerFrom(resetState).company).toBeNull();
+    expect(playerFrom(resetState).shares).toEqual({ SKY: 0, PIX: 0 });
   } finally {
     extraStudents.forEach(client => client.disconnect());
     if (student) student.disconnect();
