@@ -18,8 +18,6 @@ function createClassroom(roomCode) {
   let ROOM = roomCode;
   const roomIo = io.of('/classrooms/' + roomCode);
   roomCodeMap.set(roomCode, roomIo);
-const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
-const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
 const MAX = 30;
 const players = new Map();
 const market = { apple: 1000, bread: 3500, toy: 15000 };
