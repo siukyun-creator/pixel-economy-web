@@ -8,7 +8,6 @@ const projectRoot = path.resolve(__dirname, '..', '..');
 const resultsDir = path.join(projectRoot, 'test-results');
 const browserErrorsPath = path.join(resultsDir, 'browser-errors.json');
 let browserErrors = [];
-let roomCode;
 
 function collectBrowserErrors(page) {
   page.on('console', message => {
@@ -43,7 +42,6 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
     await expect(page.locator('#teacher')).toBeVisible();
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
-    roomCode = await page.locator('#teacherRoomCode').textContent();
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
   });
@@ -75,9 +73,36 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#menuContent .wholesaleHero')).toBeVisible();
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
-  await page.getByRole('button', { name: '＋ 가게 만들기' }).click();
-  await expect(page.locator('.foodArtShelf')).toBeVisible();
-  await expect(page.locator('.foodArtShelf img')).toHaveCount(5);
+  await page.getByRole('button', { name: /사업 시작/ }).click();
+  await expect(page.locator('.businessChoice')).toHaveCount(3);
+  await expect(page.locator('.businessChoice')).toContainText(['우리 동네 가게', '식자재 도매상', '주식회사']);
+  fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
+  await page.screenshot({
+    path: path.join(resultsDir, 'screenshots', 'pixel-town-business-hub.png'),
+    fullPage: false
+  });
+  await page.getByRole('button', { name: '가게 만들기' }).click();
+  await expect(page.locator('#newStoreName')).toBeVisible();
+  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button', { name: /내 가게/ }).click();
+  await expect(page.locator('.communityReport')).toContainText('사회공헌과 나눔');
+  await expect(page.locator('.communityReport')).toContainText('기부금이 세금이나 특정 공공사업으로 자동 배정되는 것은 아니에요.');
+
+  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button', { name: /사업 시작/ }).click();
+  await page.getByRole('button', { name: '가게 만들기' }).click();
+  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(3);
+  const breadArt = await page.locator('.foodChoices .foodPixelArt').evaluateAll(images =>
+    images.map(image => image.src)
+  );
+  expect(new Set(breadArt).size).toBe(3);
+  await page.locator('#newStoreFood').selectOption('cafe');
+  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(3);
+  const cafeArt = await page.locator('.foodChoices .foodPixelArt').evaluateAll(images =>
+    images.map(image => image.src)
+  );
+  expect(new Set(cafeArt).size).toBe(3);
+  expect(cafeArt).not.toEqual(breadArt);
 
   const artworkResponses = await Promise.all([
     '/assets/food/pixel-bread.svg',
@@ -117,8 +142,17 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
 test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({ browser, baseURL }) => {
   test.setTimeout(90000);
   browserErrors = [];
-  expect(roomCode, '교실 생성 테스트에서 받은 코드').toMatch(/^\d{4}$/);
 
+  const teacherPage = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  collectBrowserErrors(teacherPage);
+  await teacherPage.goto(baseURL);
+  await teacherPage.locator('#pin').fill('2468');
+  await teacherPage.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
+  await expect(teacherPage.locator('#teacher')).toBeVisible();
+  await expect(teacherPage.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
+  const roomCode = await teacherPage.locator('#teacherRoomCode').textContent();
+  await teacherPage.getByRole('button', { name: '▶ 시작' }).click();
+  await expect(teacherPage.locator('#teacherCount')).toContainText('진행 중');
   const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
   collectBrowserErrors(page);
   await page.goto(baseURL);
@@ -130,6 +164,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect(page.locator('#gameArea')).toBeVisible();
     await expect(page.locator('#game canvas').first()).toBeVisible();
     await expect(page.locator('#lobbyOverlay')).toBeHidden();
+    await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(0);
 
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
     await page.screenshot({
@@ -158,6 +193,23 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(1);
   }, { timeout: 45000 });
 
+  await test.step('사업 시작 허브에서 기업과 도매상을 창업한다', async () => {
+    await page.getByRole('button', { name: /사업 시작/ }).click();
+    await expect(page.locator('.businessChoice')).toHaveCount(3);
+    await page.locator('#hubCompanyName').fill('E2E기업');
+    await page.getByRole('button', { name: '기업 창업하기' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies.length)).toBe(1);
+    await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(1);
+
+    await page.locator('#hubWholesaleName').fill('E2E도매');
+    await page.getByRole('button', { name: '도매상 창업하기' }).click();
+    await expect.poll(() => page.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
+    await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
+    await expect(page.locator('.businessChoice').nth(1)).toContainText('내가 운영 중인 도매상');
+  });
+
   await page.goto('about:blank');
+  await teacherPage.goto('about:blank');
   await page.close();
+  await teacherPage.close();
 });
