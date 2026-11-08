@@ -21,6 +21,11 @@ function createClassroom(roomCode) {
   const roomIo = io.of('/classrooms/' + roomCode);
   roomCodeMap.set(roomCode, roomIo);
 const MAX = 30;
+const MAX_STORE_EMPLOYEES = 3;
+const monthlyPeriod = () => {
+  const date = new Date();
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 const players = new Map();
 const market = { apple: 1000, bread: 3500, toy: 15000 };
 const stocks = { SKY: { name: '하늘항공', price: 50000 }, PIX: { name: '픽셀상사', price: 35000 } };
@@ -53,6 +58,7 @@ let startingMoney = 200000;
 let storeFee = 30000;
 const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee });
 const broadcast = () => roomIo.emit('state', snapshot());
+const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
 roomIo.on('connection', socket => {
@@ -73,12 +79,16 @@ roomIo.on('connection', socket => {
       saved.insideStore = null;
       saved.insideWholesale = false;
       p = saved;
-      stores.forEach(st => { if (st.ownerId === oldId) st.ownerId = socket.id; });
+      stores.forEach(st => {
+        if (st.ownerId === oldId) st.ownerId = socket.id;
+        (st.employees||[]).forEach(employee=>{if(employee.playerId===oldId)employee.playerId=socket.id;});
+        (st.employmentApplications||[]).forEach(application=>{if(application.playerId===oldId)application.playerId=socket.id;});
+      });
       if (wholesaleShop && wholesaleShop.ownerId === oldId) wholesaleShop.ownerId = socket.id;
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
       const seat = randomSeat();
-      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     }
     players.set(socket.id, p);
     socket.join(ROOM);
@@ -115,6 +125,77 @@ roomIo.on('connection', socket => {
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
+    if(a.type==='employmentApply'){
+      const st=stores.find(value=>value.id===String(a.storeId));
+      if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 일자리에 지원할 수 있어요.');
+      if(!st)return msg(socket,'지원할 가게를 찾을 수 없어요.');
+      if(st.ownerId===socket.id)return msg(socket,'내 가게에는 지원할 수 없어요.');
+      if(p.employerStoreId)return msg(socket,'이미 다른 가게에서 일하고 있어요.');
+      st.employmentApplications=st.employmentApplications||[];
+      if(st.employmentApplications.some(value=>value.playerId===socket.id)||st.employees?.some(value=>value.playerId===socket.id))return msg(socket,'이미 지원했거나 근무 중이에요.');
+      if((st.employees||[]).length>=(MAX_STORE_EMPLOYEES))return msg(socket,'이 가게의 채용 인원이 가득 찼어요.');
+      st.employmentApplications.push({playerId:socket.id,name:p.name});
+      msg(socket,st.name+'의 포용 고용 일자리에 지원했어요.');
+      broadcastEmployment();return;
+    }
+    if(a.type==='hireEmployee'){
+      const st=stores.find(value=>value.id===String(a.storeId));
+      if(!st||st.ownerId!==socket.id)return msg(socket,'가게 주인만 지원자를 채용할 수 있어요.');
+      if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 채용할 수 있어요.');
+      st.employees=st.employees||[];st.employmentApplications=st.employmentApplications||[];
+      if(st.employees.length>=MAX_STORE_EMPLOYEES)return msg(socket,'직원은 최대 3명까지 채용할 수 있어요.');
+      const application=st.employmentApplications.find(value=>value.playerId===String(a.employeeId));
+      const employee=players.get(String(a.employeeId));
+      const salary=Number(a.salary);
+      if(!application||!employee)return msg(socket,'지원자 정보를 확인할 수 없어요.');
+      if(employee.employerStoreId||st.employees.some(value=>value.playerId===employee.id))return msg(socket,'지원자가 이미 다른 곳에서 근무 중이에요.');
+      if(!Number.isInteger(salary)||salary<1000||salary>100000||salary%1000!==0)return msg(socket,'월급은 1,000원 단위로 1,000~100,000원 사이에서 정해 주세요.');
+      st.employees.push({playerId:employee.id,name:employee.name,salary});
+      st.employmentApplications=st.employmentApplications.filter(value=>value.playerId!==employee.id);
+      employee.employerStoreId=st.id;employee.job='포용 고용 · '+st.name;
+      msg(socket,employee.name+' 학생을 월급 '+salary.toLocaleString('ko-KR')+'원으로 채용했어요.');
+      roomIo.to(employee.id).emit('notice',st.name+'에 채용됐어요. 월급을 확인해 주세요.');
+      broadcastEmployment();return;
+    }
+    if(a.type==='setEmployeeSalary'){
+      const st=stores.find(value=>value.id===String(a.storeId));
+      if(!st||st.ownerId!==socket.id)return msg(socket,'가게 주인만 직원 월급을 정할 수 있어요.');
+      const employee=(st.employees||[]).find(value=>value.playerId===String(a.employeeId));
+      const salary=Number(a.salary);
+      if(!employee)return msg(socket,'직원 정보를 확인할 수 없어요.');
+      if(!Number.isInteger(salary)||salary<1000||salary>100000||salary%1000!==0)return msg(socket,'월급은 1,000원 단위로 1,000~100,000원 사이에서 정해 주세요.');
+      employee.salary=salary;
+      msg(socket,employee.name+' 학생의 월급을 '+salary.toLocaleString('ko-KR')+'원으로 변경했어요.');
+      broadcastEmployment();return;
+    }
+    if(a.type==='removeEmployee'){
+      const st=stores.find(value=>value.id===String(a.storeId));
+      if(!st||st.ownerId!==socket.id)return msg(socket,'가게 주인만 직원을 내보낼 수 있어요.');
+      const [employee]= (st.employees||[]).filter(value=>value.playerId===String(a.employeeId));
+      if(!employee)return msg(socket,'직원 정보를 확인할 수 없어요.');
+      st.employees=st.employees.filter(value=>value.playerId!==employee.playerId);
+      const employeePlayer=players.get(employee.playerId);
+      if(employeePlayer){employeePlayer.employerStoreId=null;employeePlayer.job='무직';}
+      msg(socket,employee.name+' 학생의 근무를 종료했어요.');
+      broadcastEmployment();return;
+    }
+    if(a.type==='payroll'){
+      const st=stores.find(value=>value.id===String(a.storeId));
+      if(!st||st.ownerId!==socket.id)return msg(socket,'가게 주인만 월급을 지급할 수 있어요.');
+      if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 월급을 지급할 수 있어요.');
+      if(!st.employees?.length)return msg(socket,'월급을 지급할 직원이 없어요.');
+      if(st.payrollMonth===monthlyPeriod())return msg(socket,'이번 달 월급은 이미 지급했어요.');
+      const total=st.employees.reduce((sum,value)=>sum+value.salary,0);
+      if(p.money<total)return msg(socket,'월급 지급액 '+total.toLocaleString('ko-KR')+'원이 필요해요. 현재 현금은 '+p.money.toLocaleString('ko-KR')+'원이에요.');
+      p.money-=total;
+      st.employees.forEach(value=>{
+        const employee=players.get(value.playerId);
+        if(employee){employee.money+=value.salary;employee.earnedTotal=(employee.earnedTotal||0)+value.salary;}
+      });
+      st.payrollMonth=monthlyPeriod();
+      msg(socket,'이번 달 월급 '+total.toLocaleString('ko-KR')+'원을 직원 '+st.employees.length+'명에게 지급했어요.');
+      broadcastEmployment();return;
+    }
     if(a.type==='createStore'){
       if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 가게를 만들 수 없어요.');
       if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
@@ -135,7 +216,7 @@ roomIo.on('connection', socket => {
       const awningStyle=['stripe','solid','scallop'].includes(String(a.awningStyle))?String(a.awningStyle):'stripe';
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -245,13 +326,13 @@ roomIo.on('connection', socket => {
       console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
     }
     if(c.type==='shops')shopsEnabled=!!c.value;
-    if(c.type==='clearStores'){stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
+    if(c.type==='clearStores'){stores.forEach(st=>(st.employees||[]).forEach(employee=>{const player=players.get(employee.playerId);if(player){player.employerStoreId=null;player.job='무직';}}));stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1000,500000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
     if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=roomIo.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={SKY:0,PIX:0};p.company=null;p.storeId=null;p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){if(/^CO\d+$/.test(ticker)){delete stocks[ticker];delete stockHistory[ticker];}}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={SKY:0,PIX:0};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){if(/^CO\d+$/.test(ticker)){delete stocks[ticker];delete stockHistory[ticker];}}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));

@@ -243,6 +243,56 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     const wholesalerId = state.players.find(entry => entry.name === '경제유통학생').id;
     const wholesalerFrom = current => current.players.find(player => player.id === wholesalerId);
 
+    const employmentCandidates = [];
+    for (let index = 0; index < 4; index += 1) {
+      const candidate = io(`${baseURL}/classrooms/${roomCode}`, {
+        transports: ['websocket'],
+        reconnection: false,
+        timeout: 10000
+      });
+      extraStudents.push(candidate);
+      const candidateName = `취업학생${index + 1}`;
+      const candidateState = await joinStudent(candidate, candidateName, roomCode);
+      const candidateId = candidateState.players.find(entry => entry.name === candidateName).id;
+      employmentCandidates.push({ client: candidate, id: candidateId, name: candidateName });
+      await act(candidate, { type: 'employmentApply', storeId: store.id });
+    }
+
+    for (const [index, candidate] of employmentCandidates.slice(0, 3).entries()) {
+      state = await act(student, {
+        type: 'hireEmployee',
+        storeId: store.id,
+        employeeId: candidate.id,
+        salary: (index + 1) * 10000
+      });
+    }
+    expect(state.stores.find(entry => entry.id === store.id).employees).toHaveLength(3);
+    const fourthHireNotice = new Promise(resolve => student.once('notice', resolve));
+    student.emit('action', {
+      type: 'hireEmployee',
+      storeId: store.id,
+      employeeId: employmentCandidates[3].id,
+      salary: 10000
+    });
+    expect(await fourthHireNotice).toContain('최대 3명');
+
+    state = await act(student, {
+      type: 'setEmployeeSalary',
+      storeId: store.id,
+      employeeId: employmentCandidates[0].id,
+      salary: 15000
+    });
+    const payrollBalance = playerFrom(state).money;
+    state = await act(student, { type: 'payroll', storeId: store.id });
+    expect(playerFrom(state).money).toBe(payrollBalance - 65000);
+    for (const [index, candidate] of employmentCandidates.slice(0, 3).entries()) {
+      expect(state.players.find(entry => entry.id === candidate.id).money)
+        .toBe(200000 + (index === 0 ? 15000 : (index + 1) * 10000));
+    }
+    const duplicatePayrollNotice = new Promise(resolve => student.once('notice', resolve));
+    student.emit('action', { type: 'payroll', storeId: store.id });
+    expect(await duplicatePayrollNotice).toContain('이번 달 월급은 이미 지급');
+
     state = await act(wholesaler, { type: 'createWholesale', name: '경제 유통상' });
     expect(wholesalerFrom(state).money).toBe(120000);
     await new Promise(resolve => {

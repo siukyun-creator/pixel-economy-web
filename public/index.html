@@ -468,6 +468,16 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
 .donationCause select{width:100%;padding:12px}
 .donationCauseNote{padding:12px 14px;border-left:3px solid #e4bd37;border-radius:8px;background:#fff9e6;line-height:1.7}
 @media(max-width:600px){.stockHoldingRow{align-items:flex-start}.communityReport{padding:16px!important}}
+.storeWizardIntro{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-bottom:14px;border:1px solid #efdfab;border-radius:14px;background:#fff8dc}
+.storeWizardIntro strong{color:#7b620d}.storeWizardSteps{display:flex;gap:6px;flex-wrap:wrap}
+.storeWizardSteps span{padding:5px 9px;border-radius:99px;background:#f3f0e7;color:#817a68;font-size:12px;font-weight:800}
+.storeWizardSteps span.active{background:#ffdf62;color:#4b3b0d}
+.storeWizardPanel{display:grid;gap:11px}.storeWizardNav{display:flex;justify-content:space-between;gap:10px;margin-top:16px;padding-top:12px;border-top:1px solid #eee5cc}
+.storeWizardNav button{min-width:120px}.storeWizardPanel[hidden]{display:none!important}
+.employmentPanel{padding:20px!important}.employmentPanel h3{margin:0 0 8px}.employmentPanel>p{line-height:1.75;color:#716b5c}
+.employmentList{display:grid;gap:10px;margin:12px 0}.employmentRow{display:grid;grid-template-columns:minmax(100px,1fr) auto auto;gap:8px;align-items:center;padding:12px;border:1px solid #eae2d0;border-radius:14px;background:#fff}
+.employmentRow input{width:120px!important}.employmentRow small{display:block;color:#827b6b}.employmentStatus{padding:10px 12px;border-radius:12px;background:#fff6d8;line-height:1.6}
+@media(max-width:600px){.employmentRow{grid-template-columns:1fr 1fr}.employmentRow>span{grid-column:1/-1}.employmentRow input{width:100%!important}.storeWizardIntro{align-items:flex-start;flex-direction:column}}
 </style></head><body>
 <header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('leaderboard')">🏆 순위표</button><button onclick="openMenu('inventory')">🎒 가방</button><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도 숨기기</button><button class="refreshBtn" onclick="fullScreenGame()">⛶ 전체 화면</button><button class="refreshBtn" onclick="syncGame()">↻ 새로고침</button><span id="connection">서버 연결 중</span></header>
 <section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 인증 코드"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 인증 코드를 입력하면 새 교실과 4자리 접속 코드가 만들어져요.</p></section>
@@ -596,7 +606,7 @@ s.on('wholesaleEntered',()=>{openMenu('wholesale');showNotice('📦 도매상에
 s.on('wholesaleExited',()=>{if(me){me.position.set(-22,0,8);socket.emit('move3d',{x:-22,z:8,jump:false});}closeMenu();showNotice('도매상 밖으로 나왔어요.')});
 s.on('storePurchaseResult',r=>{if(r?.store){selectedStore=r.store;if(latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='playerStore')drawMenu()}});
 s.on('wholesalePurchaseResult',r=>{if(r?.store&&latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='wholesale')drawMenu()});s.on('receiptIssued',r=>showReceipt(r));s.on('wholesaleBusinessCreated',r=>{if(r?.ok){if(latestState)latestState.wholesaleShop=r.shop;if(scene)syncBusinessBuildings(latestState?.wholesaleShop,latestState?.companies||[]);showNotice('🎉 내 도매상이 문을 열었어요!');if(menu==='wholesale')drawMenu();if(menu==='businessHub')drawBusinessHub()}});s.on('wholesaleAdminResult',r=>{if(r&&latestState)latestState.wholesaleShop=r;if(menu==='wholesale')drawMenu()});
-s.on('state',s=>{render(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});
+s.on('state',s=>{render(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});s.on('employmentChanged',()=>{if(menu==='myStore')drawMenu()});
 }
 managerSocket.on('connect',()=>$('connection').textContent='서버 연결됨');
 
@@ -609,7 +619,7 @@ building(22,-17,12,10,7,0x8ab5d7,0x3e6592,'은행',-1);building(38,-17,12,10,8,0
 for(let i=-4;i<=4;i++){makeBlock(.3,.04,1.2,0x477f47,i*5,.02,6);makeBlock(1.2,.04,.3,0x477f47,6,.02,i*5)}
 for(let i=0;i<42;i++){const x=(Math.random()-.5)*180,z=(Math.random()-.5)*180;if((Math.abs(x)<25&&Math.abs(z)<25)||Math.abs(z)<30)continue;makeBlock(.65,2.3,.65,0x805333,x,1.15,z);const crown=new THREE.Mesh(new THREE.BoxGeometry(2.7,2.5,2.7),new THREE.MeshStandardMaterial({color:i%3===0?0x4b9b55:0x39854a,roughness:1}));crown.position.set(x,3.3,z);crown.castShadow=true;crown.receiveShadow=true;world.add(crown);const crown2=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.8,1.9),new THREE.MeshStandardMaterial({color:0x5aa95d,roughness:1}));crown2.position.set(x,4.35,z);crown2.castShadow=true;world.add(crown2)}
 if(!teacher&&myId){me=makePlayer(myId,$('name').value||'나',0xf0c64b);scene.add(me);me.position.set(0,0,0)}else{me=null;camera.position.set(0,34,42);camera.lookAt(0,0,0)}
-window.addEventListener('resize',resize3D);requestAnimationFrame(loop)}
+removeCenterBenches();removeTownBuildings();window.addEventListener('resize',resize3D);requestAnimationFrame(loop)}
 let centerBenchesRemoved=false;
 function removeCenterBenches(){
  if(!world||centerBenchesRemoved)return;
@@ -618,6 +628,20 @@ function removeCenterBenches(){
   return color===0x8a5a35&&Math.abs(x)===7&&Math.abs(z-5)<.3;
  }).forEach(object=>world.remove(object));
  centerBenchesRemoved=true;
+}
+function removeTownBuildings(){
+ if(!world)return;
+ world.children.filter(object=>{
+  if(object.position.y<.2)return false;
+  const {x,z}=object.position;
+  const inDistrict=x>13&&x<62&&z>-25&&z<25;
+  const plaza=x>-8&&x<8&&z>21&&z<36;
+  const park=x>58&&x<76&&z>50&&z<67;
+  const wholesale=x>-31&&x<-13&&z>10&&z<25;
+  const streetGate=(Math.abs(x+12)<1||Math.abs(x-13)<1)&&Math.abs(z)<12;
+  const bench=Math.abs(Math.abs(x)-7)<1.2&&Math.abs(Math.abs(z)-5)<1;
+  return inDistrict||plaza||park||wholesale||streetGate||bench;
+ }).forEach(object=>world.remove(object));
 }
 function syncStoreBuildings(stores){
  removeCenterBenches();
@@ -729,7 +753,55 @@ window.addEventListener('keyup',e=>{const map={w:'forward',ArrowUp:'forward',s:'
 document.querySelectorAll('[data-dir]').forEach(b=>{const k=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
 function attachCameraControls(){const canvas=$('game').querySelector('canvas');if(!canvas)return;canvas.style.touchAction='none';canvas.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;dragPointer=e.pointerId;dragX=e.clientX;dragY=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(dragPointer!==e.pointerId)return;const dx=e.clientX-dragX,dy=e.clientY-dragY;dragX=e.clientX;dragY=e.clientY;camYaw-=dx*cameraSensitivity;camPitch=Math.max(.12,Math.min(1.05,camPitch+dy*.0045))});const end=e=>{if(dragPointer===e.pointerId)dragPointer=null};canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('wheel',e=>{camDistance=Math.max(5,Math.min(14,camDistance+e.deltaY*.008));e.preventDefault()},{passive:false})}
 
-function enterNearbyStore(){if(!nearbyStore){showNotice('가까운 가게가 없어요.');return}socket.emit('enterStore',nearbyStore.id)}function enterNearbyWholesale(){if(!nearbyWholesale){showNotice('도매상 입구까지 걸어와 주세요.');return}socket.emit('enterWholesale')}function buyWholesaleIngredients(id){addWholesaleToCart(id)}function createWholesaleBusiness(){const name=$('wholesaleBusinessName')?.value?.trim();if(!name){showNotice('도매상 이름을 입력해 주세요.');return}socket.emit('action',{type:'createWholesale',name})}function addWholesaleToCart(id){const qty=Number($('wholesaleQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>99){showNotice('수량은 1~99개로 입력해 주세요.');return}const old=wholesaleCart.find(v=>v.productId===id);if(old)old.amount=Math.min(99,old.amount+qty);else wholesaleCart.push({productId:id,amount:qty});drawMenu();showNotice('장바구니에 담았어요.')}function removeWholesaleFromCart(id){wholesaleCart=wholesaleCart.filter(v=>v.productId!==id);drawMenu()}function checkoutWholesale(){if(!wholesaleCart.length){showNotice('장바구니가 비어 있어요.');return}if(!confirm('장바구니 상품을 결제할까요?'))return;socket.emit('action',{type:'wholesaleCheckout',items:wholesaleCart})}function restockWholesale(id){const qty=Number($('restockQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>100){showNotice('입고 수량은 1~100개로 입력해 주세요.');return}socket.emit('action',{type:'wholesaleStockUp',productId:id,amount:qty})}function setWholesalePrice(id){const price=Number($('wholesalePrice_'+id)?.value||0);socket.emit('action',{type:'setWholesalePrice',productId:id,amount:price})}function showReceipt(r){const root=$('receiptPaper');if(!root)return;root.innerHTML='<h2>PIXEL TOWN</h2><div class="receiptSub">구매 영수증 · '+esc(r.receiptNo||'')+'</div><hr><div class="receiptLine"><span>판매자</span><span>'+esc(r.seller||'')+'</span></div><div class="receiptLine"><span>구매자</span><span>'+esc(r.buyer||'')+'</span></div><hr>'+(r.lines||[]).map(v=>'<div class="receiptLine"><span>'+esc(v.name)+' × '+v.quantity+'</span><b>'+Number(v.subtotal).toLocaleString('ko-KR')+'원</b></div>').join('')+'<hr><div class="receiptLine"><b>결제 금액</b><b>'+Number(r.total).toLocaleString('ko-KR')+'원</b></div><div class="receiptLine"><span>결제 후 잔액</span><b>'+Number(r.balance).toLocaleString('ko-KR')+'원</b></div><div class="receiptActions"><button onclick="window.print()">인쇄</button><button onclick="closeReceipt()">영수증 확인 완료</button></div>';$('receiptOverlay').classList.add('show')}function closeReceipt(){$('receiptOverlay').classList.remove('show');wholesaleCart=[];if(menu==='wholesale')drawMenu()}function exitWholesale(){socket.emit('exitWholesale')}function openMenu(m){menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');if(m==='businessHub'){drawBusinessHub();return}drawMenu();if(m==='createStore')wireStoreStylePreview()}function closeMenu(){if(cookRunning)stopCookGame();$('menuPanel').style.display='none';$('menuPanel').classList.remove('menu-fullscreen','cook-fullscreen');document.body.classList.remove('cookingMode','menuFullscreen')}
+function enterNearbyStore(){if(!nearbyStore){showNotice('가까운 가게가 없어요.');return}socket.emit('enterStore',nearbyStore.id)}function enterNearbyWholesale(){if(!nearbyWholesale){showNotice('도매상 입구까지 걸어와 주세요.');return}socket.emit('enterWholesale')}function buyWholesaleIngredients(id){addWholesaleToCart(id)}function createWholesaleBusiness(){const name=$('wholesaleBusinessName')?.value?.trim();if(!name){showNotice('도매상 이름을 입력해 주세요.');return}socket.emit('action',{type:'createWholesale',name})}function addWholesaleToCart(id){const qty=Number($('wholesaleQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>99){showNotice('수량은 1~99개로 입력해 주세요.');return}const old=wholesaleCart.find(v=>v.productId===id);if(old)old.amount=Math.min(99,old.amount+qty);else wholesaleCart.push({productId:id,amount:qty});drawMenu();showNotice('장바구니에 담았어요.')}function removeWholesaleFromCart(id){wholesaleCart=wholesaleCart.filter(v=>v.productId!==id);drawMenu()}function checkoutWholesale(){if(!wholesaleCart.length){showNotice('장바구니가 비어 있어요.');return}if(!confirm('장바구니 상품을 결제할까요?'))return;socket.emit('action',{type:'wholesaleCheckout',items:wholesaleCart})}function restockWholesale(id){const qty=Number($('restockQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>100){showNotice('수량은 1~100개로 입력해 주세요.');return}socket.emit('action',{type:'wholesaleStockUp',productId:id,amount:qty})}function setWholesalePrice(id){const price=Number($('wholesalePrice_'+id)?.value||0);socket.emit('action',{type:'setWholesalePrice',productId:id,amount:price})}function showReceipt(r){const root=$('receiptPaper');if(!root)return;root.innerHTML='<h2>PIXEL TOWN</h2><div class="receiptSub">구매 영수증 · '+esc(r.receiptNo||'')+'</div><hr><div class="receiptLine"><span>판매자</span><span>'+esc(r.seller||'')+'</span></div><div class="receiptLine"><span>구매자</span><span>'+esc(r.buyer||'')+'</span></div><hr>'+(r.lines||[]).map(v=>'<div class="receiptLine"><span>'+esc(v.name)+' × '+v.quantity+'</span><b>'+Number(v.subtotal).toLocaleString('ko-KR')+'원</b></div>').join('')+'<hr><div class="receiptLine"><b>결제 금액</b><b>'+Number(r.total).toLocaleString('ko-KR')+'원</b></div><div class="receiptLine"><span>결제 후 잔액</span><b>'+Number(r.balance).toLocaleString('ko-KR')+'원</b></div><div class="receiptActions"><button onclick="window.print()">인쇄</button><button onclick="closeReceipt()">영수증 확인 완료</button></div>';$('receiptOverlay').classList.add('show')}function closeReceipt(){$('receiptOverlay').classList.remove('show');wholesaleCart=[];if(menu==='wholesale')drawMenu()}function exitWholesale(){socket.emit('exitWholesale')}function openMenu(m){menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');if(m==='businessHub'){drawBusinessHub();return}drawMenu();if(m==='createStore'){setupStoreCreationWizard();wireStoreStylePreview()}}function closeMenu(){if(cookRunning)stopCookGame();$('menuPanel').style.display='none';$('menuPanel').classList.remove('menu-fullscreen','cook-fullscreen');document.body.classList.remove('cookingMode','menuFullscreen')}
+let storeWizardStep=0;
+function setupStoreCreationWizard(){
+ const card=document.querySelector('#menuContent .cookCard');
+ if(!card||card.querySelector('.storeWizardPanel'))return;
+ const intro=card.querySelector(':scope > p');
+ const heading=card.querySelector(':scope > b');
+ const panels=[0,1,2].map(()=>{const panel=document.createElement('section');panel.className='storeWizardPanel';panel.hidden=true;return panel});
+ const move=(selector,panel)=>{const element=card.querySelector(selector);if(element)panel.appendChild(element)};
+ if(heading)panels[0].appendChild(heading);
+ if(intro)panels[0].appendChild(intro);
+ ['newStoreName','newStoreSign','newStoreFood'].forEach(id=>{
+  move('label[for="'+id+'"]',panels[0]);
+  move('#'+id,panels[0]);
+ });
+ ['.foodArtShelf','#foodProductChoices','#foodPreview','#foodProductName'].forEach(selector=>move(selector,panels[0]));
+ move('label[for="newStoreColor"]',panels[1]);
+ move('#newStoreColor',panels[1]);
+ move('.storeCustomize',panels[1]);
+ const fee=Array.from(card.children).find(element=>element.tagName==='P'&&element.textContent.includes('가게 개설'));
+ if(fee)panels[2].appendChild(fee);
+ move('button[onclick="createStudentStore()"]',panels[2]);
+ const introBar=document.createElement('div');introBar.className='storeWizardIntro';
+ const copy=document.createElement('div');copy.innerHTML='<strong>가게 창업 계획</strong><div class="small">메뉴와 디자인을 차례대로 정해요.</div>';
+ const progress=document.createElement('div');progress.className='storeWizardSteps';
+ ['메뉴 선택','가게 디자인','최종 확인'].forEach((label,index)=>{const item=document.createElement('span');item.dataset.step=String(index);item.textContent=(index+1)+' '+label;progress.appendChild(item)});
+ introBar.append(copy,progress);
+ const nav=document.createElement('div');nav.className='storeWizardNav';
+ nav.innerHTML='<button type="button" class="secondary" onclick="moveStoreWizard(-1)">이전</button><button type="button" onclick="moveStoreWizard(1)">다음 단계</button>';
+ card.prepend(introBar);
+ panels.forEach(panel=>card.appendChild(panel));
+ card.appendChild(nav);
+ storeWizardStep=0;updateStoreWizard();
+}
+function updateStoreWizard(){
+ const card=document.querySelector('#menuContent .cookCard');
+ if(!card)return;
+ card.querySelectorAll('.storeWizardPanel').forEach((panel,index)=>{panel.hidden=index!==storeWizardStep});
+ card.querySelectorAll('.storeWizardSteps span').forEach((step,index)=>step.classList.toggle('active',index===storeWizardStep));
+ const buttons=card.querySelectorAll('.storeWizardNav button');
+ if(buttons[0])buttons[0].disabled=storeWizardStep===0;
+ if(buttons[1])buttons[1].textContent=storeWizardStep===2?'처음으로':'다음 단계';
+}
+function moveStoreWizard(direction){
+ const next=storeWizardStep+direction;
+ if(direction>0&&storeWizardStep===0&&!$('newStoreName')?.value.trim()){showNotice('먼저 가게 이름을 입력해 주세요.');$('newStoreName')?.focus();return}
+ if(next>2){storeWizardStep=0}else if(next>=0)storeWizardStep=next;
+ updateStoreWizard();
+}
 function drawBusinessHub(){
  const p=players.find(v=>v.id===myId),store=p?.storeId,wholesale=latestState?.wholesaleShop,company=p?.company,selectedBusiness=store?'가게':wholesale?.ownerId===myId?'도매상':company?'회사':null;
  $('menuTitle').textContent='🏗️ 사업 시작';
@@ -830,19 +902,40 @@ function updateStockCards(state){
  }
 }
 function updateMenuData(p,s){if(menu==='stocks'&&$('menuPanel').style.display==='block'){drawStockChart();updateStockCards(s)}if(menu==='myStore'&&$('menuPanel').style.display==='block')drawMyStoreSalesChart();if(menu==='inventory'&&$('menuPanel').style.display==='block'){$('menuContent').innerHTML='<p>사과 '+p.inventory.apple+'개 · 빵 '+p.inventory.bread+'개 · 장난감 '+p.inventory.toy+'개</p><p>하늘항공 '+p.shares.SKY+'주 · 픽셀상사 '+p.shares.PIX+'주</p>'}}
+function drawInclusiveEmploymentPanel(player,store){
+ if(store&&store.ownerId===myId){
+  const employees=store.employees||[],applications=store.employmentApplications||[],paid=store.payrollMonth===new Date().toISOString().slice(0,7);
+  const staff=employees.length?employees.map(employee=>'<div class="employmentRow" data-employee-id="'+esc(employee.playerId)+'"><span><b>'+esc(employee.name)+'</b><small>월급 '+Number(employee.salary).toLocaleString('ko-KR')+'원</small></span><input id="salary-'+esc(employee.playerId)+'" type="number" min="1000" max="100000" step="1000" value="'+Number(employee.salary)+'" aria-label="'+esc(employee.name)+' 월급"><button class="secondary" onclick="changeEmployeeSalary(&quot;'+esc(employee.playerId)+'&quot;)">월급 변경</button><button class="secondary" onclick="removeInclusiveEmployee(&quot;'+esc(employee.playerId)+'&quot;)">근무 종료</button></div>').join(''):'<p class="employmentStatus">아직 채용한 직원이 없어요. 지원한 학생을 확인해 보세요.</p>';
+  const applicants=applications.length?applications.map(application=>'<div class="employmentRow"><span><b>'+esc(application.name)+'</b><small>포용 고용 일자리 지원자</small></span><input id="offer-'+esc(application.playerId)+'" type="number" min="1000" max="100000" step="1000" value="10000" aria-label="'+esc(application.name)+' 제안 월급"><button onclick="hireInclusiveEmployee(&quot;'+esc(application.playerId)+'&quot;)">채용하고 월급 정하기</button></div>').join(''):'<p class="employmentStatus">아직 지원한 학생이 없어요. 채용은 학생이 자발적으로 지원한 경우에만 할 수 있어요.</p>';
+  const total=employees.reduce((sum,employee)=>sum+(Number(employee.salary)||0),0);
+  return '<section class="cookCard employmentPanel"><span class="lessonKicker">일자리와 포용</span><h3>🤝 장애인 고용과 포용적인 일터</h3><p>가게 주인은 지원한 학생 가운데 최대 3명을 채용하고 직원별 월급을 정할 수 있어요. 장애 여부는 묻거나 표시하지 않으며, 누구나 필요한 편의와 공정한 대우를 받는 일터를 함께 배워요.</p><div class="employmentStatus">현재 직원 '+employees.length+' / 3명 · 한 달 월급 합계 '+total.toLocaleString('ko-KR')+'원'+(paid?' · 이번 달 지급 완료':' · 이번 달 지급 전')+'</div><h4>채용된 직원</h4><div class="employmentList">'+staff+'</div><h4>지원자</h4><div class="employmentList">'+applicants+'</div><button onclick="payInclusivePayroll(&quot;'+esc(store.id)+'&quot;)" '+(employees.length===0||paid?'disabled':'')+'>💵 이번 달 월급 지급 ('+total.toLocaleString('ko-KR')+'원)</button><p class="small">월급은 수업에서 정한 한 달 급여예요. 지급 버튼을 누르면 가게 주인의 현금에서 직원에게 전달되며, 매달 한 번만 지급할 수 있어요.</p></section>';
+ }
+ const stores=latestState?.stores||[],employed=Boolean(player?.employerStoreId),applications=stores.flatMap(value=>(value.employmentApplications||[]).filter(application=>application.playerId===myId).map(()=>value.id));
+ const opportunities=stores.filter(value=>value.ownerId!==myId&&(value.employees||[]).length<3);
+ const rows=opportunities.map(value=>{
+  const applied=applications.includes(value.id),ownApplication=(value.employmentApplications||[]).some(application=>application.playerId===myId);
+  return '<div class="employmentRow"><span><b>'+esc(value.name)+'</b><small>포용 고용 · 직원 '+(value.employees||[]).length+'/3명 · 월급은 채용 때 협의</small></span><button onclick="applyInclusiveEmployment(&quot;'+esc(value.id)+'&quot;)" '+(employed||applied||ownApplication?'disabled':'')+'>'+(employed?'이미 근무 중':applied||ownApplication?'지원 완료':'자발적으로 지원')+'</button></div>';
+ }).join('');
+ return '<section class="cookCard employmentPanel"><span class="lessonKicker">일자리와 포용</span><h3>🤝 장애인 고용과 포용적인 일터</h3><p>장애가 있는 사람도 자신의 능력에 맞는 일을 선택하고, 필요한 편의 지원과 공정한 임금을 받으며 일할 수 있어야 해요. 이 게임에서는 장애 여부를 표시하지 않고, 포용 고용 일자리에 자발적으로 지원한 학생만 채용할 수 있어요.</p><p class="employmentStatus">'+(employed?'이미 일자리에 등록되어 있어요.':'가게 일자리에 지원할 수 있어요. 채용되면 월급은 가게 주인과 정해요.')+'</p><div class="employmentList">'+(rows||'<p class="employmentStatus">현재 지원할 수 있는 가게 일자리가 없어요.</p>')+'</div><p class="small">게임 속 지원과 급여는 경제 학습을 위한 가상 활동이며 실제 고용이나 지급이 아니에요.</p></section>';
+}
+function applyInclusiveEmployment(storeId){if(!socket?.connected){showNotice('서버 연결을 확인하고 다시 시도해 주세요.');return}socket.emit('action',{type:'employmentApply',storeId})}
+function hireInclusiveEmployee(employeeId){const store=latestState?.stores?.find(value=>value.ownerId===myId),salary=Number($('offer-'+employeeId)?.value);if(!store)return showNotice('내 가게 정보를 찾지 못했어요.');socket.emit('action',{type:'hireEmployee',storeId:store.id,employeeId,salary})}
+function changeEmployeeSalary(employeeId){const store=latestState?.stores?.find(value=>value.ownerId===myId),salary=Number($('salary-'+employeeId)?.value);if(!store)return showNotice('내 가게 정보를 찾지 못했어요.');socket.emit('action',{type:'setEmployeeSalary',storeId:store.id,employeeId,salary})}
+function removeInclusiveEmployee(employeeId){const store=latestState?.stores?.find(value=>value.ownerId===myId);if(store)socket.emit('action',{type:'removeEmployee',storeId:store.id,employeeId})}
+function payInclusivePayroll(storeId){if(!confirm('이번 달 월급을 직원에게 지급할까요?'))return;socket.emit('action',{type:'payroll',storeId})}
 function drawMyStoreMenu(){
  const st=latestState?.stores?.find(v=>v.ownerId===myId),p=players.find(v=>v.id===myId),sales=(st?.salesHistory||[]).reduce((sum,row)=>sum+row.amount,0);
  const storeCard=st?'<section class="cookCard"><h2>🏪 '+esc(st.name)+'</h2><p>총 판매액 <b>'+sales.toLocaleString('ko-KR')+'원</b> · 누적 판매 '+(st.salesHistory||[]).length+'건</p><canvas id="myStoreSalesChart" width="720" height="250" style="width:100%;max-height:250px"></canvas><p>최근 판매 기록을 확인해요.</p><button onclick="openMenu(&quot;kitchen&quot;)">🍳 주방 열기</button></section>':'<section class="cookCard"><h2>🏪 내 가게 관리</h2><p>아직 가게를 운영하지 않아요. 사업을 시작하려면 사업 시작 메뉴를 이용해 주세요.</p><button onclick="openMenu(&quot;businessHub&quot;)">🏗️ 사업 시작</button></section>';
  const donations=p?.donations||{};
  const causeCards=[['disability','장애인 지원','이동·정보 접근성을 높이는 환경을 마련하고, 장애인이 지역사회 활동에 참여할 기회를 넓히는 데 관심을 가져요.'],['seniors','어르신 지원','어르신의 건강과 안전, 세대 간 교류를 돕는 활동을 살펴보고 필요한 도움을 함께 생각해요.'],['inclusiveEmployment','장애인 고용 지원','장애인이 능력에 맞는 일을 선택하고 정당한 보수와 편의 지원을 받으며 일할 수 있는 포용적인 일터를 응원해요.']];
-return storeCard+'<section class="communityReport"><span class="lessonKicker">초등 사회 · 경제생활과 공동체</span><h3>💛 사회공헌과 나눔</h3><p>사회공헌은 개인과 기업이 공동체의 문제를 살피고 책임 있게 참여하는 활동이에요. 기부는 자발적으로 나누는 것이며, 세금은 법에 따라 모아 공공서비스에 사용하는 돈이에요. 두 활동은 목적과 운영 방식이 서로 달라요.</p><div class="communityConcepts">'+causeCards.map(([key,title,description])=>'<article class="communityConcept"><b>'+title+'</b><p>'+description+'</p><small>누적 '+(donations[key]||0).toLocaleString('ko-KR')+'원</small></article>').join('')+'<article class="communityConcept"><b>세금과 공공서비스</b><p>세금은 학교·도로·공원처럼 많은 사람이 함께 이용하는 공공서비스에 쓰여요. 이 게임의 기부금은 실제 기관이나 공공사업으로 전달되지 않아요.</p></article></div><div class="donationLedger"><div><span>누적 기부</span><strong>'+(p?.socialDonated||0).toLocaleString('ko-KR')+'원</strong></div><div><span>게임 규칙상 세금 감면권</span><strong>'+(p?.taxRelief||0).toLocaleString('ko-KR')+'원</strong></div></div><label class="donationCause" for="donationCause">기부 목적 선택<select id="donationCause" onchange="updateDonationCauseNote()"><option value="disability">장애인 지원</option><option value="seniors">어르신 지원</option><option value="inclusiveEmployment">장애인 고용 지원</option><option value="community">지역사회 지원</option></select></label><div id="donationCauseNote" class="donationCauseNote">선택한 목적에 대한 설명이 여기에 표시돼요.</div><label for="donationAmount">기부할 금액 (1,000~100,000원)</label><input id="donationAmount" type="number" min="1000" max="100000" step="1000" value="10000"><p class="donationEstimate">기부액의 10%는 게임 안에서 세금 감면권으로 기록돼요. 이는 학습용 규칙이며, 실제 세금·기부금 전달을 뜻하지 않아요.</p><button onclick="donateToTown()">💛 선택한 목적으로 기부하기</button><p class="communityQuestion">생각해 보기: 장애인의 고용 기회를 넓히려면 일터와 지역사회가 어떤 지원을 할 수 있을까요?</p></section>';
+return storeCard+drawInclusiveEmploymentPanel(p,st)+'<section class="communityReport"><span class="lessonKicker">초등 사회 · 경제생활과 공동체</span><h3>💛 사회공헌과 나눔</h3><p>사회공헌은 개인과 기업이 공동체의 문제를 살피고 책임 있게 참여하는 활동이에요. 기부는 자발적으로 나누는 것이며, 세금은 법에 따라 모아 공공서비스에 사용하는 돈이에요. 두 활동은 목적과 운영 방식이 서로 달라요.</p><div class="communityConcepts">'+causeCards.map(([key,title,description])=>'<article class="communityConcept"><b>'+title+'</b><p>'+description+'</p><small>누적 '+(donations[key]||0).toLocaleString('ko-KR')+'원</small></article>').join('')+'<article class="communityConcept"><b>세금과 공공서비스</b><p>세금은 학교·도로·공원처럼 많은 사람이 함께 이용하는 공공서비스에 쓰여요. 이 게임의 기부금은 실제 기관이나 공공사업으로 전달되지 않아요.</p></article></div><div class="donationLedger"><div><span>누적 기부</span><strong>'+(p?.socialDonated||0).toLocaleString('ko-KR')+'원</strong></div><div><span>게임 규칙상 세금 감면권</span><strong>'+(p?.taxRelief||0).toLocaleString('ko-KR')+'원</strong></div></div><label class="donationCause" for="donationCause">기부 목적 선택<select id="donationCause" onchange="updateDonationCauseNote()"><option value="disability">장애인 지원</option><option value="seniors">어르신 지원</option><option value="inclusiveEmployment">장애인 고용 지원</option><option value="community">지역사회 지원</option></select></label><div id="donationCauseNote" class="donationCauseNote">선택한 목적에 대한 설명이 여기에 표시돼요.</div><label for="donationAmount">기부할 금액 (1,000~100,000원)</label><input id="donationAmount" type="number" min="1000" max="100000" step="1000" value="10000"><p class="donationEstimate">기부액의 10%는 게임 안에서 세금 감면권으로 기록돼요. 이는 학습용 규칙이며, 실제 세금·기부금 전달을 뜻하지 않아요.</p><button onclick="donateToTown()">💛 선택한 목적으로 기부하기</button><p class="communityQuestion">생각해 보기: 장애인의 고용 기회를 넓히려면 일터와 지역사회가 어떤 지원을 할 수 있을까요?</p></section>';
 }
 function updateDonationCauseNote(){const note=$('donationCauseNote'),cause=$('donationCause')?.value;if(!note)return;note.textContent=({disability:'장애인의 이동·정보 접근성을 높이고 지역사회 참여 기회를 넓히는 지원을 생각해요.',seniors:'어르신의 건강과 안전, 세대 간 교류를 돕는 지원을 살펴봐요.',inclusiveEmployment:'장애인이 정당한 보수와 필요한 편의 지원을 받으며 일할 수 있는 포용적인 일터를 응원해요.',community:'우리 지역에서 함께 해결할 문제와 모두에게 필요한 지원을 생각해요.'})[cause]||''}
 function donateToTown(){const amount=Number($('donationAmount')?.value||0),cause=$('donationCause')?.value||'community';if(!Number.isInteger(amount)||amount<1000||amount>100000){showNotice('기부는 1,000~100,000원 사이로 입력해 주세요.');return}if(!confirm(amount.toLocaleString('ko-KR')+'원을 선택한 목적으로 기부할까요?'))return;socket.emit('action',{type:'donate',amount,cause})}
 function openMenu(m){
  menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');
  if(m==='businessHub'){drawBusinessHub();return}
- drawMenu();if(m==='stocks')updateStockCards(latestState);if(m==='createStore')wireStoreStylePreview();
+ drawMenu();if(m==='stocks')updateStockCards(latestState);if(m==='createStore'){setupStoreCreationWizard();wireStoreStylePreview()}
 }
 const FOOD_ART_COLORS={b:'#e7a94f',c:'#9b5234',w:'#fff0cc',r:'#ef6876',y:'#ffce4c',g:'#69aa5d',p:'#f48cae',o:'#f28a45',k:'#754633',i:'#a7e3ef',a:'#533527',e:'#d7f8ff',h:'#fff3d9',s:'#3e2d29'};
 function createFoodPixelArt(productId,small=false){
