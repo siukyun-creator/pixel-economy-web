@@ -96,6 +96,17 @@ html,body{background:#eaf5ff;color:#20364b}body{background:linear-gradient(#dff2
 .lessonTabs button.active{background:#f2c56f;color:#4b3414}
 .lessonChoice{display:block;width:100%;margin:7px 0;padding:10px;text-align:left;border-radius:10px;background:#f4f8fc;color:#25445c;border:1px solid #c3d9e8}
 #teacher{inset:82px 14px 14px!important;max-height:none;overflow:auto;padding:20px;border-radius:22px;background:linear-gradient(145deg,#f8fcff,#e7f3fb);border:1px solid #9fc2da;box-shadow:0 24px 70px #193a5666}.teacherHeader{display:flex;justify-content:space-between;align-items:center;gap:12px}.teacherHeader h2{margin:4px 0;color:#183c57}.teacherStats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:14px 0}.teacherStats>div{padding:13px;border-radius:13px;background:#fff;border:1px solid #c8dfed}.teacherStats small{display:block;color:#6c879a;font-size:11px}.teacherStats b{display:block;color:#1e5679;font-size:20px;margin-top:5px}.teacherGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.teacherCard{padding:14px;border-radius:14px;background:#fff;border:1px solid #d0e1ec;min-width:0}.teacherCard h3,.teacherSection h3{margin:0 0 9px;color:#244d68}.teacherCard label{display:block;margin:7px 0 3px;color:#5e788c;font-size:11px}.teacherCard input,.teacherRosterHead input{width:100%;background:#f6fafd;color:#203f55;border:1px solid #c7dbe8;padding:9px;margin:3px 0 7px}.teacherActions{display:flex;gap:7px;flex-wrap:wrap}.teacherRosterHead{display:flex;justify-content:space-between;align-items:center;gap:12px}.teacherRosterHead input{max-width:240px}.teacherRoster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#teacher .studentRow{margin:0;padding:10px;background:#fff;border:1px solid #d0e1ec;border-radius:12px;display:flex;align-items:center;gap:7px}.studentRow .studentMeta{flex:1;min-width:100px}.studentRow .studentMeta b,.studentRow .studentMeta small{display:block}.studentRow .studentMeta small{color:#7790a2;font-size:11px}.studentRow button{padding:7px 9px}.studentRow .danger,.teacherCard .danger{background:#d96c67;color:white}@media(max-width:720px){#teacher{inset:108px 7px 7px!important;padding:12px}.teacherStats{grid-template-columns:repeat(2,1fr)}.teacherGrid,.teacherRoster{grid-template-columns:1fr}.teacherRosterHead{align-items:flex-start;flex-direction:column}.teacherRosterHead input{max-width:none}}
+#teacherMarketControls{margin:14px 0;padding:clamp(16px,2vw,24px);border:1px solid #d7c58c;border-radius:18px;background:linear-gradient(135deg,#fff9e8,#fffefa);box-shadow:0 8px 24px #66551a10}
+#teacherMarketControls>h3{font-size:clamp(18px,2vw,22px);color:#493e22}
+#teacherMarketControls>p{max-width:850px;line-height:1.6;color:#70664f}
+#teacherMarketControls .marketControlsGrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;align-items:end;margin:16px 0}
+#teacherMarketControls label{display:grid;gap:5px;font-size:12px;font-weight:800;color:#625b48}
+#teacherMarketControls input,#teacherMarketControls select{width:100%;min-height:42px;padding:9px 11px;border:1px solid #d9cfb5;border-radius:10px;background:#fff;color:#363328}
+#teacherMarketControls button{min-height:42px;white-space:nowrap}
+#marketStatus{padding:10px 12px;border-radius:10px;background:#fff;color:#3d4b39;font-weight:800}
+#teacherCeoAward:empty{display:none}
+#teacherCeoAward:not(:empty){margin-top:12px;padding:14px;border:1px solid #e8cc71;border-radius:14px;background:#fff6d5;color:#514118}
+@media(max-width:720px){#teacherMarketControls .marketControlsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Full-screen cooking studio */
 body.cookingMode{overflow:hidden}body.cookingMode>header,body.cookingMode #hud,body.cookingMode #touchPad,body.cookingMode #jump,body.cookingMode #mapPanel,body.cookingMode #cameraHint{display:none!important}#menuPanel.cook-fullscreen{display:block!important;position:fixed!important;inset:0!important;z-index:100!important;width:100vw!important;height:100dvh!important;max-height:none!important;overflow:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:linear-gradient(145deg,#102a3d,#1b4860 55%,#173447)!important;color:#f4fbff!important;box-shadow:none!important}#menuPanel.cook-fullscreen>.row{display:none!important}#menuPanel.cook-fullscreen #menuContent{min-height:100dvh}.cookScreen{min-height:100dvh;padding:clamp(16px,3vw,38px);display:flex;flex-direction:column;gap:20px;background:radial-gradient(ellipse at 50% 25%,#34718a 0%,#1c4b63 42%,#102a3d 100%)}.cookTop{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #ffffff30;padding-bottom:16px}.cookTop small{font-size:11px;letter-spacing:2px;color:#9edcf1;font-weight:900}.cookTop h2{font-size:clamp(24px,4vw,38px);margin:4px 0}.cookTop p{margin:4px 0;color:#c6e4ef}.cookTop button{background:#ffffff18;border:1px solid #ffffff55;color:#fff;padding:12px 18px}.cookLayout{width:min(1100px,100%);margin:auto;display:grid;grid-template-columns:minmax(240px,.85fr) minmax(320px,1.15fr);gap:clamp(18px,4vw,52px);align-items:center}.cookVisual,.cookControls{border:1px solid #ffffff2b;background:#ffffff12;border-radius:24px;padding:clamp(18px,3vw,32px);box-shadow:0 18px 50px #06192555}.cookVisual{text-align:center}.cookDish{font-size:clamp(100px,18vw,190px);line-height:1.4;filter:drop-shadow(0 18px 15px #071e2c88);animation:dishBob 2.5s ease-in-out infinite}.cookDishName{font-size:clamp(20px,3vw,28px);font-weight:900}.cookStock{margin-top:12px;color:#c9e8f3}.cookStock b{color:#ffe49a}.cookStep span{font-size:11px;letter-spacing:2px;color:#9de2bc;font-weight:900}.cookStep h3{font-size:clamp(21px,3vw,29px);margin:8px 0}.cookStep p{color:#c4e0ea;line-height:1.7}.cookControls #cookTrack{height:58px;border:3px solid #d7edf5;margin:26px 0 14px;border-radius:14px}.cookZoneLabel{position:absolute;left:40%;width:20%;height:100%;display:grid;place-items:center;font-size:10px;font-weight:900;letter-spacing:1px;color:#145b39;pointer-events:none}.cookControls #cookMarker{width:8px;background:#fff;box-shadow:0 0 12px #fff,0 0 20px #62e7ff}.cookButtons{display:flex;gap:10px}.cookButtons button{flex:1;min-height:62px;font-size:clamp(16px,2vw,20px);font-weight:900;background:linear-gradient(135deg,#ffd36e,#f39a42);color:#57320e;border:0;border-radius:15px;box-shadow:0 5px 0 #a85b28}.cookButtons #cookStop{background:linear-gradient(135deg,#9af0b6,#39bd7b);color:#12472c;box-shadow:0 5px 0 #18784c}.cookControls #cookResult{min-height:45px;color:#e4f4fa;line-height:1.6;margin:16px 0}.cookPrice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #ffffff2b;padding-top:14px}.cookPrice label{color:#c4e0ea}.cookPrice input{width:110px;padding:10px;border-radius:9px;background:#fff;color:#16334a}.cookPrice button{padding:10px 14px}.cookEmpty{margin:auto;text-align:center;padding:40px 15px}.cookEmpty p{color:#c4e0ea}@keyframes dishBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-12px) rotate(3deg)}}
 .storeCustomize{margin:14px 0;padding:14px;border:1px solid #b7d1e3;border-radius:14px;background:#f3f8fc;color:#29465e}.storeCustomize h3{margin:0 0 4px;color:#254c68}.storeCustomize p{font-size:12px;color:#6b8293}.storeCustomize label{display:block;margin:9px 0 4px;font-weight:700;font-size:12px}.storeCustomize select{width:100%;padding:10px;border:1px solid #bdd3e2;border-radius:9px;background:#fff;color:#25465e}.storeStylePreview{height:100px;margin-top:12px;border:8px solid #f4e3c1;border-bottom-width:12px;border-radius:12px;background:linear-gradient(#bde4f4 0 65%,#9ac88b 65%);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:8px;gap:10px}.previewSign{padding:8px 22px;border:4px solid #d9a85e;border-radius:6px;background:#fff4d6;color:#241b13;font-weight:900;box-shadow:0 3px 6px #0002}.previewWindow{width:45%;height:22px;background:#8fd5ee;border:3px solid #fff;}
@@ -528,6 +539,21 @@ const ECONOMY_LESSONS=[
 ];
 let economyQuizIndex=0,economyQuizDone={};
 const FOOD_VOXEL_COLORS={b:0xe7a94f,c:0x9b5234,w:0xfff0cc,r:0xef6876,y:0xffce4c,g:0x69aa5d,p:0xf48cae,o:0xf28a45,k:0x754633,i:0xa7e3ef,a:0x533527,e:0xd7f8ff,h:0xfff3d9,s:0x3e2d29};
+const FOOD_MODEL_UPDATES={
+ milk_bread:[['..cccc.','.cbbbbc','cbbbbbc','cbbbbbc','.cbbbbc','..cccc.'],['.......','..bbbb.','.bbbbbb','.bbbbbb','..bbbb.','.......']],
+ coffee:[['..iiii..','.iiaaii.','iiaaaii.','iiaaaii.','.iiaaii.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.iaaaai.','iaassai.','iaassai.','.iaaaai.','..iiii..','........','........'],['..iiii..','.ieeeei.','ieehhei.','ieehhei.','.ieeeei.','..iiii..','........','........'],['..iiii..','.ieeeei.','ieehhei.','ieehhei.','.ieeeei.','..iiii..','........','........'],['..iiii..','.ieeeei.','ieehhei.','ieehhei.','.ieeeei.','..iiii..','........','........'],['..iiii..','.ieeeei.','ieehhei.','ieehhei.','.ieeeei.','..iiii..','........','........']],
+ pizza:[['.......c','......cc','.....ccc','....cccc','...ccccc','..cccccc','.ccccccc','cccccccc'],['........','......yy','.....yyy','....yyyy','...yyyyy','..yyyyyy','.yyyyyyy','........'],['........','........','.....r..','...g....','......r.','..g.....','........','........']],
+ orange_juice:[['........','..oooo..','.oooooo.','.oooooo.','.oooooo.','..oooo..','........'],['........','..iiii..','.iwwwwi.','.iwoowi.','.iwwwwi.','..iiii..','........'],['........','........','..iiii..','.iiiiii.','.iiiiii.','..iiii..','........']],
+ steak:[['........','.cccccc.','cccccccc','cccccccc','.cccccc.','........'],['........','.aassaa.','assssssa','assssssa','.aassaa.','........'],['........','........','..cc..cc','.c......','........','........']]
+};
+const coffeeBody=['..iiii..','.i....i.','i.ssss.i','i.ssss.i','i.ssss.i','.i....i.','..iiii..','........'];
+const coffeeRoast=['..iiii..','.i....i.','i.sass.i','i.ssss.i','i.ssss.i','.i....i.','..iiii..','........'];
+const coffeeIce=['..iiii..','.i....i.','i.ehhe.i','i.eeee.i','i.ehhe.i','.i....i.','..iiii..','........'];
+FOOD_MODEL_UPDATES.coffee=Array.from({length:12},(_,level)=>level<9?(level===4?coffeeRoast:coffeeBody):coffeeIce);
+for(const [id,layers] of Object.entries(FOOD_MODEL_UPDATES)){
+ const product=Object.values(FOOD_PRODUCTS).flat().find(item=>item.id===id);
+ if(product)product.layers=layers;
+}
 let cookFrame=0,cookTarget=50,cookRunning=false,cookRaf=0;let myId=null,teacherPin='',teacher=false,players=[],scene,renderer,camera,world,me,remote=new Map(),keys={},jumping=false,vy=0,lastSend=0,lastX=0,lastZ=0,lastJump=false,menu='inventory',latestState=null,lastChartDraw=0,selectedStore=null,nearbyStore=null,nearbyWholesale=false;let wholesaleCart=[];const storeVisuals=new Map(),businessVisuals=new Map();let activeBuildGroup=null;let camYaw=0,camPitch=.42,camDistance=9,dragPointer=null,dragX=0,dragY=0,moveVX=0,moveVZ=0,lastFrame=0;let moveSpeed=7.2,cameraSensitivity=0.006,gameBrightness=1.08;
 const $=id=>document.getElementById(id);
 function connectClassroom(namespace,onConnected){
@@ -866,8 +892,52 @@ function getSelectedFoodProduct(){const kind=$('newStoreFood')?.value||'bread',i
 function updateFoodProductChoices(){const kind=$('newStoreFood')?.value||'bread',root=$('foodProductChoices');if(!root)return;root.innerHTML=FOOD_PRODUCTS[kind].map((p,i)=>'<button type="button" role="radio" aria-checked="'+(i===0)+'" class="foodChoice '+(i===0?'active':'')+'" data-product="'+p.id+'" onclick="selectFoodProduct(\''+p.id+'\')"><span>'+p.emoji+'</span><b>'+p.name+'</b></button>').join('');root.setAttribute('role','radiogroup');root.setAttribute('aria-label','가게 대표 메뉴 하나 선택');root.dataset.selected=FOOD_PRODUCTS[kind][0].id;drawVoxelPreview(FOOD_PRODUCTS[kind][0]);}
 function selectFoodProduct(id){const kind=$('newStoreFood')?.value||'bread',p=FOOD_PRODUCTS[kind].find(v=>v.id===id);if(!p)return;const root=$('foodProductChoices');root.dataset.selected=id;root.querySelectorAll('.foodChoice').forEach(b=>{const selected=b.dataset.product===id;b.classList.toggle('active',selected);b.setAttribute('aria-checked',String(selected))});drawVoxelPreview(p);}
 function drawVoxelPreview(product){const canvas=$('foodPreview');if(!canvas||!product)return;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#eaf5ff';ctx.fillRect(0,0,canvas.width,canvas.height);const width=Math.max(...product.layers.flatMap(layer=>layer.map(row=>row.length))),depth=Math.max(...product.layers.map(layer=>layer.length)),cubes=[];product.layers.forEach((rows,y)=>rows.forEach((row,rz)=>Array.from(row).forEach((ch,rx)=>{if(ch!=='.')cubes.push({x:rx-(width-1)/2,z:rz-(depth-1)/2,y,ch})})));cubes.sort((a,b)=>(a.x+a.z)-(b.x+b.z)||a.y-b.y);const size=product.id==='coffee'?12:14,ox=130,oy=product.id==='coffee'?160:123;for(const v of cubes){const x=ox+(v.x-v.z)*size*.5,y=oy+(v.x+v.z)*size*.25-v.y*size*.75,color=FOOD_VOXEL_COLORS[v.ch]||0x999999,hex='#'+color.toString(16).padStart(6,'0');ctx.fillStyle=hex;ctx.beginPath();ctx.moveTo(x,y-size*.5);ctx.lineTo(x+size*.5,y-size*.25);ctx.lineTo(x,y);ctx.lineTo(x-size*.5,y-size*.25);ctx.closePath();ctx.fill();ctx.fillStyle='#'+Math.max(0,color-0x222222).toString(16).padStart(6,'0');ctx.beginPath();ctx.moveTo(x-size*.5,y-size*.25);ctx.lineTo(x,y);ctx.lineTo(x,y+size*.5);ctx.lineTo(x-size*.5,y+size*.25);ctx.closePath();ctx.fill();ctx.fillStyle='#'+Math.min(0xffffff,color+0x222222).toString(16).padStart(6,'0');ctx.beginPath();ctx.moveTo(x+size*.5,y-size*.25);ctx.lineTo(x,y);ctx.lineTo(x,y+size*.5);ctx.lineTo(x+size*.5,y+size*.25);ctx.closePath();ctx.fill();}const label=$('foodProductName');if(label)label.textContent=product.emoji+' '+product.name+' · 입체 픽셀 모델';}
+function paintIcedCoffeePreview(ctx){
+ const polygon=(points,color)=>{ctx.beginPath();points.forEach(([x,y],index)=>index?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=color;ctx.fill()};
+ ctx.fillStyle='#eaf5ff';ctx.fillRect(0,0,260,210);
+ ctx.fillStyle='#c9dce6';ctx.beginPath();ctx.ellipse(130,171,45,8,0,0,Math.PI*2);ctx.fill();
+ polygon([[92,64],[130,80],[130,164],[103,151]],'#91cbd5');
+ polygon([[130,80],[168,63],[157,151],[130,164]],'#72b7c5');
+ polygon([[97,67],[130,81],[130,147],[108,138]],'#513126');
+ polygon([[130,81],[163,67],[154,138],[130,147]],'#39241d');
+ polygon([[89,59],[130,39],[171,58],[130,79]],'#a7e3eb');
+ polygon([[98,59],[130,44],[162,58],[130,73]],'#583629');
+ polygon([[106,59],[117,53],[127,58],[116,64]],'#e5fbff');
+ polygon([[132,53],[142,49],[151,54],[141,59]],'#d5f5f8');
+ polygon([[112,61],[121,57],[128,61],[119,66]],'#fff4dc');
+ polygon([[91,57],[130,37],[173,56],[170,61],[130,43],[94,61]],'#e0fbff');
+ polygon([[141,42],[145,15],[151,16],[149,46]],'#815641');
+ polygon([[100,146],[130,160],[157,146],[156,153],[130,168],[102,153]],'#b8e9ed');
+ polygon([[101,70],[106,72],[106,136],[102,134]],'#e5fbff');
+ polygon([[157,72],[161,70],[153,136],[149,138]],'#bcecf0');
+}
+const drawVoxelPreviewLayers=drawVoxelPreview;
+drawVoxelPreview=function(product){
+ if(product?.id!=='coffee'){drawVoxelPreviewLayers(product);return}
+ const canvas=$('foodPreview');if(!canvas)return;
+ paintIcedCoffeePreview(canvas.getContext('2d'));
+ const label=$('foodProductName');if(label)label.textContent=product.emoji+' '+product.name+' · 얼음이 든 투명 컵';
+};
 const voxelMaterials={};
 function addVoxelFood(parent,productId,x,y,z,scale=1){let product=null;for(const list of Object.values(FOOD_PRODUCTS)){product=list.find(v=>v.id===productId);if(product)break;}if(!product)return null;const width=Math.max(...product.layers.flatMap(layer=>layer.map(row=>row.length))),depth=Math.max(...product.layers.map(layer=>layer.length)),group=new THREE.Group(),cubeSize=.25*scale;product.layers.forEach((rows,ly)=>rows.forEach((row,rz)=>Array.from(row).forEach((ch,rx)=>{if(ch==='.')return;const color=FOOD_VOXEL_COLORS[ch]||0xffffff;if(!voxelMaterials[color])voxelMaterials[color]=new THREE.MeshLambertMaterial({color});const mesh=new THREE.Mesh(new THREE.BoxGeometry(cubeSize,cubeSize,cubeSize),voxelMaterials[color]);mesh.position.set((rx-(width-1)/2)*cubeSize,ly*1.05*cubeSize,(rz-(depth-1)/2)*cubeSize);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)})));group.position.set(x,y,z);parent.add(group);return group;}
+const addVoxelFoodLayers=addVoxelFood;
+addVoxelFood=function(parent,productId,x,y,z,scale=1){
+ if(productId!=='coffee')return addVoxelFoodLayers(parent,productId,x,y,z,scale);
+ const group=new THREE.Group();
+ const glass=new THREE.MeshPhysicalMaterial({color:0x9edce4,transparent:true,opacity:.38,roughness:.16,side:THREE.DoubleSide});
+ const liquid=new THREE.MeshStandardMaterial({color:0x4a2d22,roughness:.32});
+ const ice=new THREE.MeshPhysicalMaterial({color:0xd9f6f7,transparent:true,opacity:.88,roughness:.12});
+ const straw=new THREE.MeshStandardMaterial({color:0x8c5a43,roughness:.65});
+ const add=(geometry,material,px,py,pz)=>{const mesh=new THREE.Mesh(geometry,material);mesh.position.set(px*scale,py*scale,pz*scale);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)};
+ add(new THREE.CylinderGeometry(.34*scale,.24*scale,.92*scale,8,1,true),glass,0,.47,0);
+ add(new THREE.CylinderGeometry(.24*scale,.24*scale,.035*scale,8),glass,0,.025,0);
+ add(new THREE.CylinderGeometry(.32*scale,.23*scale,.62*scale,8),liquid,0,.38,0);
+ add(new THREE.CylinderGeometry(.37*scale,.37*scale,.045*scale,8),glass,0,.94,0);
+ add(new THREE.BoxGeometry(.2*scale,.14*scale,.18*scale),ice,-.1,.77,-.08);
+ add(new THREE.BoxGeometry(.17*scale,.13*scale,.16*scale),ice,.11,.79,.07);
+ add(new THREE.CylinderGeometry(.025*scale,.025*scale,.34*scale,6),straw,.13,1.08,0);
+ group.position.set(x,y,z);parent.add(group);return group;
+};
 function showEconomyLesson(i){economyQuizIndex=Math.max(0,Math.min(ECONOMY_LESSONS.length-1,i));drawMenu();}
 function answerEconomyQuiz(choice){const l=ECONOMY_LESSONS[economyQuizIndex],ok=choice===l.answer;economyQuizDone[economyQuizIndex]=(ok?'정답! ':'다시 생각해 봐요. ')+l.why;const fb=$('lessonFeedback');if(fb)fb.textContent=economyQuizDone[economyQuizIndex];}
 function drawPixelEditor(){const root=$('pixelEditor');if(!root)return;root.innerHTML='';pixelArt.forEach((color,i)=>{const b=document.createElement('button');b.style.background=color;b.setAttribute('aria-label','픽셀 '+i);b.onpointerdown=e=>{e.preventDefault();pixelArt[i]=pixelColor;b.style.background=pixelColor};root.appendChild(b)});}
@@ -904,24 +974,23 @@ function drawStockChart(){const canvas=$('stockChart');if(!canvas||!latestState)
 function updateStockCards(state){
  if(!state?.stocks)return;
  const stockIntro=document.querySelector('#menuContent > p');
- if(stockIntro)stockIntro.textContent='선생님이 다음 거래 시점을 진행하면 주가가 변해요. 매수·매도 수요와 기업 실적이 가격에 반영됩니다.';
- document.querySelectorAll('#menuContent .stockCard').forEach(card=>{
-  const ticker=card.querySelector('.ticker')?.textContent.trim(),stock=state.stocks[ticker];
-  if(!ticker||!stock)return;
-  const price=card.querySelector('strong');
-  if(price){price.classList.add('stockPrice');price.textContent=stock.price.toLocaleString('ko-KR')+'원'}
-  let change=card.querySelector('.stockChange');
-  if(!change){change=document.createElement('small');change.className='stockChange';price?.insertAdjacentElement('afterend',change)}
-  const history=state.stockHistory?.[ticker]||[],previous=history.length>1?history[history.length-2]:stock.price,delta=stock.price-previous;
-  change.classList.toggle('up',delta>0);change.classList.toggle('down',delta<0);
-  change.textContent=(delta>0?'▲ +'+delta.toLocaleString('ko-KR')+'원':delta<0?'▼ '+delta.toLocaleString('ko-KR')+'원':'변동 대기 중')+(stock.lastReason?' · '+stock.lastReason:'');
- });
+ if(stockIntro)stockIntro.textContent='회사가 창업되면 주식이 등록돼요. 매수·매도 주문은 선생님이 거래 턴을 진행할 때 주가에 반영됩니다.';
+ const stockGrid=document.querySelector('#menuContent .stockGrid');
+ const player=state.players?.find(value=>value.id===myId);
+ if(stockGrid){
+  const entries=Object.entries(state.stocks);
+  stockGrid.innerHTML=entries.length?entries.map(([ticker,stock])=>{
+   const history=state.stockHistory?.[ticker]||[],previous=history.length>1?history[history.length-2]:stock.price,delta=stock.price-previous;
+   const change=delta>0?'▲ +'+delta.toLocaleString('ko-KR')+'원':delta<0?'▼ '+delta.toLocaleString('ko-KR')+'원':'변동 대기 중';
+   return '<article class="stockCard" data-ticker="'+esc(ticker)+'"><b>'+esc(stock.name)+'</b><span class="ticker">'+esc(ticker)+'</span><strong class="stockPrice">'+Number(stock.price).toLocaleString('ko-KR')+'원</strong><small class="stockChange '+(delta>0?'up':delta<0?'down':'')+'">'+change+(stock.lastReason?' · '+esc(stock.lastReason):'')+'</small><small>내 보유량: '+Number(player?.shares?.[ticker]||0)+'주</small><div class="row"><button onclick="act(\'stockBuy\',\''+esc(ticker)+'\',1)">＋ 매수</button><button class="secondary" onclick="act(\'stockSell\',\''+esc(ticker)+'\',1)">－ 매도</button></div></article>';
+  }).join(''):'<p class="small">아직 등록된 회사 주식이 없어요. 사업 시작 메뉴에서 회사를 창업하면 이곳에 나타납니다.</p>';
+ }
  let holdings=document.getElementById('stockHoldings');
  if(!holdings){
-  const anchor=document.querySelector('#menuContent .stockGrid')||document.querySelector('#menuContent .stockCard:last-child');
+  const anchor=stockGrid||document.querySelector('#menuContent .stockCard:last-child');
   if(anchor){anchor.insertAdjacentHTML('afterend','<section id="stockHoldings" class="stockHoldings"><div class="stockHoldingsHeading"><div><span class="lessonKicker">내 투자 현황</span><h3>보유 주식</h3></div><strong class="stockHoldingsTotal">0원</strong></div><div class="stockHoldingsList"></div></section>');holdings=document.getElementById('stockHoldings')}
  }
- const list=holdings?.querySelector('.stockHoldingsList'),player=state.players?.find(value=>value.id===myId);
+ const list=holdings?.querySelector('.stockHoldingsList');
  if(list&&player){
   const rows=Object.entries(player.shares||{}).filter(([,quantity])=>quantity>0);
   list.innerHTML=rows.length?rows.map(([ticker,quantity])=>{const stock=state.stocks[ticker],value=(stock?.price||0)*quantity;return '<div class="stockHoldingRow" data-ticker="'+esc(ticker)+'"><span><b>'+esc(stock?.name||ticker)+'</b><small>'+esc(ticker)+' · '+quantity+'주</small></span><strong>'+value.toLocaleString('ko-KR')+'원</strong></div>'}).join(''):'<p class="small">아직 보유한 주식이 없어요. 위 종목에서 매수하면 이곳에 표시돼요.</p>';
@@ -929,7 +998,7 @@ function updateStockCards(state){
   holdings.querySelector('.stockHoldingsTotal').textContent=total.toLocaleString('ko-KR')+'원';
  }
 }
-function updateMenuData(p,s){if(menu==='stocks'&&$('menuPanel').style.display==='block'){drawStockChart();updateStockCards(s)}if(menu==='myStore'&&$('menuPanel').style.display==='block')drawMyStoreSalesChart();if(menu==='inventory'&&$('menuPanel').style.display==='block'){$('menuContent').innerHTML='<p>사과 '+p.inventory.apple+'개 · 빵 '+p.inventory.bread+'개 · 장난감 '+p.inventory.toy+'개</p><p>하늘항공 '+p.shares.SKY+'주 · 픽셀상사 '+p.shares.PIX+'주</p>'}}
+function updateMenuData(p,s){if(menu==='stocks'&&$('menuPanel').style.display==='block'){drawStockChart();updateStockCards(s)}if(menu==='myStore'&&$('menuPanel').style.display==='block')drawMyStoreSalesChart();if(menu==='inventory'&&$('menuPanel').style.display==='block'){const holdings=Object.entries(p.shares||{}).filter(([,quantity])=>quantity>0).map(([ticker,quantity])=>{const stock=s.stocks[ticker];return '<p>'+esc(stock?.name||ticker)+' '+quantity+'주</p>'}).join('');$('menuContent').innerHTML='<p>사과 '+p.inventory.apple+'개 · 빵 '+p.inventory.bread+'개 · 장난감 '+p.inventory.toy+'개</p>'+holdings}}
 function drawInclusiveEmploymentPanel(player,store){
  if(store&&store.ownerId===myId){
   const employees=store.employees||[],applications=store.employmentApplications||[],paid=store.payrollMonth===new Date().toISOString().slice(0,7);
@@ -977,18 +1046,20 @@ function buyCompanyGoods(ticker){socket.emit('action',{type:'buyCompanyGoods',ti
 function setupTeacherMarketControls(){
  const teacherPanel=$('teacher');if(!teacherPanel||$('teacherMarketControls'))return;
  const panel=document.createElement('section');panel.id='teacherMarketControls';panel.className='teacherSection';
- panel.innerHTML='<h3>🗓 주식 시장 시간·요일</h3><p>가상 거래일은 월~토, 거래 시간은 09:00~15:30이에요. 시간을 설정한 뒤 30분 거래를 진행하세요.</p><div class="row"><label for="marketDay">요일</label><select id="marketDay"><option value="0">월요일</option><option value="1">화요일</option><option value="2">수요일</option><option value="3">목요일</option><option value="4">금요일</option><option value="5">토요일</option></select><label for="marketTime">시각</label><input id="marketTime" type="time" value="09:00"><button onclick="applyMarketTime()">시간 적용</button><button class="secondary" onclick="applyMarketAdvance()">⏩ 다음 30분 거래</button></div><p id="marketStatus" class="small"></p><p class="small">수요·공급(학생의 매수·매도), 기업 영업이익, 시장의 불확실성이 주가에 반영돼요. 실제 투자 결과를 보장하는 서비스가 아닌 수업용 모형입니다.</p><div id="teacherCeoAward"></div>';
+ panel.innerHTML='<h3>📊 우리 반 주식 수업</h3><p>월요일부터 토요일까지 시장을 운영합니다. 거래 시각과 한 턴에 흐를 시간을 정한 뒤, 선생님이 직접 다음 턴을 진행하세요. 토요일 장이 끝나면 수업이 종료되고 최고의 CEO상을 선정합니다.</p><div class="marketControlsGrid"><label for="marketDay">거래 요일<select id="marketDay"><option value="0">월요일</option><option value="1">화요일</option><option value="2">수요일</option><option value="3">목요일</option><option value="4">금요일</option><option value="5">토요일</option></select></label><label for="marketTime">현재 시각<input id="marketTime" type="time" value="09:00"></label><label for="marketTurnMinutes">한 턴당 진행 시간 (분)<input id="marketTurnMinutes" type="number" min="5" max="180" step="5" value="30"></label><button onclick="applyMarketTime()">시간 설정 적용</button><button class="secondary" id="advanceMarketButton" onclick="applyMarketAdvance()">⏩ 다음 거래 턴 진행</button></div><p id="marketStatus" class="small"></p><p class="small">주가는 매수·매도 수요, 회사의 영업 실적, 시장 변동을 반영하는 학습용 모의 값입니다. 실제 주식 시장과 연결되지 않습니다.</p><div id="teacherCeoAward"></div>';
  const before=teacherPanel.querySelector('.teacherGrid');teacherPanel.insertBefore(panel,before||null);
 }
-function applyMarketTime(){const dayIndex=Number($('marketDay')?.value),time=$('marketTime')?.value;if(!Number.isInteger(dayIndex)||!time){showNotice('요일과 시각을 선택해 주세요.');return}teacherCmd('marketTime',{dayIndex,time})}
-function applyMarketAdvance(){teacherCmd('advanceMarket',1)}
+function applyMarketTime(){const dayIndex=Number($('marketDay')?.value),time=$('marketTime')?.value,turnMinutes=Number($('marketTurnMinutes')?.value);if(!Number.isInteger(dayIndex)||!time||!Number.isInteger(turnMinutes)||turnMinutes<5||turnMinutes>180||turnMinutes%5!==0){showNotice('요일·시각과 한 턴 시간(5~180분, 5분 단위)을 확인해 주세요.');return}teacherCmd('marketTime',{dayIndex,time,turnMinutes})}
+function applyMarketAdvance(){teacherCmd('advanceMarket')}
 function renderTeacherMarketControls(state){
  if(!teacher||!state?.marketClock)return;
  setupTeacherMarketControls();
  if(document.activeElement!==$('marketDay'))$('marketDay').value=String(state.marketClock.dayIndex);
  if(document.activeElement!==$('marketTime'))$('marketTime').value=state.marketClock.time;
- const status=$('marketStatus');if(status)status.textContent=state.marketClock.day+' '+state.marketClock.time+' · '+(state.marketClock.marketOpen?'거래 중':'휴장');
- const award=$('teacherCeoAward');if(award&&state.finalAwards?.ceo){const ceo=state.finalAwards.ceo;award.innerHTML='<h3>🏆 최고의 CEO상</h3><p><b>'+esc(ceo.owner)+' · '+esc(ceo.name)+'</b></p><p>시가총액 '+Number(ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p>'}
+ if(document.activeElement!==$('marketTurnMinutes'))$('marketTurnMinutes').value=String(state.marketClock.turnMinutes||30);
+ const status=$('marketStatus');if(status)status.textContent=state.marketClock.day+' '+state.marketClock.time+' · '+(state.marketClock.marketOpen?'거래 중':'휴장')+' · 한 턴 '+(state.marketClock.turnMinutes||30)+'분';
+ const advance=$('advanceMarketButton');if(advance)advance.disabled=state.gameStatus!=='running';
+ const award=$('teacherCeoAward');if(award&&state.gameStatus==='ended'){const ceo=state.finalAwards?.ceo;award.innerHTML=ceo?'<h3>🏆 토요일 장 마감 · 최고의 CEO상</h3><p><b>'+esc(ceo.owner)+' · '+esc(ceo.name)+'</b></p><p>시가총액 '+Number(ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p><p>최종 성과 화면이 학생에게도 표시됩니다.</p>':'<h3>🏁 토요일 장 마감</h3><p>이번 수업에 창업한 회사가 없어 CEO상을 선정하지 않았어요.</p>'}
 }
 function renderFinalResults(state){
  const gameArea=$('gameArea');if(!gameArea||!state)return;
@@ -1011,6 +1082,14 @@ const FOOD_ART_COLORS={b:'#e7a94f',c:'#9b5234',w:'#fff0cc',r:'#ef6876',y:'#ffce4
 function createFoodPixelArt(productId,small=false){
  const product=Object.values(FOOD_PRODUCTS).flat().find(item=>item.id===productId);
  if(!product)return null;
+ const featuredAssets={milk_bread:'pixel-bread.svg',coffee:'pixel-coffee.svg',pizza:'pixel-pizza.svg',orange_juice:'pixel-juice.svg',steak:'pixel-steak.svg'};
+ if(featuredAssets[productId]){
+  const image=document.createElement('img');
+  image.className='foodPixelArt'+(small?' foodPixelArt--small':'');
+  image.alt=product.name;
+  image.src='/assets/food/'+featuredAssets[productId];
+  return image;
+ }
  const rows=product.layers.flatMap(layer=>layer),width=Math.max(...rows.map(row=>row.length)),height=Math.max(...product.layers.map(layer=>layer.length)),cell=9,depth=7;
  const artWidth=(width+height)*cell+12,artHeight=(width+height)*cell/2+product.layers.length*depth+12,originX=artWidth/2,voxels=[];
  product.layers.forEach((layer,level)=>layer.forEach((row,z)=>Array.from(row).forEach((pixel,x)=>{if(pixel!=='.')voxels.push({x,z,level,pixel})})));

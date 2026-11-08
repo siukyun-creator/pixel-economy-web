@@ -34,7 +34,7 @@ const monthlyPeriod = () => {
 };
 const players = new Map();
 const market = { apple: 1000, bread: 3500, toy: 15000 };
-const stocks = { SKY: { name: '하늘항공', price: 50000 }, PIX: { name: '픽셀상사', price: 35000 } };
+const stocks = {};
 const companies = [];
 const stores = [];
 let wholesaleShop = null;
@@ -42,10 +42,9 @@ const ingredientCosts={milk_bread:1200,croissant:1400,cake:2600,coffee:900,donut
 const retailPrices={milk_bread:3500,croissant:3800,cake:6500,coffee:4500,donut:3000,cookie:2500,pizza:15000,burger:6500,fries:3500,orange_juice:4000,strawberry_smoothie:5500,lemonade:4500,steak:19000,samgyeopsal:15000,galbi:18000};
 const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'}, meat:{name:'고깃집',emoji:'🥩'} };
 const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'},steak:{category:'meat',name:'직화 스테이크'},samgyeopsal:{category:'meat',name:'삼겹살 구이'},galbi:{category:'meat',name:'양념 갈비'}};
-const stockHistory = { SKY: [50000], PIX: [35000] };
-const stockOrders = { SKY: { buys: 0, sells: 0 }, PIX: { buys: 0, sells: 0 } };
-const stockOrderBefore = new Map();
-let marketClock = { dayIndex: 0, day: MARKET_DAYS[0], time: '09:00', marketOpen: true };
+const stockHistory = {};
+const stockOrders = {};
+let marketClock = { dayIndex: 0, day: MARKET_DAYS[0], time: '09:00', marketOpen: true, turnMinutes: 30 };
 let finalAwards = null;
 const properties = [
   { id: 'house1', name: '작은 집', price: 50000000, owner: null },
@@ -74,24 +73,37 @@ function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number
 function marketIsOpen(time = marketClock.time) {
   const [hours, minutes] = String(time).split(':').map(Number);
   const value = hours * 60 + minutes;
-  return value >= 540 && value <= 930;
+  return value >= 540 && value < 930;
 }
-function setMarketClock(dayIndex, time) {
-  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= MARKET_DAYS.length || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(time))) return false;
-  marketClock = { dayIndex, day: MARKET_DAYS[dayIndex], time, marketOpen: marketIsOpen(time) };
+function setMarketClock(dayIndex, time, turnMinutes = marketClock.turnMinutes) {
+  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= MARKET_DAYS.length ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(time)) ||
+      !Number.isInteger(turnMinutes) || turnMinutes < 5 || turnMinutes > 180) return false;
+  marketClock = { dayIndex, day: MARKET_DAYS[dayIndex], time, marketOpen: marketIsOpen(time), turnMinutes };
   return true;
 }
 function advanceMarket() {
+  if (!marketClock.marketOpen) return false;
   let [hours, minutes] = marketClock.time.split(':').map(Number);
-  let total = hours * 60 + minutes + 30;
+  let total = hours * 60 + minutes + marketClock.turnMinutes;
   let dayIndex = marketClock.dayIndex;
-  if (total > 930) {
-    dayIndex = (dayIndex + 1) % MARKET_DAYS.length;
+  const closesOnSaturday = dayIndex === MARKET_DAYS.length - 1 && total >= 930;
+  if (total >= 930) {
+    updateStockPrices();
+    if (closesOnSaturday) {
+      setMarketClock(dayIndex, '15:30');
+      gameStatus = 'ended';
+      finalAwards = calculateFinalAwards();
+      return true;
+    }
+    dayIndex = Math.min(dayIndex + 1, MARKET_DAYS.length - 1);
     total = 540;
+  } else {
+    updateStockPrices();
   }
   const time = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
   setMarketClock(dayIndex, time);
-  return marketClock.marketOpen ? updateStockPrices() : false;
+  return true;
 }
 function updateStockPrices() {
   for (const [ticker, stock] of Object.entries(stocks)) {
@@ -101,9 +113,9 @@ function updateStockPrices() {
     const company = companies.find(value => value.ticker === ticker);
     const profitRatio = company ? Math.max(-1, Math.min(1, company.operatingProfit / Math.max(50000, company.costs))) : 0;
     const randomNews = Math.random() * 0.02 - 0.01;
-    const rate = Math.max(-0.06, Math.min(0.06, orderPressure * 0.025 + profitRatio * 0.015 + randomNews));
+    const rate = Math.max(-0.06, Math.min(0.06, orderPressure * 0.025 + profitRatio * 0.01 + randomNews * 0.5));
     const previous = stock.price;
-    const change = rate === 0 ? 0 : Math.sign(rate) * Math.max(100, Math.round(Math.abs(previous * rate) / 100) * 100);
+    const change = Math.sign(rate) * Math.max(100, Math.round(Math.abs(previous * rate) / 100) * 100);
     stock.price = Math.max(1000, Math.min(500000, previous + change));
     stock.lastChange = stock.price - previous;
     stock.lastChangeRate = previous ? stock.lastChange / previous : 0;
@@ -163,7 +175,7 @@ roomIo.on('connection', socket => {
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
       const seat = randomSeat();
-      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     }
     players.set(socket.id, p);
     socket.join(ROOM);
@@ -200,10 +212,6 @@ roomIo.on('connection', socket => {
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
-    if(a.type==='stockBuy'||a.type==='stockSell'){
-      const ticker=String(a.item||'');
-      stockOrderBefore.set(socket.id,{ticker,type:a.type,money:p.money,shares:p.shares?.[ticker]||0});
-    }
     if(a.type==='employmentApply'){
       const st=stores.find(value=>value.id===String(a.storeId));
       if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 일자리에 지원할 수 있어요.');
@@ -380,8 +388,8 @@ roomIo.on('connection', socket => {
     else if(a.type==='loan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<10000||v>100000||v%10000!==0)return msg(socket,'대출은 10,000원 단위로 10,000~100,000원까지 신청할 수 있어요.');if((p.loan||0)+v>200000)return msg(socket,'대출 한도는 총 200,000원이에요.');p.loan=(p.loan||0)+v;p.money+=v;msg(socket,`🏦 대출 완료! ${v.toLocaleString('ko-KR')}원 · 갚을 돈 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='repayLoan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>200000)return msg(socket,'상환 금액을 확인해 주세요.');const pay=Math.min(v,p.loan||0);if(!pay)return msg(socket,'갚을 대출금이 없어요.');if(p.money<pay)return msg(socket,'현금이 부족해요.');p.money-=pay;p.loan-=pay;msg(socket,`🏦 대출 상환! ${pay.toLocaleString('ko-KR')}원 · 남은 빚 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='donate'){const v=Number(a.amount),cause=DONATION_CAUSES.includes(a.cause)?a.cause:'community';if(!Number.isInteger(v)||v<1000||v>100000)return msg(socket,'기부는 1,000~100,000원 사이로 입력해 주세요.');if(p.money<v)return msg(socket,'기부할 현금이 부족해요.');p.money-=v;p.socialDonated=(p.socialDonated||0)+v;p.donations||=emptyDonations();p.donations[cause]=(p.donations[cause]||0)+v;const relief=Math.floor(v*.1);p.taxRelief=(p.taxRelief||0)+relief;const causeName={community:'지역사회',disability:'장애인 지원',seniors:'어르신 지원',inclusiveEmployment:'장애인 고용 지원'}[cause];msg(socket,`💛 ${causeName}에 ${v.toLocaleString('ko-KR')}원 기부 · 앞으로 낼 세금 ${relief.toLocaleString('ko-KR')}원 감면권 획득`);}
-    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
-    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
+    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].buys += n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
+    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].sells += n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
     else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
     else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
@@ -391,18 +399,6 @@ roomIo.on('connection', socket => {
   socket.on('action', a => {
     const player = players.get(socket.id);
     if (!player || !a) return;
-    if (a.type === 'stockBuy' || a.type === 'stockSell') {
-      const before=stockOrderBefore.get(socket.id);stockOrderBefore.delete(socket.id);
-      if (!before||!marketClock.marketOpen||!stocks[before.ticker]) return;
-      const succeeded=a.type==='stockBuy'
-        ? player.money<before.money&&(player.shares[before.ticker]||0)>before.shares
-        : player.money>before.money&&(player.shares[before.ticker]||0)<before.shares;
-      if(!succeeded)return;
-      const ticker = before.ticker;
-      stockOrders[ticker] ||= { buys: 0, sells: 0 };
-      stockOrders[ticker][a.type === 'stockBuy' ? 'buys' : 'sells'] += bounded(a.amount, 1, 10);
-      return;
-    }
     if (a.type === 'createCompany') {
       const companyName = safeName(a.item);
       const sector = String(a.sector || '');
@@ -507,11 +503,11 @@ roomIo.on('connection', socket => {
     }
     if(c.type==='shops')shopsEnabled=!!c.value;
     if(c.type==='marketTime'){
-      if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||'')))msg(socket,'요일이나 시각을 확인해 주세요.');
+      if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||''),Number(c.value?.turnMinutes)))msg(socket,'요일·시각 또는 한 턴 진행 시간을 확인해 주세요.');
     }
     if(c.type==='advanceMarket'){
       if(gameStatus!=='running')msg(socket,'수업을 시작한 뒤 거래 시점을 진행할 수 있어요.');
-      else if(advanceMarket())msg(socket,`📈 ${marketClock.day} ${marketClock.time} 거래 완료 · 매수·매도와 기업 실적을 반영했어요.`);
+      else if(advanceMarket())msg(socket,gameStatus==='ended'?`🏁 토요일 장 마감! ${marketClock.time} · 주가를 확정하고 최고의 CEO상을 선정했어요.`:`📈 ${marketClock.day} ${marketClock.time} 거래 완료 · 매수·매도와 기업 실적을 반영했어요.`);
       else msg(socket,`🕘 ${marketClock.day} ${marketClock.time} · 장이 열리지 않아 시각만 진행했어요.`);
     }
     if(c.type==='clearStores'){stores.forEach(st=>(st.employees||[]).forEach(employee=>{const player=players.get(employee.playerId);if(player){player.employerStoreId=null;player.job='무직';}}));stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
@@ -520,7 +516,7 @@ roomIo.on('connection', socket => {
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={SKY:0,PIX:0};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){if(/^CO\d+$/.test(ticker)){delete stocks[ticker];delete stockHistory[ticker];}}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){delete stocks[ticker];delete stockHistory[ticker];delete stockOrders[ticker];}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
@@ -530,12 +526,7 @@ roomIo.on('connection', socket => {
     if(c.type==='end'){gameStatus='ended';finalAwards=calculateFinalAwards();}
     if(c.type==='reset'){gameStatus='waiting';finalAwards=null;}
     if(c.type==='resetEconomy'){
-      stocks.SKY={name:'하늘항공',price:50000};
-      stocks.PIX={name:'픽셀상사',price:35000};
-      stockHistory.SKY=[50000];stockHistory.PIX=[35000];
-      stockOrders.SKY={buys:0,sells:0};stockOrders.PIX={buys:0,sells:0};
-      Object.keys(stockOrders).filter(ticker=>/^CO\d+$/.test(ticker)).forEach(ticker=>delete stockOrders[ticker]);
-      setMarketClock(0,'09:00');finalAwards=null;
+      setMarketClock(0,'09:00',30);finalAwards=null;
       players.forEach(player=>{player.companyGoods={};});
     }
     if(c.type==='randomize'){

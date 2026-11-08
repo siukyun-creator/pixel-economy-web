@@ -184,18 +184,31 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(playerFrom(state).inventory.apple).toBe(0);
     expect(playerFrom(state).money).toBeLessThan(initialMoney + 9500);
 
-    state = await act(student, { type: 'stockBuy', item: 'SKY', amount: 1 });
-    expect(playerFrom(state).shares.SKY).toBe(1);
-    const priceBeforeDemand = state.stocks.SKY.price;
+    const stockOwner = io(`${baseURL}/classrooms/${roomCode}`, {
+      transports: ['websocket'],
+      reconnection: false,
+      timeout: 10000
+    });
+    extraStudents.push(stockOwner);
+    let stockOwnerState = await joinStudent(stockOwner, '주식회사학생', roomCode);
+    stockOwnerState = await act(stockOwner, { type: 'createCompany', item: '주식회사', sector: 'electronics' });
+    const publicTicker = stockOwnerState.players.find(player => player.name === '주식회사학생').company;
+    expect(Object.keys(stockOwnerState.stocks)).toEqual([publicTicker]);
+    state = await syncStudent();
+    expect(state.stocks.SKY).toBeUndefined();
+    expect(state.stocks.PIX).toBeUndefined();
+    state = await act(student, { type: 'stockBuy', item: publicTicker, amount: 1 });
+    expect(playerFrom(state).shares[publicTicker]).toBe(1);
+    const priceBeforeDemand = state.stocks[publicTicker].price;
     await teacherCommand('advanceMarket');
     state = await syncStudent();
-    expect(state.stocks.SKY.price).toBeGreaterThan(priceBeforeDemand);
-    state = await act(student, { type: 'stockSell', item: 'SKY', amount: 1 });
-    expect(playerFrom(state).shares.SKY).toBe(0);
-    const priceBeforeSupply = state.stocks.SKY.price;
+    expect(state.stocks[publicTicker].price).toBeGreaterThan(priceBeforeDemand);
+    state = await act(student, { type: 'stockSell', item: publicTicker, amount: 1 });
+    expect(playerFrom(state).shares[publicTicker]).toBe(0);
+    const priceBeforeSupply = state.stocks[publicTicker].price;
     await teacherCommand('advanceMarket');
     state = await syncStudent();
-    expect(state.stocks.SKY.price).toBeLessThan(priceBeforeSupply);
+    expect(state.stocks[publicTicker].price).toBeLessThan(priceBeforeSupply);
     expect(playerFrom(state).taxPaid).toBeGreaterThan(500);
 
     const storeCreationPromise = new Promise((resolve, reject) => {
@@ -383,9 +396,20 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     state = await act(student, { type: 'transfer', item: '경제유통학생', amount: 1000 });
     expect(playerFrom(state).money).toBe(moneyBeforeTransfer - 1000);
 
-    const finalStatePromise = new Promise(resolve => teacher.once('state', resolve));
-    await teacherCommand('end');
-    const finalState = await finalStatePromise;
+    await teacherCommand('marketTime', { dayIndex: 5, time: '15:00', turnMinutes: 30 });
+    const saturdayFinalStatePromise = new Promise(resolve => {
+      const onState = next => {
+        if (next.gameStatus !== 'ended') return;
+        teacher.off('state', onState);
+        resolve(next);
+      };
+      teacher.on('state', onState);
+    });
+    await teacherCommand('advanceMarket');
+    const finalState = await saturdayFinalStatePromise;
+    expect(finalState.marketClock.day).toBe('토요일');
+    expect(finalState.marketClock.time).toBe('15:30');
+    expect(finalState.finalAwards).toBeTruthy();
     expect(finalState.finalAwards.ceo.name).toBe('경제회사');
     expect(finalState.finalAwards.ceo.operatingProfit).toBe(10000);
 
@@ -403,7 +427,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(resetResult.ok).toBe(true);
     const resetState = await resetStatePromise;
     expect(resetState.companies).toHaveLength(0);
-    expect(resetState.stocks[ticker]).toBeUndefined();
+    expect(resetState.stocks[publicTicker]).toBeUndefined();
     expect(playerFrom(resetState).company).toBeNull();
     expect(playerFrom(resetState).donations).toEqual({
       community: 0,
@@ -411,7 +435,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
       seniors: 0,
       inclusiveEmployment: 0
     });
-    expect(playerFrom(resetState).shares).toEqual({ SKY: 0, PIX: 0 });
+    expect(playerFrom(resetState).shares).toEqual({});
   } finally {
     extraStudents.forEach(client => client.disconnect());
     if (student) student.disconnect();

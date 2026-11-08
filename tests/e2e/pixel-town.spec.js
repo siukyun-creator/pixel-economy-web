@@ -45,14 +45,16 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
     await expect(page.locator('#teacherMarketControls')).toBeVisible();
     await page.locator('#marketDay').selectOption('5');
-    await page.locator('#marketTime').fill('10:30');
-    await page.getByRole('button', { name: '시간 적용' }).click();
-    await expect(page.locator('#marketStatus')).toContainText('토요일 10:30');
+    await page.locator('#marketTime').fill('14:45');
+    await page.locator('#marketTurnMinutes').fill('45');
+    await page.getByRole('button', { name: '시간 설정 적용' }).click();
+    await expect(page.locator('#marketStatus')).toContainText('토요일 14:45 · 거래 중 · 한 턴 45분');
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
-    await page.getByRole('button', { name: '■ 종료' }).click();
+    await page.getByRole('button', { name: '⏩ 다음 거래 턴 진행' }).click();
     await expect(page.locator('#finalResults')).toBeVisible();
     await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
+    await expect(page.locator('#teacherCeoAward')).toContainText('토요일 장 마감');
   });
 
   await page.goto('about:blank');
@@ -139,6 +141,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   );
   expect(new Set(cafeArt).size).toBe(3);
   expect(cafeArt).not.toEqual(breadArt);
+  expect(cafeArt[0]).toMatch(/pixel-coffee\.svg$/);
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
   const coffeeModel = await page.evaluate(() => {
     const product = FOOD_PRODUCTS.cafe[0];
@@ -270,15 +273,21 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
   }, { timeout: 45000 });
 
   await test.step('주식 가격이 변하고 화면에 갱신된다', async () => {
+    await page.getByRole('button', { name: /사업 시작/ }).click();
+    await page.locator('#hubCompanyName').fill('E2E기업');
+    await page.locator('#hubCompanySector').selectOption('electronics');
+    await page.getByRole('button', { name: '기업 창업하기' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies.length)).toBe(1);
     await page.getByRole('button', { name: /주식/ }).click();
     const price = page.locator('#menuContent .stockCard .stockPrice').first();
     await expect(price).toBeVisible();
     const previousPrice = await price.textContent();
     await expect(page.locator('#companyMarket')).toContainText('소비자의 구매가 기업 실적과 주가에 영향을 줍니다.');
     await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
-    await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="SKY"]')).toContainText('1주');
+    const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
+    await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
     await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
-    await teacherPage.getByRole('button', { name: '⏩ 다음 30분 거래' }).click();
+    await teacherPage.getByRole('button', { name: '⏩ 다음 거래 턴 진행' }).click();
     await expect(price).not.toHaveText(previousPrice);
     await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/▲/);
     await page.screenshot({
@@ -288,15 +297,12 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.getByRole('button', { name: '닫기 ✕' }).click();
   });
 
-  await test.step('사업 시작 허브에서 기업과 도매상을 창업한다', async () => {
+  await test.step('사업 시작 허브에서 회사 운영과 도매상 창업을 확인한다', async () => {
     await page.getByRole('button', { name: /사업 시작/ }).click();
     await expect(page.locator('.businessChoice')).toHaveCount(3);
-    await page.locator('#hubCompanyName').fill('E2E기업');
-    await page.getByRole('button', { name: '기업 창업하기' }).click();
     await expect.poll(() => page.evaluate(() => latestState.companies.length)).toBe(1);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(1);
-    await expect(page.locator('.businessChoice').nth(0)).toContainText('이미 회사');
-    await expect(page.locator('.businessChoice').nth(1)).toContainText('이미 회사');
+    await expect(page.locator('.businessChoice').nth(2)).toContainText('이미 회사를 창업했어요.');
     await page.getByRole('button', { name: /주식/ }).click();
     await expect(page.locator('#companyMarket')).toContainText('E2E기업 경영');
     await expect(page.locator('#companyMarket img').first()).toHaveAttribute('src', /pixel-smartphone\.svg$/);
