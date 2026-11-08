@@ -606,7 +606,7 @@ s.on('wholesaleEntered',()=>{openMenu('wholesale');showNotice('📦 도매상에
 s.on('wholesaleExited',()=>{if(me){me.position.set(-22,0,8);socket.emit('move3d',{x:-22,z:8,jump:false});}closeMenu();showNotice('도매상 밖으로 나왔어요.')});
 s.on('storePurchaseResult',r=>{if(r?.store){selectedStore=r.store;if(latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='playerStore')drawMenu()}});
 s.on('wholesalePurchaseResult',r=>{if(r?.store&&latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='wholesale')drawMenu()});s.on('receiptIssued',r=>showReceipt(r));s.on('wholesaleBusinessCreated',r=>{if(r?.ok){if(latestState)latestState.wholesaleShop=r.shop;if(scene)syncBusinessBuildings(latestState?.wholesaleShop,latestState?.companies||[]);showNotice('🎉 내 도매상이 문을 열었어요!');if(menu==='wholesale')drawMenu();if(menu==='businessHub')drawBusinessHub()}});s.on('wholesaleAdminResult',r=>{if(r&&latestState)latestState.wholesaleShop=r;if(menu==='wholesale')drawMenu()});
-s.on('state',s=>{render(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});s.on('employmentChanged',()=>{if(menu==='myStore')drawMenu()});
+s.on('state',s=>{render(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});s.on('employmentChanged',()=>{if(menu==='myStore')drawMenu()});s.on('teacherOK',state=>{setupTeacherMarketControls();renderTeacherMarketControls(state)});s.on('state',state=>{renderTeacherMarketControls(state);renderFinalResults(state);if(menu==='stocks')drawCompanyMarket(state)});
 }
 managerSocket.on('connect',()=>$('connection').textContent='서버 연결됨');
 
@@ -810,11 +810,39 @@ function drawBusinessHub(){
  const companyAction=selectedBusiness?'<span class="businessCost">'+(selectedBusiness==='회사'?'이미 회사를 창업했어요.':'이미 '+selectedBusiness+'을(를) 선택했어요. 한 학생은 사업 하나만 운영할 수 있어요.')+'</span>':'<label for="hubCompanyName">기업 이름</label><input id="hubCompanyName" maxlength="12" placeholder="예: 픽셀 문구 회사"><button onclick="createCompanyFromHub()">기업 창업하기</button>';
  $('menuContent').innerHTML='<section class="businessHubIntro"><h2>내가 만들 사업을 하나 골라 보세요</h2><p>한 학생은 가게·도매상·회사 중 하나만 운영할 수 있어요. 사업 계획과 준비 비용을 살펴보고 선택해 보세요.</p></section><div class="businessHubGrid"><article class="businessChoice"><span class="businessIcon">🏪</span><strong>우리 동네 가게</strong><small>대표 메뉴 하나를 골라 생산·판매하고 가게를 꾸며요. 개설 비용은 '+Number(latestState?.storeFee??30000).toLocaleString('ko-KR')+'원이에요.</small>'+storeAction+'</article><article class="businessChoice"><span class="businessIcon">📦</span><strong>식자재 도매상</strong><small>재료를 입고해 가게에 판매해요. 창업 비용은 80,000원이에요.</small>'+wholesaleAction+'</article><article class="businessChoice"><span class="businessIcon">🏭</span><strong>주식회사</strong><small>회사를 세우고 주식 10주를 받아요. 창업 비용은 100,000원이며, 주식 시장에서 가격을 확인할 수 있어요.</small>'+companyAction+'</article></div><section class="businessHubIntro"><b>생각해 보기</b><p>무엇을 누구에게 팔지, 필요한 재료와 비용은 얼마인지 먼저 계획해 보세요. 수업이 시작된 뒤 창업할 수 있어요.</p></section>';
 }
+function setupCompanyChooser(){
+ const button=document.querySelector('#menuContent button[onclick="createCompanyFromHub()"]');
+ if(!button||$('hubCompanySector'))return;
+ const selector=document.createElement('select');
+ selector.id='hubCompanySector';selector.setAttribute('aria-label','회사 제품 분야');
+ selector.innerHTML='<option value="electronics">📱 전자기기 회사</option><option value="food">🍪 식품 회사</option><option value="toys">🤖 장난감·학용품 회사</option>';
+ selector.style.cssText='display:block;width:100%;margin:8px 0;padding:10px;border:1px solid #dfd3b1;border-radius:10px;background:#fff';
+ const preview=document.createElement('div');
+ preview.id='companyProductPreview';preview.style.cssText='display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #eee2bf;border-radius:12px;background:#fffefa;margin:8px 0';
+ const image=document.createElement('img');image.width=70;image.height=70;image.alt='선택한 회사 제품 픽셀 그림';image.style.imageRendering='pixelated';
+ const description=document.createElement('span');description.id='companyProductDescription';
+ preview.append(image,description);
+ const nameInput=$('hubCompanyName');
+ nameInput.insertAdjacentElement('afterend',selector);
+ selector.insertAdjacentElement('afterend',preview);
+ selector.addEventListener('change',updateCompanyProductPreview);
+ updateCompanyProductPreview();
+}
+function updateCompanyProductPreview(){
+ const sector=$('hubCompanySector')?.value||'electronics';
+ const previews={electronics:{image:'pixel-smartphone.svg',name:'픽셀 스마트폰 · 전자기기'},food:{image:'pixel-snack.svg',name:'픽셀 에너지바 · 식품'},toys:{image:'pixel-robot-kit.svg',name:'픽셀 로봇 조립 키트 · 장난감·학용품'}};
+ const selected=previews[sector]||previews.electronics;
+ const image=$('companyProductPreview')?.querySelector('img');
+ if(image)image.src='/assets/companies/'+selected.image;
+ if($('companyProductDescription'))$('companyProductDescription').textContent=selected.name;
+}
 function refreshBusinessHub(){
- const wholesaleName=$('hubWholesaleName')?.value,companyName=$('hubCompanyName')?.value;
+ const wholesaleName=$('hubWholesaleName')?.value,companyName=$('hubCompanyName')?.value,companySector=$('hubCompanySector')?.value;
  drawBusinessHub();
+ setupCompanyChooser();
  if($('hubWholesaleName')&&wholesaleName!==undefined)$('hubWholesaleName').value=wholesaleName;
  if($('hubCompanyName')&&companyName!==undefined)$('hubCompanyName').value=companyName;
+ if($('hubCompanySector')&&companySector!==undefined){$('hubCompanySector').value=companySector;updateCompanyProductPreview();}
 }
 function createWholesaleBusinessFromHub(){const input=$('hubWholesaleName'),name=input?.value.trim(),p=players.find(v=>v.id===myId);if(!name){showNotice('도매상 이름을 입력해 주세요.');input?.focus();return}if(p?.storeId||p?.company||latestState?.wholesaleShop?.ownerId===myId){showNotice('한 학생은 사업 하나만 선택할 수 있어요.');return}if(!socket?.connected){showNotice('교실 서버에 연결된 뒤 다시 시도해 주세요.');return}socket.emit('action',{type:'createWholesale',name})}
 function createCompanyFromHub(){const input=$('hubCompanyName'),name=input?.value.trim(),p=players.find(v=>v.id===myId);if(!name){showNotice('기업 이름을 입력해 주세요.');input?.focus();return}if(p?.storeId||p?.company||latestState?.wholesaleShop?.ownerId===myId){showNotice('한 학생은 사업 하나만 선택할 수 있어요.');return}if(p&&p.money<100000){showNotice('기업 창업에는 현금 100,000원이 필요해요.');return}if(!socket?.connected){showNotice('교실 서버에 연결된 뒤 다시 시도해 주세요.');return}socket.emit('action',{type:'startup',item:name})}
@@ -876,7 +904,7 @@ function drawStockChart(){const canvas=$('stockChart');if(!canvas||!latestState)
 function updateStockCards(state){
  if(!state?.stocks)return;
  const stockIntro=document.querySelector('#menuContent > p');
- if(stockIntro?.textContent.includes('10초'))stockIntro.textContent='실시간 주가 · 약 3초마다 변동';
+ if(stockIntro)stockIntro.textContent='선생님이 다음 거래 시점을 진행하면 주가가 변해요. 매수·매도 수요와 기업 실적이 가격에 반영됩니다.';
  document.querySelectorAll('#menuContent .stockCard').forEach(card=>{
   const ticker=card.querySelector('.ticker')?.textContent.trim(),stock=state.stocks[ticker];
   if(!ticker||!stock)return;
@@ -886,7 +914,7 @@ function updateStockCards(state){
   if(!change){change=document.createElement('small');change.className='stockChange';price?.insertAdjacentElement('afterend',change)}
   const history=state.stockHistory?.[ticker]||[],previous=history.length>1?history[history.length-2]:stock.price,delta=stock.price-previous;
   change.classList.toggle('up',delta>0);change.classList.toggle('down',delta<0);
-  change.textContent=delta>0?'▲ +'+delta.toLocaleString('ko-KR')+'원':delta<0?'▼ '+delta.toLocaleString('ko-KR')+'원':'변동 대기 중';
+  change.textContent=(delta>0?'▲ +'+delta.toLocaleString('ko-KR')+'원':delta<0?'▼ '+delta.toLocaleString('ko-KR')+'원':'변동 대기 중')+(stock.lastReason?' · '+stock.lastReason:'');
  });
  let holdings=document.getElementById('stockHoldings');
  if(!holdings){
@@ -932,10 +960,52 @@ return storeCard+drawInclusiveEmploymentPanel(p,st)+'<section class="communityRe
 }
 function updateDonationCauseNote(){const note=$('donationCauseNote'),cause=$('donationCause')?.value;if(!note)return;note.textContent=({disability:'장애인의 이동·정보 접근성을 높이고 지역사회 참여 기회를 넓히는 지원을 생각해요.',seniors:'어르신의 건강과 안전, 세대 간 교류를 돕는 지원을 살펴봐요.',inclusiveEmployment:'장애인이 정당한 보수와 필요한 편의 지원을 받으며 일할 수 있는 포용적인 일터를 응원해요.',community:'우리 지역에서 함께 해결할 문제와 모두에게 필요한 지원을 생각해요.'})[cause]||''}
 function donateToTown(){const amount=Number($('donationAmount')?.value||0),cause=$('donationCause')?.value||'community';if(!Number.isInteger(amount)||amount<1000||amount>100000){showNotice('기부는 1,000~100,000원 사이로 입력해 주세요.');return}if(!confirm(amount.toLocaleString('ko-KR')+'원을 선택한 목적으로 기부할까요?'))return;socket.emit('action',{type:'donate',amount,cause})}
+function createCompanyFromHub(){const input=$('hubCompanyName'),name=input?.value.trim(),sector=$('hubCompanySector')?.value||'electronics',p=players.find(v=>v.id===myId);if(!name){showNotice('기업 이름을 입력해 주세요.');input?.focus();return}if(p?.storeId||p?.company||latestState?.wholesaleShop?.ownerId===myId){showNotice('한 학생은 사업 하나만 선택할 수 있어요.');return}if(p&&p.money<100000){showNotice('기업 창업에는 현금 100,000원이 필요해요.');return}if(!socket?.connected){showNotice('서버에 연결된 뒤 다시 시도해 주세요.');return}socket.emit('action',{type:'createCompany',item:name,sector})}
+function companyImage(sector){return({electronics:'pixel-smartphone.svg',food:'pixel-snack.svg',toys:'pixel-robot-kit.svg'})[sector]||'pixel-smartphone.svg'}
+function drawCompanyMarket(state=latestState){
+ const root=$('menuContent');if(!root||menu!=='stocks')return;
+ root.querySelector('#companyMarket')?.remove();
+ const companies=state?.companies||[],owner=companies.find(company=>company.ownerId===myId);
+ const management=owner?'<section class="cookCard"><span class="lessonKicker">우리 회사 · '+esc(owner.sectorName||'기업')+'</span><h3>'+esc(owner.name)+' 경영</h3><div style="display:flex;align-items:center;gap:12px"><img width="72" height="72" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(owner.sector)+'" alt="'+esc(owner.productName)+' 픽셀 그림"><div>'+esc(owner.productName)+' · 보유 재고 '+owner.inventory+'개<br>누적 영업이익 <b>'+Number(owner.operatingProfit||0).toLocaleString('ko-KR')+'원</b></div></div><p>제품 1개 생산비 '+Number(owner.unitCost).toLocaleString('ko-KR')+'원 · 판매가 '+Number(owner.unitPrice).toLocaleString('ko-KR')+'원</p><label for="companyProduceQty">생산 수량 (1~10개)</label><input id="companyProduceQty" type="number" min="1" max="10" value="1"><button onclick="produceCompanyGoods()">제품 생산</button><p class="small">판매액에서 누적 생산비를 뺀 금액이 영업이익이에요. 생산하지 않은 제품은 시장에 나오지 않아요.</p></section>':'';
+ const offers=companies.filter(company=>company.ownerId!==myId).map(company=>'<article class="stockCard"><img width="64" height="64" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(company.sector)+'" alt="'+esc(company.productName)+' 픽셀 그림"><b>'+esc(company.name)+' · '+esc(company.productName)+'</b><small>재고 '+company.inventory+'개 · '+Number(company.unitPrice).toLocaleString('ko-KR')+'원 / 개</small><button onclick="buyCompanyGoods(&quot;'+esc(company.ticker)+'&quot;)" '+(company.inventory<1?'disabled':'')+'>제품 1개 구매</button></article>').join('');
+ const clock=state?.marketClock?'<p class="marketClockLabel">가상 거래 시각: <b>'+esc(state.marketClock.day)+' '+esc(state.marketClock.time)+'</b> · '+(state.marketClock.marketOpen?'거래 중':'휴장')+'</p>':'<p class="marketClockLabel">가상 거래일은 월~토예요. 선생님이 거래 시점을 진행하면 주가가 바뀝니다.</p>';
+ const section=document.createElement('section');section.id='companyMarket';section.innerHTML='<h3>🏢 기업 제품 시장</h3>'+clock+'<p class="small">회사는 제품을 생산해 판매하고, 매출·생산비·영업이익을 기록해요. 소비자의 구매가 기업 실적과 주가에 영향을 줍니다.</p>'+management+(offers?'<div class="stockGrid">'+offers+'</div>':'<p class="small">아직 판매 중인 다른 회사 제품이 없어요.</p>');
+ root.appendChild(section);
+}
+function produceCompanyGoods(){const amount=Number($('companyProduceQty')?.value||0);if(!Number.isInteger(amount)||amount<1||amount>10){showNotice('생산 수량은 1~10개로 입력해 주세요.');return}socket.emit('action',{type:'produceCompanyGoods',amount})}
+function buyCompanyGoods(ticker){socket.emit('action',{type:'buyCompanyGoods',ticker,amount:1})}
+function setupTeacherMarketControls(){
+ const teacherPanel=$('teacher');if(!teacherPanel||$('teacherMarketControls'))return;
+ const panel=document.createElement('section');panel.id='teacherMarketControls';panel.className='teacherSection';
+ panel.innerHTML='<h3>🗓 주식 시장 시간·요일</h3><p>가상 거래일은 월~토, 거래 시간은 09:00~15:30이에요. 시간을 설정한 뒤 30분 거래를 진행하세요.</p><div class="row"><label for="marketDay">요일</label><select id="marketDay"><option value="0">월요일</option><option value="1">화요일</option><option value="2">수요일</option><option value="3">목요일</option><option value="4">금요일</option><option value="5">토요일</option></select><label for="marketTime">시각</label><input id="marketTime" type="time" value="09:00"><button onclick="applyMarketTime()">시간 적용</button><button class="secondary" onclick="applyMarketAdvance()">⏩ 다음 30분 거래</button></div><p id="marketStatus" class="small"></p><p class="small">수요·공급(학생의 매수·매도), 기업 영업이익, 시장의 불확실성이 주가에 반영돼요. 실제 투자 결과를 보장하는 서비스가 아닌 수업용 모형입니다.</p><div id="teacherCeoAward"></div>';
+ const before=teacherPanel.querySelector('.teacherGrid');teacherPanel.insertBefore(panel,before||null);
+}
+function applyMarketTime(){const dayIndex=Number($('marketDay')?.value),time=$('marketTime')?.value;if(!Number.isInteger(dayIndex)||!time){showNotice('요일과 시각을 선택해 주세요.');return}teacherCmd('marketTime',{dayIndex,time})}
+function applyMarketAdvance(){teacherCmd('advanceMarket',1)}
+function renderTeacherMarketControls(state){
+ if(!teacher||!state?.marketClock)return;
+ setupTeacherMarketControls();
+ if(document.activeElement!==$('marketDay'))$('marketDay').value=String(state.marketClock.dayIndex);
+ if(document.activeElement!==$('marketTime'))$('marketTime').value=state.marketClock.time;
+ const status=$('marketStatus');if(status)status.textContent=state.marketClock.day+' '+state.marketClock.time+' · '+(state.marketClock.marketOpen?'거래 중':'휴장');
+ const award=$('teacherCeoAward');if(award&&state.finalAwards?.ceo){const ceo=state.finalAwards.ceo;award.innerHTML='<h3>🏆 최고의 CEO상</h3><p><b>'+esc(ceo.owner)+' · '+esc(ceo.name)+'</b></p><p>시가총액 '+Number(ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p>'}
+}
+function renderFinalResults(state){
+ const gameArea=$('gameArea');if(!gameArea||!state)return;
+ let panel=$('finalResults');
+ if(!panel){panel=document.createElement('section');panel.id='finalResults';panel.style.cssText='display:none;position:absolute;z-index:20;inset:8% 8%;overflow:auto;padding:24px;border:2px solid #e8c85d;border-radius:20px;background:#fffdf5;color:#333;box-shadow:0 18px 60px #0008';gameArea.appendChild(panel)}
+ if(state.gameStatus!=='ended'){panel.style.display='none';return}
+ panel.style.display='block';
+ const result=state.finalAwards||{players:[],companies:[],ceo:null};
+ const studentRows=result.players.map((player,index)=>'<li>'+(['🥇','🥈','🥉'][index]||'🏅')+' '+esc(player.name)+' · 누적 수익 '+Number(player.earnedTotal).toLocaleString('ko-KR')+'원</li>').join('');
+ const companyRows=result.companies.map(company=>'<li>'+esc(company.name)+' · '+esc(company.sectorName)+' · 시가총액 '+Number(company.marketValue).toLocaleString('ko-KR')+'원 · 영업이익 '+Number(company.operatingProfit||0).toLocaleString('ko-KR')+'원</li>').join('');
+ panel.innerHTML='<button style="float:right" onclick="closeFinalResults()">닫기</button><span class="lessonKicker">수업 결과</span><h2>🎉 우리 반 경제 활동 성과</h2><h3>🏆 최고의 CEO상</h3>'+(result.ceo?'<p><b>'+esc(result.ceo.owner)+' · '+esc(result.ceo.name)+'</b> — 시가총액 '+Number(result.ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(result.ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p>':'<p>이번 수업에서 창업한 회사가 없어 CEO상을 선정하지 않았어요.</p>')+'<h3>학생 누적 수익</h3><ol>'+studentRows+'</ol><h3>기업 성과</h3><ol>'+companyRows+'</ol><p class="small">CEO상은 회사 시가총액과 누적 영업이익을 합산해 선정했어요. 주식·기업 결과는 학습용 모의 기록입니다.</p>';
+}
+function closeFinalResults(){if($('finalResults'))$('finalResults').style.display='none'}
 function openMenu(m){
  menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');
- if(m==='businessHub'){drawBusinessHub();return}
- drawMenu();if(m==='stocks')updateStockCards(latestState);if(m==='createStore'){setupStoreCreationWizard();wireStoreStylePreview()}
+ if(m==='businessHub'){drawBusinessHub();setupCompanyChooser();return}
+ drawMenu();if(m==='stocks'){updateStockCards(latestState);drawCompanyMarket()}if(m==='createStore'){setupStoreCreationWizard();wireStoreStylePreview()}
 }
 const FOOD_ART_COLORS={b:'#e7a94f',c:'#9b5234',w:'#fff0cc',r:'#ef6876',y:'#ffce4c',g:'#69aa5d',p:'#f48cae',o:'#f28a45',k:'#754633',i:'#a7e3ef',a:'#533527',e:'#d7f8ff',h:'#fff3d9',s:'#3e2d29'};
 function createFoodPixelArt(productId,small=false){

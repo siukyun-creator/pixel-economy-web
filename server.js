@@ -10,6 +10,12 @@ const TEACHER_PIN = process.env.TEACHER_PIN;
 if (!TEACHER_PIN) throw new Error('TEACHER_PIN environment variable must be set.');
 const DONATION_CAUSES = ['community', 'disability', 'seniors', 'inclusiveEmployment'];
 const emptyDonations = () => ({ community: 0, disability: 0, seniors: 0, inclusiveEmployment: 0 });
+const MARKET_DAYS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+const COMPANY_PRODUCTS = {
+  electronics: { name: '전자기기', productId: 'smartphone', productName: '픽셀 스마트폰', unitCost: 20000, unitPrice: 30000 },
+  food: { name: '식품', productId: 'snack', productName: '픽셀 에너지바', unitCost: 5000, unitPrice: 8000 },
+  toys: { name: '장난감·학용품', productId: 'robotKit', productName: '픽셀 로봇 조립 키트', unitCost: 10000, unitPrice: 16000 }
+};
 const roomCodeMap = new Map();
 function makeRoomCode() {
   let code;
@@ -37,6 +43,10 @@ const retailPrices={milk_bread:3500,croissant:3800,cake:6500,coffee:4500,donut:3
 const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'}, meat:{name:'고깃집',emoji:'🥩'} };
 const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'},steak:{category:'meat',name:'직화 스테이크'},samgyeopsal:{category:'meat',name:'삼겹살 구이'},galbi:{category:'meat',name:'양념 갈비'}};
 const stockHistory = { SKY: [50000], PIX: [35000] };
+const stockOrders = { SKY: { buys: 0, sells: 0 }, PIX: { buys: 0, sells: 0 } };
+const stockOrderBefore = new Map();
+let marketClock = { dayIndex: 0, day: MARKET_DAYS[0], time: '09:00', marketOpen: true };
+let finalAwards = null;
 const properties = [
   { id: 'house1', name: '작은 집', price: 50000000, owner: null },
   { id: 'shop1', name: '상점 건물', price: 90000000, owner: null },
@@ -56,11 +66,75 @@ const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) |
 let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee });
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
+function marketIsOpen(time = marketClock.time) {
+  const [hours, minutes] = String(time).split(':').map(Number);
+  const value = hours * 60 + minutes;
+  return value >= 540 && value <= 930;
+}
+function setMarketClock(dayIndex, time) {
+  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= MARKET_DAYS.length || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(time))) return false;
+  marketClock = { dayIndex, day: MARKET_DAYS[dayIndex], time, marketOpen: marketIsOpen(time) };
+  return true;
+}
+function advanceMarket() {
+  let [hours, minutes] = marketClock.time.split(':').map(Number);
+  let total = hours * 60 + minutes + 30;
+  let dayIndex = marketClock.dayIndex;
+  if (total > 930) {
+    dayIndex = (dayIndex + 1) % MARKET_DAYS.length;
+    total = 540;
+  }
+  const time = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  setMarketClock(dayIndex, time);
+  return marketClock.marketOpen ? updateStockPrices() : false;
+}
+function updateStockPrices() {
+  for (const [ticker, stock] of Object.entries(stocks)) {
+    const orders = stockOrders[ticker] || { buys: 0, sells: 0 };
+    const totalOrders = orders.buys + orders.sells;
+    const orderPressure = totalOrders ? (orders.buys - orders.sells) / totalOrders : 0;
+    const company = companies.find(value => value.ticker === ticker);
+    const profitRatio = company ? Math.max(-1, Math.min(1, company.operatingProfit / Math.max(50000, company.costs))) : 0;
+    const randomNews = Math.random() * 0.02 - 0.01;
+    const rate = Math.max(-0.06, Math.min(0.06, orderPressure * 0.025 + profitRatio * 0.015 + randomNews));
+    const previous = stock.price;
+    const change = rate === 0 ? 0 : Math.sign(rate) * Math.max(100, Math.round(Math.abs(previous * rate) / 100) * 100);
+    stock.price = Math.max(1000, Math.min(500000, previous + change));
+    stock.lastChange = stock.price - previous;
+    stock.lastChangeRate = previous ? stock.lastChange / previous : 0;
+    stock.lastReason = totalOrders ? (orderPressure > 0 ? '매수세 우위' : orderPressure < 0 ? '매도세 우위' : '거래 균형') : '시장 기대와 기업 실적';
+    orders.buys = 0;
+    orders.sells = 0;
+    stockOrders[ticker] = orders;
+    stockHistory[ticker] ||= [];
+    stockHistory[ticker].push(stock.price);
+    if (stockHistory[ticker].length > 60) stockHistory[ticker].shift();
+    if (company) company.price = stock.price;
+  }
+  return true;
+}
+function calculateFinalAwards() {
+  const rankedCompanies = companies.map(company => {
+    const marketValue = (stocks[company.ticker]?.price || company.price || 0) * 10;
+    return { ...company, marketValue, score: marketValue + (company.operatingProfit || 0) };
+  }).sort((a, b) => b.score - a.score);
+  const rankedPlayers = [...players.values()].map(player => ({
+    name: player.name,
+    earnedTotal: player.earnedTotal || 0,
+    cash: player.money || 0,
+    bank: player.bank || 0
+  })).sort((a, b) => b.earnedTotal - a.earnedTotal);
+  return {
+    players: rankedPlayers.slice(0, 10),
+    ceo: rankedCompanies.length ? rankedCompanies[0] : null,
+    companies: rankedCompanies
+  };
+}
 roomIo.on('connection', socket => {
   socket.on('join', (data, ack) => {
     const reply = (ok, message) => { if (typeof ack === 'function') ack({ok, message}); if (!ok) msg(socket, message); };
@@ -84,11 +158,12 @@ roomIo.on('connection', socket => {
         (st.employees||[]).forEach(employee=>{if(employee.playerId===oldId)employee.playerId=socket.id;});
         (st.employmentApplications||[]).forEach(application=>{if(application.playerId===oldId)application.playerId=socket.id;});
       });
+      companies.forEach(company=>{if(company.ownerId===oldId)company.ownerId=socket.id;});
       if (wholesaleShop && wholesaleShop.ownerId === oldId) wholesaleShop.ownerId = socket.id;
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
       const seat = randomSeat();
-      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {SKY:0,PIX:0}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     }
     players.set(socket.id, p);
     socket.join(ROOM);
@@ -125,6 +200,10 @@ roomIo.on('connection', socket => {
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
+    if(a.type==='stockBuy'||a.type==='stockSell'){
+      const ticker=String(a.item||'');
+      stockOrderBefore.set(socket.id,{ticker,type:a.type,money:p.money,shares:p.shares?.[ticker]||0});
+    }
     if(a.type==='employmentApply'){
       const st=stores.find(value=>value.id===String(a.storeId));
       if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 일자리에 지원할 수 있어요.');
@@ -301,13 +380,114 @@ roomIo.on('connection', socket => {
     else if(a.type==='loan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<10000||v>100000||v%10000!==0)return msg(socket,'대출은 10,000원 단위로 10,000~100,000원까지 신청할 수 있어요.');if((p.loan||0)+v>200000)return msg(socket,'대출 한도는 총 200,000원이에요.');p.loan=(p.loan||0)+v;p.money+=v;msg(socket,`🏦 대출 완료! ${v.toLocaleString('ko-KR')}원 · 갚을 돈 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='repayLoan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>200000)return msg(socket,'상환 금액을 확인해 주세요.');const pay=Math.min(v,p.loan||0);if(!pay)return msg(socket,'갚을 대출금이 없어요.');if(p.money<pay)return msg(socket,'현금이 부족해요.');p.money-=pay;p.loan-=pay;msg(socket,`🏦 대출 상환! ${pay.toLocaleString('ko-KR')}원 · 남은 빚 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='donate'){const v=Number(a.amount),cause=DONATION_CAUSES.includes(a.cause)?a.cause:'community';if(!Number.isInteger(v)||v<1000||v>100000)return msg(socket,'기부는 1,000~100,000원 사이로 입력해 주세요.');if(p.money<v)return msg(socket,'기부할 현금이 부족해요.');p.money-=v;p.socialDonated=(p.socialDonated||0)+v;p.donations||=emptyDonations();p.donations[cause]=(p.donations[cause]||0)+v;const relief=Math.floor(v*.1);p.taxRelief=(p.taxRelief||0)+relief;const causeName={community:'지역사회',disability:'장애인 지원',seniors:'어르신 지원',inclusiveEmployment:'장애인 고용 지원'}[cause];msg(socket,`💛 ${causeName}에 ${v.toLocaleString('ko-KR')}원 기부 · 앞으로 낼 세금 ${relief.toLocaleString('ko-KR')}원 감면권 획득`);}
-    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
-    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if((p.shares[item]||0)<n)return msg(socket,`❌ 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
+    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
+    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
     else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
     else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
     else return;
     broadcast();
+  });
+  socket.on('action', a => {
+    const player = players.get(socket.id);
+    if (!player || !a) return;
+    if (a.type === 'stockBuy' || a.type === 'stockSell') {
+      const before=stockOrderBefore.get(socket.id);stockOrderBefore.delete(socket.id);
+      if (!before||!marketClock.marketOpen||!stocks[before.ticker]) return;
+      const succeeded=a.type==='stockBuy'
+        ? player.money<before.money&&(player.shares[before.ticker]||0)>before.shares
+        : player.money>before.money&&(player.shares[before.ticker]||0)<before.shares;
+      if(!succeeded)return;
+      const ticker = before.ticker;
+      stockOrders[ticker] ||= { buys: 0, sells: 0 };
+      stockOrders[ticker][a.type === 'stockBuy' ? 'buys' : 'sells'] += bounded(a.amount, 1, 10);
+      return;
+    }
+    if (a.type === 'createCompany') {
+      const companyName = safeName(a.item);
+      const sector = String(a.sector || '');
+      const product = COMPANY_PRODUCTS[sector];
+      if (gameStatus !== 'running') return msg(socket, '수업을 시작한 뒤 회사를 창업할 수 있어요.');
+      if (!product) return msg(socket, '회사 제품 분야를 선택해 주세요.');
+      if (player.company || player.storeId || (wholesaleShop && wholesaleShop.ownerId === socket.id)) return msg(socket, '한 학생은 사업 하나만 운영할 수 있어요.');
+      if (companyName === '학생') return msg(socket, '회사 이름을 입력해 주세요.');
+      if (player.money < 100000) return msg(socket, '회사 창업에는 현금 100,000원이 필요해요.');
+      const ticker = 'CO' + String(companies.length + 1).padStart(2, '0');
+      player.money -= 100000;
+      player.company = ticker;
+      player.shares[ticker] = 10;
+      stocks[ticker] = { name: companyName, price: 10000, owner: player.name, sector };
+      stockHistory[ticker] = [10000];
+      stockOrders[ticker] = { buys: 0, sells: 0 };
+      companies.push({ ticker, name: companyName, owner: player.name, ownerId: socket.id, sector, sectorName: product.name, productId: product.productId, productName: product.productName, unitCost: product.unitCost, unitPrice: product.unitPrice, inventory: 0, producedUnits: 0, soldUnits: 0, revenue: 0, costs: 0, operatingProfit: 0, price: 10000 });
+      msg(socket, `🏭 ${product.name} 회사 ${companyName} 창업 성공! 주식 10주 지급 · 잔액 ${player.money.toLocaleString('ko-KR')}원`);
+      broadcast();
+      return;
+    }
+    if (a.type === 'startup') {
+      const company = companies.find(value => value.ticker === player.company);
+      if (!company) return;
+      const product = COMPANY_PRODUCTS[String(a.sector || 'electronics')] || COMPANY_PRODUCTS.electronics;
+      Object.assign(company, {
+        ownerId: socket.id,
+        sector: String(a.sector || 'electronics') in COMPANY_PRODUCTS ? String(a.sector) : 'electronics',
+        sectorName: product.name,
+        productId: product.productId,
+        productName: product.productName,
+        unitCost: product.unitCost,
+        unitPrice: product.unitPrice,
+        inventory: 0,
+        producedUnits: 0,
+        soldUnits: 0,
+        revenue: 0,
+        costs: 0,
+        operatingProfit: 0
+      });
+      stocks[company.ticker].sector = company.sector;
+      stockOrders[company.ticker] = { buys: 0, sells: 0 };
+      broadcast();
+      return;
+    }
+    if (a.type === 'produceCompanyGoods') {
+      const company = companies.find(value => value.ticker === player.company);
+      const quantity = Number(a.amount);
+      if (gameStatus !== 'running') return msg(socket, '수업을 시작한 뒤 제품을 생산할 수 있어요.');
+      if (!company || company.ownerId !== socket.id) return msg(socket, '회사 대표만 제품을 생산할 수 있어요.');
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) return msg(socket, '생산 수량은 1~10개로 입력해 주세요.');
+      const cost = company.unitCost * quantity;
+      if (player.money < cost) return msg(socket, `생산 비용 ${cost.toLocaleString('ko-KR')}원이 필요해요.`);
+      player.money -= cost;
+      company.costs += cost;
+      company.inventory += quantity;
+      company.producedUnits += quantity;
+      msg(socket, `${company.productName} ${quantity}개 생산 · 생산비 ${cost.toLocaleString('ko-KR')}원`);
+      broadcast();
+      return;
+    }
+    if (a.type === 'buyCompanyGoods') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      const quantity = Number(a.amount);
+      if (gameStatus !== 'running') return msg(socket, '수업을 시작한 뒤 제품을 구매할 수 있어요.');
+      if (!company) return msg(socket, '구매할 회사 제품을 찾을 수 없어요.');
+      if (company.ownerId === socket.id) return msg(socket, '내 회사 제품은 구매할 수 없어요.');
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return msg(socket, '구매 수량은 1~5개로 입력해 주세요.');
+      if (company.inventory < quantity) return msg(socket, '회사 재고가 부족해요.');
+      const total = company.unitPrice * quantity;
+      if (player.money < total) return msg(socket, `구매에는 ${total.toLocaleString('ko-KR')}원이 필요해요.`);
+      const owner = players.get(company.ownerId);
+      if (!owner) return msg(socket, '회사 대표가 현재 교실에 없어요.');
+      player.money -= total;
+      owner.money += total;
+      owner.earnedTotal = (owner.earnedTotal || 0) + total;
+      company.inventory -= quantity;
+      company.soldUnits += quantity;
+      company.revenue += total;
+      company.operatingProfit = company.revenue - company.costs;
+      player.companyGoods ||= {};
+      player.companyGoods[company.productId] = (player.companyGoods[company.productId] || 0) + quantity;
+      msg(socket, `${company.productName} ${quantity}개 구매 완료 · ${total.toLocaleString('ko-KR')}원`);
+      broadcast();
+    }
   });
   socket.on('sync',()=>socket.emit('state',snapshot()));
   socket.on('teacherLogin', (pin, ack) => { if(String(pin)!==TEACHER_PIN){if(typeof ack==='function')ack({ok:false,message:'교사 PIN이 틀렸어요. Render의 TEACHER_PIN 설정을 확인해 주세요.'});return msg(socket,'교사 PIN이 틀렸어요.');}socket.join(ROOM);if(typeof ack==='function')ack({ok:true});socket.emit('teacherOK',{...snapshot(),roomCode:ROOM}); });
@@ -326,6 +506,14 @@ roomIo.on('connection', socket => {
       console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
     }
     if(c.type==='shops')shopsEnabled=!!c.value;
+    if(c.type==='marketTime'){
+      if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||'')))msg(socket,'요일이나 시각을 확인해 주세요.');
+    }
+    if(c.type==='advanceMarket'){
+      if(gameStatus!=='running')msg(socket,'수업을 시작한 뒤 거래 시점을 진행할 수 있어요.');
+      else if(advanceMarket())msg(socket,`📈 ${marketClock.day} ${marketClock.time} 거래 완료 · 매수·매도와 기업 실적을 반영했어요.`);
+      else msg(socket,`🕘 ${marketClock.day} ${marketClock.time} · 장이 열리지 않아 시각만 진행했어요.`);
+    }
     if(c.type==='clearStores'){stores.forEach(st=>(st.employees||[]).forEach(employee=>{const player=players.get(employee.playerId);if(player){player.employerStoreId=null;player.job='무직';}}));stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1000,500000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
     if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=roomIo.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
@@ -336,11 +524,20 @@ roomIo.on('connection', socket => {
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended'))gameStatus='running';
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){gameStatus='running';finalAwards=null;}
     if(c.type==='pause' && gameStatus==='running')gameStatus='paused';
     if(c.type==='resume' && gameStatus==='paused')gameStatus='running';
-    if(c.type==='end')gameStatus='ended';
-    if(c.type==='reset')gameStatus='waiting';
+    if(c.type==='end'){gameStatus='ended';finalAwards=calculateFinalAwards();}
+    if(c.type==='reset'){gameStatus='waiting';finalAwards=null;}
+    if(c.type==='resetEconomy'){
+      stocks.SKY={name:'하늘항공',price:50000};
+      stocks.PIX={name:'픽셀상사',price:35000};
+      stockHistory.SKY=[50000];stockHistory.PIX=[35000];
+      stockOrders.SKY={buys:0,sells:0};stockOrders.PIX={buys:0,sells:0};
+      Object.keys(stockOrders).filter(ticker=>/^CO\d+$/.test(ticker)).forEach(ticker=>delete stockOrders[ticker]);
+      setMarketClock(0,'09:00');finalAwards=null;
+      players.forEach(player=>{player.companyGoods={};});
+    }
     if(c.type==='randomize'){
       const cells=[];for(let x=-24;x<=24;x+=4)for(let z=-6;z<=6;z+=3)cells.push({x,z});
       for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}
@@ -352,19 +549,6 @@ roomIo.on('connection', socket => {
   });
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
-setInterval(() => {
-  for (const [ticker, stock] of Object.entries(stocks)) {
-    const direction = Math.random() < 0.5 ? -1 : 1;
-    const movement = 250 + Math.floor(Math.random() * 751);
-    stock.price = Math.max(1000, stock.price + direction * movement);
-    stockHistory[ticker] ||= [];
-    stockHistory[ticker].push(stock.price);
-    if (stockHistory[ticker].length > 60) stockHistory[ticker].shift();
-    const company = companies.find(c => c.ticker === ticker);
-    if (company) company.price = stock.price;
-  }
-  broadcast();
-}, 3000);
   return roomIo;
 }
 const initialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : makeRoomCode();

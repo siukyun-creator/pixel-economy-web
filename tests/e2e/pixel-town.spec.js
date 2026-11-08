@@ -43,8 +43,16 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
     await expect(page.locator('#teacher')).toBeVisible();
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
+    await expect(page.locator('#teacherMarketControls')).toBeVisible();
+    await page.locator('#marketDay').selectOption('5');
+    await page.locator('#marketTime').fill('10:30');
+    await page.getByRole('button', { name: '시간 적용' }).click();
+    await expect(page.locator('#marketStatus')).toContainText('토요일 10:30');
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
+    await page.getByRole('button', { name: '■ 종료' }).click();
+    await expect(page.locator('#finalResults')).toBeVisible();
+    await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
   });
 
   await page.goto('about:blank');
@@ -77,6 +85,11 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await expect(page.locator('.businessChoice')).toHaveCount(3);
   await expect(page.locator('.businessChoice')).toContainText(['우리 동네 가게', '식자재 도매상', '주식회사']);
+  await expect(page.locator('#hubCompanySector')).toHaveValue('electronics');
+  await expect(page.locator('#companyProductDescription')).toContainText('픽셀 스마트폰');
+  await page.locator('#hubCompanySector').selectOption('toys');
+  await expect(page.locator('#companyProductDescription')).toContainText('로봇 조립 키트');
+  await page.locator('#hubCompanySector').selectOption('electronics');
   fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
   await page.screenshot({
     path: path.join(resultsDir, 'screenshots', 'pixel-town-business-hub.png'),
@@ -261,11 +274,13 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const price = page.locator('#menuContent .stockCard .stockPrice').first();
     await expect(price).toBeVisible();
     const previousPrice = await price.textContent();
-    await expect(price).not.toHaveText(previousPrice, { timeout: 10000 });
-    await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/(▲|▼)/);
+    await expect(page.locator('#companyMarket')).toContainText('소비자의 구매가 기업 실적과 주가에 영향을 줍니다.');
     await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="SKY"]')).toContainText('1주');
     await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
+    await teacherPage.getByRole('button', { name: '⏩ 다음 30분 거래' }).click();
+    await expect(price).not.toHaveText(previousPrice);
+    await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/▲/);
     await page.screenshot({
       path: path.join(resultsDir, 'screenshots', 'pixel-town-stock-holdings.png'),
       fullPage: false
@@ -282,6 +297,11 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(1);
     await expect(page.locator('.businessChoice').nth(0)).toContainText('이미 회사');
     await expect(page.locator('.businessChoice').nth(1)).toContainText('이미 회사');
+    await page.getByRole('button', { name: /주식/ }).click();
+    await expect(page.locator('#companyMarket')).toContainText('E2E기업 경영');
+    await expect(page.locator('#companyMarket img').first()).toHaveAttribute('src', /pixel-smartphone\.svg$/);
+    await page.getByRole('button', { name: '제품 생산' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBe(1);
 
     const wholesalePage = await browser.newPage({ viewport: { width: 960, height: 600 } });
     collectBrowserErrors(wholesalePage);
@@ -296,7 +316,14 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect.poll(() => wholesalePage.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
     await expect(wholesalePage.locator('.businessChoice').nth(1)).toContainText('내 도매상을 운영');
+    await wholesalePage.getByRole('button', { name: /주식/ }).click();
+    await expect(wholesalePage.locator('#companyMarket')).toContainText('픽셀 스마트폰');
+    await wholesalePage.getByRole('button', { name: '제품 1개 구매' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].operatingProfit)).toBe(10000);
     await wholesalePage.close();
+    await teacherPage.getByRole('button', { name: '■ 종료' }).click();
+    await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
+    await expect(page.locator('#finalResults')).toContainText('E2E기업');
   });
 
   await page.goto('about:blank');

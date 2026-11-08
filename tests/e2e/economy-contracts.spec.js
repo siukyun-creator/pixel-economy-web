@@ -144,6 +144,14 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
       target.on('state', onState);
       target.emit('action', action);
     });
+    const teacherCommand = (type, value = 1) => new Promise(resolve => {
+      teacher.once('teacherCommandResult', resolve);
+      teacher.emit('teacherCommand', { pin: '6582', type, value });
+    });
+    const syncStudent = () => new Promise(resolve => {
+      student.once('state', resolve);
+      student.emit('sync');
+    });
 
     const initialMoney = playerFrom(state).money;
     state = await act(student, { type: 'work' });
@@ -178,8 +186,16 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
 
     state = await act(student, { type: 'stockBuy', item: 'SKY', amount: 1 });
     expect(playerFrom(state).shares.SKY).toBe(1);
+    const priceBeforeDemand = state.stocks.SKY.price;
+    await teacherCommand('advanceMarket');
+    state = await syncStudent();
+    expect(state.stocks.SKY.price).toBeGreaterThan(priceBeforeDemand);
     state = await act(student, { type: 'stockSell', item: 'SKY', amount: 1 });
     expect(playerFrom(state).shares.SKY).toBe(0);
+    const priceBeforeSupply = state.stocks.SKY.price;
+    await teacherCommand('advanceMarket');
+    state = await syncStudent();
+    expect(state.stocks.SKY.price).toBeLessThan(priceBeforeSupply);
     expect(playerFrom(state).taxPaid).toBeGreaterThan(500);
 
     const storeCreationPromise = new Promise((resolve, reject) => {
@@ -215,10 +231,20 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     let entrepreneurState = await joinStudent(entrepreneur, '경제창업학생', roomCode);
     const entrepreneurId = entrepreneurState.players.find(player => player.name === '경제창업학생').id;
     const entrepreneurFrom = current => current.players.find(player => player.id === entrepreneurId);
-    entrepreneurState = await act(entrepreneur, { type: 'startup', item: '경제회사' });
+    entrepreneurState = await act(entrepreneur, { type: 'createCompany', item: '경제회사', sector: 'electronics' });
     const ticker = entrepreneurFrom(entrepreneurState).company;
     expect(ticker).toMatch(/^CO\d+$/);
     expect(entrepreneurFrom(entrepreneurState).shares[ticker]).toBe(10);
+    const company = entrepreneurState.companies.find(entry => entry.ticker === ticker);
+    expect(company.sector).toBe('electronics');
+    expect(company.productName).toBe('픽셀 스마트폰');
+    entrepreneurState = await act(entrepreneur, { type: 'produceCompanyGoods', amount: 1 });
+    expect(entrepreneurState.companies.find(entry => entry.ticker === ticker).inventory).toBe(1);
+    state = await act(student, { type: 'buyCompanyGoods', ticker, amount: 1 });
+    const operatedCompany = state.companies.find(entry => entry.ticker === ticker);
+    expect(operatedCompany.soldUnits).toBe(1);
+    expect(operatedCompany.operatingProfit).toBe(10000);
+    expect(operatedCompany.inventory).toBe(0);
     const secondBusinessNotice = new Promise(resolve => entrepreneur.once('notice', resolve));
     entrepreneur.emit('action', {
       type: 'createStore',
@@ -357,7 +383,20 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     state = await act(student, { type: 'transfer', item: '경제유통학생', amount: 1000 });
     expect(playerFrom(state).money).toBe(moneyBeforeTransfer - 1000);
 
-    const resetStatePromise = new Promise(resolve => student.once('state', resolve));
+    const finalStatePromise = new Promise(resolve => teacher.once('state', resolve));
+    await teacherCommand('end');
+    const finalState = await finalStatePromise;
+    expect(finalState.finalAwards.ceo.name).toBe('경제회사');
+    expect(finalState.finalAwards.ceo.operatingProfit).toBe(10000);
+
+    const resetStatePromise = new Promise(resolve => {
+      const onState = next => {
+        if (next.companies.length) return;
+        student.off('state', onState);
+        resolve(next);
+      };
+      student.on('state', onState);
+    });
     const resetResultPromise = new Promise(resolve => teacher.once('teacherCommandResult', resolve));
     teacher.emit('teacherCommand', { pin: '6582', type: 'resetEconomy' });
     const resetResult = await resetResultPromise;
