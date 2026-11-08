@@ -24,3 +24,15 @@
 5. 배포된 HTTPS 주소를 학생들에게 공유합니다.
 
 무료 호스팅은 절전/재시작/자원 제한이 있을 수 있으므로 30대 동시 접속은 반드시 사전 테스트하세요. 이 파일만으로 서버가 이미 인터넷에 배포되는 것은 아닙니다.
+
+## 브라우저 자동 테스트
+
+Playwright와 Chromium으로 실제 게임 페이지의 교실 생성, 4자리 코드 입장, 키보드 이동을 테스트하고, 대표 경제 거래와 30명 동시 접속 계약도 확인합니다. 유지해야 할 기능과 저장 방식 검토는 [기능 계약 문서](./docs/functional-contracts.md)를 참고하세요.
+
+```bash
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+테스트는 로컬 게임 서버를 자동으로 실행하고 종료합니다. 스크린샷은 `test-results/screenshots/pixel-town-game.png`, 브라우저/서버 오류 로그는 `test-results/`에 저장됩니다. 30명 테스트는 서버 Socket.IO 접속 한도를 검증하며, 호스팅 환경의 용량 측정은 별도로 해야 합니다. HTML 결과는 `npm run test:e2e:report`로 열 수 있습니다.
