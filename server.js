@@ -6,8 +6,8 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
-const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
-const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
+// Fixed classroom PIN for reliable setup across Render environments.
+const TEACHER_PIN = '2468';
 const roomCodeMap = new Map();
 function makeRoomCode() {
   let code;
