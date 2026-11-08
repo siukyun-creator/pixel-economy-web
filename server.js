@@ -46,13 +46,14 @@ const broadcast = () => io.to(ROOM).emit('state', snapshot());
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
 io.on('connection', socket => {
-  socket.on('join', data => {
-    if (!data || data.room !== ROOM) return msg(socket, '방 코드가 올바르지 않아요.');
+  socket.on('join', (data, ack) => {
+    const reply = (ok, message) => { if (typeof ack === 'function') ack({ok, message}); if (!ok) msg(socket, message); };
+    if (!data || data.room !== ROOM) return reply(false, '방 코드가 올바르지 않아요. 선생님이 알려준 최신 코드를 확인해 주세요.');
     const name = safeName(data.name);
-    if (!name) return msg(socket, '이름을 입력해 주세요.');
+    if (!String(data.name || '').trim()) return reply(false, '이름을 입력해 주세요.');
     const saved = [...players.values()].find(v => v.name.toLocaleLowerCase('ko-KR') === name.toLocaleLowerCase('ko-KR'));
-    if (saved && saved.connected) return msg(socket, '같은 이름의 학생이 이미 접속 중이에요.');
-    if (!saved && players.size >= MAX) return msg(socket, '등록된 학생이 30명이에요. 선생님께 문의해 주세요.');
+    if (saved && saved.connected) return reply(false, '같은 이름의 학생이 이미 접속 중이에요.');
+    if (!saved && players.size >= MAX) return reply(false, '등록된 학생이 30명이에요. 선생님께 문의해 주세요.');
     let p;
     if (saved) {
       const oldId = saved.id;
@@ -71,6 +72,7 @@ io.on('connection', socket => {
     }
     players.set(socket.id, p);
     socket.join(ROOM);
+    reply(true, '입장 성공');
     socket.emit('joined', {id: socket.id, resumed: !!saved});
     broadcast();
     io.to(ROOM).emit('notice', saved ? `${p.name} 다시 입장! 이전 기록을 불러왔어요.` : `${p.name} 입장!`);
