@@ -6,8 +6,10 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
-const ROOM = process.env.ROOM_CODE || 'TOWN123';
-const TEACHER_PIN = process.env.TEACHER_PIN || '2468';
+const configuredRoomCode = String(process.env.ROOM_CODE || '').trim();
+const ROOM = /^\d{4}$/.test(configuredRoomCode) ? configuredRoomCode : String(Math.floor(1000 + Math.random() * 9000));
+const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
+const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
 const MAX = 30;
 const players = new Map();
 const market = { apple: 1000, bread: 3500, toy: 15000 };
@@ -213,7 +215,7 @@ io.on('connection', socket => {
     broadcast();
   });
   socket.on('sync',()=>{if(players.has(socket.id)||socket.rooms.has(ROOM))socket.emit('state',snapshot());});
-  socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',snapshot()); });
+  socket.on('teacherLogin', pin => { if(String(pin)!==TEACHER_PIN)return msg(socket,'교사 PIN이 틀렸어요.');socket.join(ROOM);socket.emit('teacherOK',{...snapshot(),roomCode:ROOM}); });
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
 
