@@ -7,7 +7,7 @@ const io = new Server(server);
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 const configuredRoomCode = String(process.env.ROOM_CODE || '').trim();
-const ROOM = /^\d{4}$/.test(configuredRoomCode) ? configuredRoomCode : String(Math.floor(1000 + Math.random() * 9000));
+let ROOM = /^\d{4}$/.test(configuredRoomCode) ? configuredRoomCode : String(Math.floor(1000 + Math.random() * 9000));
 const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
 const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
 const MAX = 30;
@@ -219,6 +219,20 @@ io.on('connection', socket => {
   socket.on('teacherCommand', c => {
     if(!c||String(c.pin)!==TEACHER_PIN)return;
 
+    if(c.type==='rotateRoom') {
+      const previousRoom = ROOM;
+      let nextRoom;
+      do { nextRoom = String(Math.floor(1000 + Math.random() * 9000)); } while (nextRoom === previousRoom);
+      ROOM = nextRoom;
+      const members = [...(io.sockets.adapter.rooms.get(previousRoom) || [])];
+      members.forEach(id => {
+        const memberSocket = io.sockets.sockets.get(id);
+        if (memberSocket) { memberSocket.leave(previousRoom); memberSocket.join(ROOM); }
+      });
+      socket.emit('roomCodeUpdated', { roomCode: ROOM });
+      broadcast();
+      console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
+    }
     if(c.type==='shops')shopsEnabled=!!c.value;
     if(c.type==='clearStores'){stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1000,500000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
