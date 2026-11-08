@@ -257,4 +257,4 @@ setInterval(() => {
   }
   broadcast();
 }, 10000);
-server.listen(PORT,'0.0.0.0',()=>console.log('Pixel Economy 3D listening on '+PORT));
+server.listen(PORT,'0.0.0.0',()=>{console.log('Pixel Economy 3D listening on '+PORT);console.log('[PIXEL TOWN] Classroom room code: '+ROOM);console.log('[PIXEL TOWN] Server PID: '+process.pid);});
