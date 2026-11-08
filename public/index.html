@@ -275,7 +275,7 @@ function connectClassroom(namespace,onConnected){
  bindGameSocketEvents(socket);
  $('connection').textContent='교실 연결 중...';
  socket.once('connect',()=>{$('connection').textContent='서버 연결됨';onConnected(socket)});
- socket.once('connect_error',e=>{$('connection').textContent='서버 연결 오류';$('loginNotice').textContent='교실 연결 실패: '+(e?.message||'잠시 후 다시 시도해 주세요.')});
+ socket.once('connect_error',e=>{$('connection').textContent='서버 연결 오류';const b=$('joinButton');if(b){b.disabled=false;b.textContent='입장'}$('loginNotice').textContent='교실 연결 실패: '+(e?.message||'잠시 후 다시 시도해 주세요.')});
 }
 function join(){
  const name=$('name').value.trim(),code=$('room').value.trim(),button=$('joinButton');
