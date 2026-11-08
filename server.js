@@ -6,8 +6,17 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
-const configuredRoomCode = String(process.env.ROOM_CODE || '').trim();
-let ROOM = /^\d{4}$/.test(configuredRoomCode) ? configuredRoomCode : String(Math.floor(1000 + Math.random() * 9000));
+const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
+const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
+const roomCodeMap = new Map();
+function makeRoomCode() {
+  let code;
+  do { code = String(Math.floor(1000 + Math.random() * 9000)); } while (roomCodeMap.has(code));
+  return code;
+}
+function createClassroom(roomCode) {
+  let ROOM = roomCode;
+  const roomIo = io.of('/classrooms/' + roomCode);
 const configuredTeacherPin = String(process.env.TEACHER_PIN || '2468').trim();
 const TEACHER_PIN = /^\d{4}$/.test(configuredTeacherPin) ? configuredTeacherPin : '2468';
 const MAX = 30;
@@ -42,10 +51,10 @@ let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
 const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee });
-const broadcast = () => io.to(ROOM).emit('state', snapshot());
+const broadcast = () => roomIo.emit('state', snapshot());
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
-io.on('connection', socket => {
+roomIo.on('connection', socket => {
   socket.on('join', (data, ack) => {
     const reply = (ok, message) => { if (typeof ack === 'function') ack({ok, message}); if (!ok) msg(socket, message); };
     if (!data || data.room !== ROOM) return reply(false, '방 코드가 올바르지 않아요. 선생님이 알려준 최신 코드를 확인해 주세요.');
@@ -75,7 +84,7 @@ io.on('connection', socket => {
     reply(true, '입장 성공');
     socket.emit('joined', {id: socket.id, resumed: !!saved});
     broadcast();
-    io.to(ROOM).emit('notice', saved ? `${p.name} 다시 입장! 이전 기록을 불러왔어요.` : `${p.name} 입장!`);
+    roomIo.emit('notice', saved ? `${p.name} 다시 입장! 이전 기록을 불러왔어요.` : `${p.name} 입장!`);
   });
   socket.on('move3d', d => {
     const p = players.get(socket.id);
@@ -224,13 +233,10 @@ io.on('connection', socket => {
     if(c.type==='rotateRoom') {
       const previousRoom = ROOM;
       let nextRoom;
-      do { nextRoom = String(Math.floor(1000 + Math.random() * 9000)); } while (nextRoom === previousRoom);
+      do { nextRoom = String(Math.floor(1000 + Math.random() * 9000)); } while (roomCodeMap.has(nextRoom));
       ROOM = nextRoom;
-      const members = [...(io.sockets.adapter.rooms.get(previousRoom) || [])];
-      members.forEach(id => {
-        const memberSocket = io.sockets.sockets.get(id);
-        if (memberSocket) { memberSocket.leave(previousRoom); memberSocket.join(ROOM); }
-      });
+      roomCodeMap.delete(previousRoom);
+      roomCodeMap.set(ROOM, roomIo);
       socket.emit('roomCodeUpdated', { roomCode: ROOM });
       broadcast();
       console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
@@ -238,7 +244,7 @@ io.on('connection', socket => {
     if(c.type==='shops')shopsEnabled=!!c.value;
     if(c.type==='clearStores'){stores.splice(0,stores.length);players.forEach(p=>p.storeId=null);}
     if(c.type==='giveMoney'||c.type==='takeMoney'){const target=players.get(String(c.value?.id||''));const amount=bounded(c.value?.amount,1000,500000);if(target)target.money=Math.max(0,target.money+(c.type==='giveMoney'?amount:-amount));}
-    if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=io.sockets.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
+    if(c.type==='removeStudent'){const targetId=String(c.value?.id||'');const targetSocket=roomIo.sockets.get(targetId);if(targetSocket)targetSocket.disconnect(true);}
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
@@ -273,4 +279,37 @@ setInterval(() => {
   }
   broadcast();
 }, 10000);
-server.listen(PORT,'0.0.0.0',()=>{console.log('Pixel Economy 3D listening on '+PORT);console.log('[PIXEL TOWN] Classroom room code: '+ROOM);console.log('[PIXEL TOWN] Server PID: '+process.pid);});
+  return roomIo;
+}
+const initialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : makeRoomCode();
+createClassroom(initialCode);
+io.on('connection', socket => {
+  socket.on('openClassroom', (data, ack) => {
+    const code = String(data?.roomCode || '').trim();
+    const room = roomCodeMap.get(code);
+    if (!/^\d{4}$/.test(code) || !room) {
+      if (typeof ack === 'function') ack({ok:false, message:'교실 코드를 찾을 수 없어요. 선생님에게 새 교실 코드를 확인해 주세요.'});
+      return;
+    }
+    if (typeof ack === 'function') ack({ok:true, namespace:room.name, roomCode:code});
+  });
+  socket.on('createClassroom', (data, ack) => {
+    if (String(data?.pin || '') !== TEACHER_PIN) {
+      if (typeof ack === 'function') ack({ok:false, message:'교사 PIN이 틀렸어요.'});
+      return;
+    }
+    if (roomCodeMap.size >= 9000) {
+      if (typeof ack === 'function') ack({ok:false, message:'만들 수 있는 교실 코드가 모두 사용 중이에요.'});
+      return;
+    }
+    const code = makeRoomCode();
+    const room = createClassroom(code);
+    console.log('[PIXEL TOWN] New classroom created: ' + code);
+    if (typeof ack === 'function') ack({ok:true, roomCode:code, namespace:room.name});
+  });
+});
+server.listen(PORT,'0.0.0.0',()=>{
+  console.log('Pixel Economy multi-classroom server listening on '+PORT);
+  console.log('[PIXEL TOWN] Initial classroom code: '+initialCode);
+  console.log('[PIXEL TOWN] Teacher PIN: '+TEACHER_PIN);
+});
