@@ -718,8 +718,9 @@ roomIo.on('connection', socket => {
   });
   socket.on('sync',()=>socket.emit('state',snapshot()));
   socket.on('teacherLogin', (pin, ack) => { if(String(pin)!==TEACHER_PIN){if(typeof ack==='function')ack({ok:false,message:'교사 PIN이 틀렸어요. Render의 TEACHER_PIN 설정을 확인해 주세요.'});return msg(socket,'교사 PIN이 틀렸어요.');}socket.join(ROOM);if(typeof ack==='function')ack({ok:true});socket.emit('teacherOK',{...snapshot(),roomCode:ROOM}); });
-  socket.on('teacherCommand', c => {
-    if(!c||String(c.pin)!==TEACHER_PIN)return;
+  socket.on('teacherCommand', (c, ack) => {
+    if(!c||String(c.pin)!==TEACHER_PIN){if(typeof ack==='function')ack({ok:false,type:c?.type||'',message:'교사 인증이 만료됐어요.'});return;}
+    console.log('[PIXEL TOWN] teacherCommand received:',c.type,JSON.stringify(c.value));
 
     if(c.type==='rotateRoom') {
       const previousRoom = ROOM;
@@ -736,10 +737,19 @@ roomIo.on('connection', socket => {
     if(c.type==='marketTime'){
       if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||''),Number(c.value?.turnMinutes)))msg(socket,'요일·시각 또는 한 턴 가상 시각을 확인해 주세요.');
     }
+    let commandResult={ok:true,type:c.type};
     if(c.type==='turnSettings'){
       const duration=Number(c.value?.durationMinutes),total=Number(c.value?.totalTurns);
-      if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>6)msg(socket,'실제 턴 시간은 1~60분, 전체 턴은 월~토 6회 이내로 설정해 주세요.');
-      else {turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;else if(gameStatus==='paused')turnState.remainingMs=duration*60000;}
+      if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>6){
+        commandResult={ok:false,type:c.type,message:'한 턴은 1~60분, 전체 턴은 1~6일로 설정해 주세요.'};
+        msg(socket,commandResult.message);
+      } else {
+        turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;
+        if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;
+        else if(gameStatus==='paused')turnState.remainingMs=duration*60000;
+        commandResult={ok:true,type:c.type,turnConfig:{...turnConfig},turnState:{...turnState}};
+        console.log('[PIXEL TOWN] turnSettings saved:',JSON.stringify(commandResult));
+      }
     }
     if(c.type==='advanceMarket'){
       if(gameStatus!=='running')msg(socket,'수업을 시작한 뒤 거래 시점을 진행할 수 있어요.');
@@ -772,7 +782,9 @@ roomIo.on('connection', socket => {
     }
     if(c.type==='price'){const item=String(c.item||'');const v=bounded(c.value,1,500);if(market[item])market[item]=v;}
     broadcast();
-    socket.emit('teacherCommandResult',{ok:true,type:c.type,gameStatus,news,shopsEnabled,turnConfig:{...turnConfig}});
+    const result={...commandResult,gameStatus,news,shopsEnabled,turnConfig:{...turnConfig},turnState:{...turnState}};
+    socket.emit('teacherCommandResult',result);
+    if(typeof ack==='function')ack(result);
   });
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
