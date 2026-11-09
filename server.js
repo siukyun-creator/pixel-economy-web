@@ -137,7 +137,7 @@ function applyImmediateStockMove(ticker, rate, reason) {
   const stock = stocks[ticker];
   if (!stock) return;
   const previous = stock.price;
-  const change = Math.max(100, Math.round(Math.abs(previous * rate) / 100) * 100) * Math.sign(rate);
+  const change = Math.max(10, Math.round(Math.abs(previous * rate) / 10) * 10) * Math.sign(rate);
   stock.price = Math.max(1000, Math.min(500000, previous + change));
   stock.lastChange = stock.price - previous;
   stock.lastChangeRate = previous ? stock.lastChange / previous : 0;
