@@ -55,6 +55,7 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.locator('#turnDurationMinutes').selectOption('1');
     await page.locator('#totalTurns').selectOption('1');
     await page.getByRole('button', { name: '설정 저장' }).click();
+    await expect(page.locator('#marketStatus')).toContainText('실제 턴 1/1', { timeout: 10000 });
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
     await expect(page.locator('#finalResults')).toBeVisible({ timeout: 75000 });
@@ -138,6 +139,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await page.getByRole('button', { name: '가게 만들기' }).click();
+  await page.locator('#newStoreName').fill('테스트 가게');
   const foodChoices = page.locator('#foodProductChoices [role="radio"]');
   await expect(foodChoices).toHaveCount(3);
   await expect(page.locator('#foodArtRegister')).toHaveCount(0);
