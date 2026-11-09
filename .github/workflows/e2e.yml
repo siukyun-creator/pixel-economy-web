@@ -1,5 +1,9 @@
 name: PIXEL TOWN verification
 
+concurrency:
+  group: pixel-town-verification-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: ["**"]
