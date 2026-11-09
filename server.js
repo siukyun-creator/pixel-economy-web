@@ -45,7 +45,7 @@ const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant
 const stockHistory = {};
 const stockOrders = {};
 let marketClock = { dayIndex: 0, day: MARKET_DAYS[0], time: '09:00', marketOpen: true, turnMinutes: 30 };
-const turnConfig = { durationMinutes: 3, totalTurns: 10 };
+const turnConfig = { durationMinutes: 3, totalTurns: 6 };
 let turnState = { turnNumber: 1, endsAt: null, remainingMs: null, summary: null, baseline: {}, initialAssets: {} };
 let finalAwards = null;
 const properties = [
@@ -54,6 +54,7 @@ const properties = [
   { id: 'house2', name: '강변 집', price: 120000000, owner: null }
 ];
 let news = '마을 경제가 시작됐어요!';
+let newsFeed = [];
 let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
@@ -67,7 +68,7 @@ const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) |
 let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, turnConfig, turnState, finalAwards });
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
 const msg = (s, t) => s.emit('notice', t);
@@ -132,6 +133,81 @@ function updateStockPrices() {
   }
   return true;
 }
+function applyImmediateStockMove(ticker, rate, reason) {
+  const stock = stocks[ticker];
+  if (!stock) return;
+  const previous = stock.price;
+  const change = Math.max(100, Math.round(Math.abs(previous * rate) / 100) * 100) * Math.sign(rate);
+  stock.price = Math.max(1000, Math.min(500000, previous + change));
+  stock.lastChange = stock.price - previous;
+  stock.lastChangeRate = previous ? stock.lastChange / previous : 0;
+  stock.lastReason = reason;
+  const history = stockHistory[ticker] ||= [];
+  history.push(stock.price);
+  if (history.length > 60) history.shift();
+  const company = companies.find(value => value.ticker === ticker);
+  if (company) company.price = stock.price;
+}
+const COMPANY_NEWS = {
+  good: [
+    ['신제품 출시 대성공', '새 제품이 큰 관심을 받으며 주문 문의가 늘었어요.'],
+    ['품질 인증 획득', '제품 품질을 인정받아 소비자 신뢰가 높아졌어요.'],
+    ['유명 매장과 납품 계약', '새로운 판매처가 생겨 고객 방문이 늘어날 전망이에요.'],
+    ['친환경 생산 호평', '환경을 생각하는 생산 방식이 좋은 평가를 받았어요.'],
+    ['고객 만족도 상승', '친절한 서비스와 좋은 품질로 단골 고객이 늘었어요.']
+  ],
+  bad: [
+    ['제품 결함 논란', '일부 제품의 품질 문제가 알려져 고객 관심이 줄었어요.'],
+    ['원재료 가격 급등', '생산 비용 부담이 커져 수익 전망이 나빠졌어요.'],
+    ['배송 지연 발생', '배송이 늦어져 고객 불만이 늘었어요.'],
+    ['경쟁사 신제품 등장', '강력한 경쟁 상품이 등장해 고객이 분산되고 있어요.'],
+    ['광고 논란 발생', '홍보 내용에 대한 논란으로 소비자 신뢰가 낮아졌어요.']
+  ]
+};
+function generateCompanyNews() {
+  if (!companies.length) {
+    news = '📰 오늘의 마을 소식: 새로운 기업이 생기면 기업 뉴스가 시작돼요.';
+    return null;
+  }
+  const company = companies[Math.floor(Math.random() * companies.length)];
+  const positive = Math.random() < 0.5;
+  const item = (positive ? COMPANY_NEWS.good : COMPANY_NEWS.bad)[Math.floor(Math.random() * 5)];
+  const demandChange = positive ? 20 : -25;
+  company.customerDemand = Math.max(30, Math.min(180, (company.customerDemand || 100) + demandChange));
+  const stockRate = positive ? 0.05 : -0.06;
+  applyImmediateStockMove(company.ticker, stockRate, positive ? '호재 뉴스' : '악재 뉴스');
+  const entry = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    ticker: company.ticker, company: company.name, type: positive ? 'good' : 'bad',
+    headline: item[0], detail: item[1], demand: company.customerDemand,
+    stockPrice: stocks[company.ticker]?.price || company.price || 0, createdAt: Date.now()
+  };
+  company.lastNews = entry.headline;
+  newsFeed.unshift(entry);
+  newsFeed = newsFeed.slice(0, 12);
+  news = (positive ? '🟢 호재' : '🔴 악재') + ' · ' + company.name + ': ' + item[0];
+  return entry;
+}
+function simulateCompanyCustomers() {
+  for (const company of companies) {
+    const demand = Math.max(30, Math.min(180, Number(company.customerDemand) || 100));
+    const expected = Math.max(1, Math.round((1 + Math.random() * 3) * demand / 100));
+    const customers = Math.min(Math.max(0, Number(company.inventory) || 0), expected);
+    company.lastTurnCustomers = customers;
+    if (!customers) continue;
+    const revenue = customers * Number(company.unitPrice || 0);
+    company.inventory -= customers;
+    company.soldUnits = (company.soldUnits || 0) + customers;
+    company.customerCount = (company.customerCount || 0) + customers;
+    company.revenue = (company.revenue || 0) + revenue;
+    company.operatingProfit = company.revenue - (company.costs || 0);
+    const owner = players.get(company.ownerId);
+    if (owner) {
+      owner.money += revenue;
+      owner.earnedTotal = (owner.earnedTotal || 0) + revenue;
+    }
+  }
+}
 function playerAssetValue(player) {
   const sharesValue = Object.entries(player.shares || {}).reduce((sum, [ticker, quantity]) => sum + (stocks[ticker]?.price || 0) * Math.max(0, Number(quantity) || 0), 0);
   return Math.round((player.money || 0) + (player.bank || 0) - (player.loan || 0) + sharesValue);
@@ -159,25 +235,56 @@ function beginTurn() {
 function finishTurn() {
   if (gameStatus !== 'running') return;
   const endedTurn = turnState.turnNumber;
-  if (marketClock.marketOpen) advanceMarket();
-  else setMarketClock((marketClock.dayIndex + 1) % MARKET_DAYS.length, '09:00', marketClock.turnMinutes);
-  const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name])).sort((a, b) => b.totalAssets - a.totalAssets);
-  results.forEach((row, index) => { row.rank = index + 1; });
-  turnState.summary = { turnNumber: endedTurn, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), results };
+  updateStockPrices();
+  const todayNews = generateCompanyNews();
+  simulateCompanyCustomers();
+  const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
+  turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
   turnState.turnNumber = endedTurn + 1;
-  if (gameStatus === 'ended' || endedTurn >= turnConfig.totalTurns) {
-    gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null; finalAwards = calculateFinalAwards();
-  } else beginTurn();
+  if (endedTurn >= turnConfig.totalTurns) {
+    gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null;
+    setMarketClock(Math.min(endedTurn - 1, 5), '15:30', marketClock.turnMinutes);
+    finalAwards = calculateFinalAwards();
+  } else {
+    setMarketClock(Math.min(endedTurn, 5), '09:00', marketClock.turnMinutes);
+    beginTurn();
+  }
   broadcast();
 }
 function calculateFinalAwards() {
-  const rankedCompanies = companies.map(company => {
-    const marketValue = (stocks[company.ticker]?.price || company.price || 0) * 10;
-    return { ...company, marketValue, score: marketValue + (company.operatingProfit || 0) };
-  }).sort((a, b) => b.score - a.score);
-  const rankedPlayers = [...players.values()].map(player => playerResult(player, turnState.initialAssets[player.name])).sort((a, b) => b.totalAssets - a.totalAssets);
-  rankedPlayers.forEach((row, index) => { row.rank = index + 1; });
-  return { players: rankedPlayers, ceo: rankedCompanies.length ? rankedCompanies[0] : null, companies: rankedCompanies };
+  const companyStats = companies.map(company => ({
+    ...company,
+    marketValue: (stocks[company.ticker]?.price || company.price || 0) * 10,
+    score: (stocks[company.ticker]?.price || company.price || 0) * 10 + (company.operatingProfit || 0)
+  }));
+  const storeStats = stores.map(store => ({
+    ...store, revenue: (store.salesHistory || []).reduce((sum, sale) => sum + (Number(sale.amount) || 0), 0),
+    employeeCount: (store.employees || []).length
+  }));
+  const awards = [];
+  const best = (rows, score) => rows.slice().sort((a,b)=>score(b)-score(a))[0] || null;
+  const ceo = best(companyStats, row => row.score);
+  if (ceo) awards.push({ title: '최고의 CEO상', emoji: '👑', winner: ceo.owner, detail: ceo.name + ' · 기업 가치와 영업이익' });
+  const bestCompanySales = best(companyStats, row => Number(row.revenue) || 0);
+  if (bestCompanySales && bestCompanySales.revenue > 0) awards.push({ title: '기업 매출왕', emoji: '📈', winner: bestCompanySales.owner, detail: bestCompanySales.name + ' · 매출 ' + bestCompanySales.revenue.toLocaleString('ko-KR') + '원' });
+  const bestStore = best(storeStats, row => row.revenue);
+  if (bestStore && bestStore.revenue > 0) awards.push({ title: '인기 가게상', emoji: '🏪', winner: bestStore.owner, detail: bestStore.name + ' · 매출 ' + bestStore.revenue.toLocaleString('ko-KR') + '원' });
+  const employers = [
+    ...companyStats.map(row => ({ owner: row.owner, name: row.name, count: (row.employees || []).length })),
+    ...storeStats.map(row => ({ owner: row.owner, name: row.name, count: row.employeeCount }))
+  ];
+  const bestEmployer = best(employers, row => row.count);
+  if (bestEmployer && bestEmployer.count > 0) awards.push({ title: '일자리 창출상', emoji: '🤝', winner: bestEmployer.owner, detail: bestEmployer.name + ' · 직원 ' + bestEmployer.count + '명' });
+  const studentRows = [...players.values()];
+  const donor = best(studentRows, row => Number(row.socialDonated) || 0);
+  if (donor && (donor.socialDonated || 0) > 0) awards.push({ title: '나눔 실천상', emoji: '💛', winner: donor.name, detail: '사회공헌 ' + donor.socialDonated.toLocaleString('ko-KR') + '원' });
+  const investor = best(studentRows, row => Number(row.realizedStockProfit) || 0);
+  if (investor && (investor.realizedStockProfit || 0) > 0) awards.push({ title: '현명한 투자상', emoji: '💹', winner: investor.name, detail: '주식 실현손익 +' + Math.round(investor.realizedStockProfit).toLocaleString('ko-KR') + '원' });
+  const saver = best(studentRows, row => Number(row.bank) || 0);
+  if (saver && (saver.bank || 0) > 0) awards.push({ title: '저축 습관상', emoji: '🏦', winner: saver.name, detail: '은행 예금 ' + saver.bank.toLocaleString('ko-KR') + '원' });
+  const popular = best(companyStats, row => Number(row.customerCount) || 0);
+  if (popular && (popular.customerCount || 0) > 0) awards.push({ title: '고객 사랑상', emoji: '❤️', winner: popular.owner, detail: popular.name + ' · 고객 ' + popular.customerCount + '명' });
+  return { awards, companies: companyStats, students: studentRows.map(player => playerResult(player, turnState.initialAssets[player.name])), ceo };
 }
 roomIo.on('connection', socket => {
   socket.on('join', (data, ack) => {
@@ -426,8 +533,8 @@ roomIo.on('connection', socket => {
     else if(a.type==='loan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<10000||v>100000||v%10000!==0)return msg(socket,'대출은 10,000원 단위로 10,000~100,000원까지 신청할 수 있어요.');if((p.loan||0)+v>200000)return msg(socket,'대출 한도는 총 200,000원이에요.');p.loan=(p.loan||0)+v;p.money+=v;msg(socket,`🏦 대출 완료! ${v.toLocaleString('ko-KR')}원 · 갚을 돈 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='repayLoan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>200000)return msg(socket,'상환 금액을 확인해 주세요.');const pay=Math.min(v,p.loan||0);if(!pay)return msg(socket,'갚을 대출금이 없어요.');if(p.money<pay)return msg(socket,'현금이 부족해요.');p.money-=pay;p.loan-=pay;msg(socket,`🏦 대출 상환! ${pay.toLocaleString('ko-KR')}원 · 남은 빚 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='donate'){const v=Number(a.amount),cause=DONATION_CAUSES.includes(a.cause)?a.cause:'community';if(!Number.isInteger(v)||v<1000||v>100000)return msg(socket,'기부는 1,000~100,000원 사이로 입력해 주세요.');if(p.money<v)return msg(socket,'기부할 현금이 부족해요.');p.money-=v;p.socialDonated=(p.socialDonated||0)+v;p.donations||=emptyDonations();p.donations[cause]=(p.donations[cause]||0)+v;const relief=Math.floor(v*.1);p.taxRelief=(p.taxRelief||0)+relief;const causeName={community:'지역사회',disability:'장애인 지원',seniors:'어르신 지원',inclusiveEmployment:'장애인 고용 지원'}[cause];msg(socket,`💛 ${causeName}에 ${v.toLocaleString('ko-KR')}원 기부 · 앞으로 낼 세금 ${relief.toLocaleString('ko-KR')}원 감면권 획득`);}
-    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shareCostBasis ||= {};p.shareCostBasis[item]=(p.shareCostBasis[item]||0)+cost;p.shares[item]=(p.shares[item]||0)+n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].buys += n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
-    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);const held=p.shares[item]||0,averageCost=(p.shareCostBasis?.[item]||0)/Math.max(1,held),realized=(st.price-averageCost)*n;p.shareCostBasis ||= {};p.shareCostBasis[item]=Math.max(0,(p.shareCostBasis[item]||0)-averageCost*n);p.shares[item]-=n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].sells += n;const paid=credit(p,st.price*n);p.realizedStockProfit=(p.realizedStockProfit||0)+realized;msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
+    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shareCostBasis ||= {};p.shareCostBasis[item]=(p.shareCostBasis[item]||0)+cost;p.shares[item]=(p.shares[item]||0)+n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].buys += n;applyImmediateStockMove(item,Math.min(.02,.005*n),'실시간 매수세 반영');msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
+    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);const held=p.shares[item]||0,averageCost=(p.shareCostBasis?.[item]||0)/Math.max(1,held),realized=(st.price-averageCost)*n;p.shareCostBasis ||= {};p.shareCostBasis[item]=Math.max(0,(p.shareCostBasis[item]||0)-averageCost*n);p.shares[item]-=n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].sells += n;applyImmediateStockMove(item,-Math.min(.02,.005*n),'실시간 매도세 반영');const paid=credit(p,st.price*n);p.realizedStockProfit=(p.realizedStockProfit||0)+realized;msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
     else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;p.shareCostBasis ||= {};p.shareCostBasis[ticker]=0;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
     else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
@@ -454,7 +561,7 @@ roomIo.on('connection', socket => {
       stocks[ticker] = { name: companyName, price: 10000, owner: player.name, sector };
       stockHistory[ticker] = [10000];
       stockOrders[ticker] = { buys: 0, sells: 0 };
-      companies.push({ ticker, name: companyName, owner: player.name, ownerId: socket.id, sector, sectorName: product.name, productId: product.productId, productName: product.productName, unitCost: product.unitCost, unitPrice: product.unitPrice, inventory: 0, producedUnits: 0, soldUnits: 0, revenue: 0, costs: 0, operatingProfit: 0, price: 10000, employees: [], employmentApplications: [], payrollMonth: null });
+      companies.push({ ticker, name: companyName, owner: player.name, ownerId: socket.id, sector, sectorName: product.name, productId: product.productId, productName: product.productName, unitCost: product.unitCost, unitPrice: product.unitPrice, inventory: 0, producedUnits: 0, soldUnits: 0, revenue: 0, costs: 0, operatingProfit: 0, price: 10000, customerDemand: 100, customerCount: 0, lastTurnCustomers: 0, lastNews: '', employees: [], employmentApplications: [], payrollMonth: null });
       msg(socket, `🏭 ${product.name} 회사 ${companyName} 창업 성공! 주식 10주 지급 · 잔액 ${player.money.toLocaleString('ko-KR')}원`);
       broadcast();
       return;
@@ -631,7 +738,7 @@ roomIo.on('connection', socket => {
     }
     if(c.type==='turnSettings'){
       const duration=Number(c.value?.durationMinutes),total=Number(c.value?.totalTurns);
-      if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>30)msg(socket,'실제 턴 시간은 1~60분, 전체 턴은 1~30회로 설정해 주세요.');
+      if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>6)msg(socket,'실제 턴 시간은 1~60분, 전체 턴은 월~토 6회 이내로 설정해 주세요.');
       else {turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;}
     }
     if(c.type==='advanceMarket'){
@@ -645,11 +752,11 @@ roomIo.on('connection', socket => {
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){delete stocks[ticker];delete stockHistory[ticker];delete stockOrders[ticker];}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){newsFeed=[];news='마을 경제가 시작됐어요!';players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){delete stocks[ticker];delete stockHistory[ticker];delete stockOrders[ticker];}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){gameStatus='running';finalAwards=null;turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){gameStatus='running';finalAwards=null;newsFeed=[];news='마을 경제가 시작됐어요!';setMarketClock(0,'09:00',marketClock.turnMinutes);turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
     if(c.type==='pause' && gameStatus==='running'){turnState.remainingMs=Math.max(0,(turnState.endsAt||Date.now())-Date.now());turnState.endsAt=null;gameStatus='paused';}
     if(c.type==='resume' && gameStatus==='paused'){gameStatus='running';turnState.endsAt=Date.now()+(turnState.remainingMs??turnConfig.durationMinutes*60000);turnState.remainingMs=null;}
     if(c.type==='end'){gameStatus='ended';turnState.endsAt=null;turnState.remainingMs=null;finalAwards=calculateFinalAwards();}
