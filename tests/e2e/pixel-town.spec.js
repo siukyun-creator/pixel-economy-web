@@ -125,9 +125,11 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '이전' }).click();
   await expect(page.locator('#newStoreName')).toHaveValue('단계별 가게');
   await page.getByRole('button', { name: '닫기 ✕' }).click();
-  await page.getByRole('button', { name: /내 가게/ }).click();
+  await page.getByRole('button', { name: /채용·지원/ }).click();
   await expect(page.locator('.employmentPanel')).toContainText('장애인 고용과 포용적인 일터');
   await expect(page.locator('.employmentPanel')).toContainText('자발적으로 지원한 학생만 채용');
+  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button', { name: /내 가게/ }).click();
   await expect(page.locator('.communityReport')).toContainText('사회공헌과 나눔');
   await expect(page.locator('.communityReport')).toContainText('장애인 고용 지원');
   await expect(page.locator('.communityReport')).toContainText('어르신 지원');
