@@ -46,14 +46,15 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await expect(page.locator('#teacherMarketControls')).toBeVisible();
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
     await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-teacher-dashboard.png'), fullPage: true });
+    await page.locator('#teacherMarketControls details summary').click();
     await page.locator('#marketDay').selectOption('5');
     await page.locator('#marketTime').fill('14:45');
     await page.locator('#marketTurnMinutes').fill('45');
-    await page.getByRole('button', { name: '시간 설정 적용' }).click();
+    await page.getByRole('button', { name: '거래 시간 저장' }).click();
     await expect(page.locator('#marketStatus')).toContainText('토요일 14:45 · 거래 중 · 한 턴 45분');
-    await page.locator('#turnDurationMinutes').fill('1');
-    await page.locator('#totalTurns').fill('1');
-    await page.getByRole('button', { name: '턴 설정 적용' }).click();
+    await page.locator('#turnDurationMinutes').selectOption('1');
+    await page.locator('#totalTurns').selectOption('1');
+    await page.getByRole('button', { name: '설정 저장' }).click();
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
     await expect(page.locator('#finalResults')).toBeVisible({ timeout: 75000 });
@@ -275,7 +276,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
     await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
-    await teacherPage.getByRole('button', { name: '⏩ 다음 거래 턴 진행' }).click();
+    await teacherPage.locator('#advanceMarketButton').click();
     await expect(price).not.toHaveText(previousPrice);
     await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/▲/);
     await page.screenshot({
