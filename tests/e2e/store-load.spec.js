@@ -35,7 +35,7 @@ test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성
     const created = await emitAck(manager, 'createClassroom', { pin: '6582' });
     expect(created.ok).toBe(true);
     roomCode = created.roomCode;
-    expect(roomCode).toMatch(/^\\d{4}$/);
+    expect(roomCode).toMatch(/^\d{4}$/);
 
     teacher = await connectSocket(`${baseURL}/classrooms/${roomCode}`);
     const login = await emitAck(teacher, 'teacherLogin', '6582');
