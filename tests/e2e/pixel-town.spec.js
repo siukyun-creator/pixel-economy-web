@@ -44,6 +44,8 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await expect(page.locator('#teacher')).toBeVisible();
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
     await expect(page.locator('#teacherMarketControls')).toBeVisible();
+    fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
+    await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-teacher-dashboard.png'), fullPage: true });
     await page.locator('#marketDay').selectOption('5');
     await page.locator('#marketTime').fill('14:45');
     await page.locator('#marketTurnMinutes').fill('45');
@@ -225,6 +227,40 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.close();
 });
 
+
+test('기업 뉴스·제품 구매·채용 메뉴가 분리되고 가방과 순위표가 없다', async ({ browser, baseURL }) => {
+  browserErrors = [];
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  collectBrowserErrors(page);
+  await page.goto(baseURL);
+  await page.locator('#gameArea').evaluate(area => {
+    area.style.display = 'block';
+    document.querySelector('#login').style.display = 'none';
+  });
+  await expect(page.locator('#newsTicker')).toBeVisible();
+  await expect(page.getByRole('button', { name: /기업 뉴스/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /기업 제품/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /채용·지원/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /가방|순위표/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /새로고침/ })).toHaveCount(0);
+
+  fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
+  await page.getByRole('button', { name: /기업 뉴스/ }).click();
+  await expect(page.locator('.newsIntro')).toBeVisible();
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-news.png'), fullPage: true });
+
+  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button', { name: /기업 제품/ }).click();
+  await expect(page.locator('#menuTitle')).toContainText('기업 제품 구매');
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-products.png'), fullPage: true });
+
+  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button', { name: /채용·지원/ }).click();
+  await expect(page.locator('#menuTitle')).toContainText('회사 채용·지원');
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-jobs.png'), fullPage: true });
+  await page.close();
+});
+
 test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({ browser, baseURL }) => {
   test.setTimeout(180000);
   browserErrors = [];
@@ -296,7 +332,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const price = page.locator('#menuContent .stockCard .stockPrice').first();
     await expect(price).toBeVisible();
     const previousPrice = await price.textContent();
-    await expect(page.locator('#companyMarket')).toContainText('기업은 제품 매출과 생산비로 영업이익을 기록합니다.');
+    await expect(page.locator('#companyMarket')).toContainText('제품 생산');
     await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
@@ -338,12 +374,12 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.locator('#room').fill(roomCode);
     await wholesalePage.locator('#joinButton').click();
     await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden();
-    await wholesalePage.getByRole('button', { name: /내 가게/ }).click();
+    await wholesalePage.getByRole('button', { name: /채용·지원/ }).click();
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await wholesalePage.locator('[data-company-employment="' + companyTicker + '"]')
       .getByRole('button', { name: '회사에 지원하기' }).click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].employmentApplications.length)).toBe(1);
-    await page.getByRole('button', { name: /내 가게/ }).click();
+    await page.getByRole('button', { name: /채용·지원/ }).click();
     await expect(page.locator('[data-company-employment="' + companyTicker + '"]')).toContainText('E2E도매학생');
     const employeeId = await wholesalePage.evaluate(() => myId);
     await page.locator('#company-offer-' + employeeId).fill('12000');
@@ -363,9 +399,9 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
     await expect(wholesalePage.locator('.businessChoice').nth(1)).toContainText('내 도매상을 운영');
     await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
-    await wholesalePage.getByRole('button', { name: /주식/ }).click();
-    await expect(wholesalePage.locator('#companyMarket')).toContainText('픽셀 스마트폰');
-    await wholesalePage.getByRole('button', { name: '제품 1개 구매' }).click();
+    await wholesalePage.getByRole('button', { name: /기업 제품/ }).click();
+    await expect(wholesalePage.locator('.companyProductCard')).toContainText('픽셀 스마트폰');
+    await wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' }).click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].operatingProfit)).toBe(10000);
     await wholesalePage.close();
     await teacherPage.getByRole('button', { name: '■ 종료' }).click();
