@@ -772,7 +772,7 @@ roomIo.on('connection', socket => {
     }
     if(c.type==='price'){const item=String(c.item||'');const v=bounded(c.value,1,500);if(market[item])market[item]=v;}
     broadcast();
-    socket.emit('teacherCommandResult',{ok:true,gameStatus,news,shopsEnabled});
+    socket.emit('teacherCommandResult',{ok:true,type:c.type,gameStatus,news,shopsEnabled,turnConfig:{...turnConfig}});
   });
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
