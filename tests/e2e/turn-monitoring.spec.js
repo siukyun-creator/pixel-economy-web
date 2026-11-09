@@ -43,6 +43,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await expect.poll(() => student.evaluate(() => latestState.companies[0].inventory)).toBe(1);
   await expect(student.locator('#turnHud')).toContainText('턴 1/1');
   await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1');
+  await student.getByRole('button', { name: '닫기 ✕' }).click();
 
   await expect(student.locator('#finalResults')).toBeVisible({ timeout: 75000 });
   await expect(teacher.locator('#finalResults')).toBeVisible({ timeout: 10000 });
