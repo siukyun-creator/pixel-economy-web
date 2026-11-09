@@ -51,10 +51,12 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.locator('#marketTurnMinutes').fill('45');
     await page.getByRole('button', { name: '시간 설정 적용' }).click();
     await expect(page.locator('#marketStatus')).toContainText('토요일 14:45 · 거래 중 · 한 턴 45분');
+    await page.locator('#turnDurationMinutes').fill('1');
+    await page.locator('#totalTurns').fill('1');
+    await page.getByRole('button', { name: '턴 설정 적용' }).click();
     await page.getByRole('button', { name: '▶ 시작' }).click();
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
-    await page.getByRole('button', { name: '⏩ 다음 거래 턴 진행' }).click();
-    await expect(page.locator('#finalResults')).toBeVisible();
+    await expect(page.locator('#finalResults')).toBeVisible({ timeout: 75000 });
     await expect(page.locator('#finalResults')).toContainText('우리 반 경제 활동 시상식');
     await expect(page.locator('#teacherCeoAward')).toContainText('토요일 장 마감');
   });
