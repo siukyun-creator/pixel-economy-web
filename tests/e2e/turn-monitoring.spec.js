@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 
 test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async ({ browser, baseURL }) => {
@@ -49,8 +51,16 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await expect.poll(() => student.evaluate(() => latestState.newsFeed.length)).toBe(1);
   await expect.poll(() => student.evaluate(() => latestState.companies[0].customerDemand)).not.toBe(100);
   await expect(student.locator('#newsTicker')).toContainText(/호재 뉴스|악재 뉴스/);
+  await expect(teacher.locator('#teacherNewsFeed')).toContainText('뉴스테스트기업');
   await expect(student.locator('#finalResults')).toContainText('뉴스테스트기업');
   await expect(student.locator('#turnSummaryOverlay')).toBeVisible();
+  const screenshotDir = path.resolve(__dirname, '..', '..', 'test-results', 'screenshots');
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  await teacher.screenshot({ path: path.join(screenshotDir, 'pixel-town-teacher-news-monitor.png'), fullPage: true });
+  await student.locator('#finalResults button').first().click();
+  await student.getByRole('button', { name: /기업 뉴스/ }).click();
+  await expect(student.locator('.newsCard')).toBeVisible();
+  await student.screenshot({ path: path.join(screenshotDir, 'pixel-town-random-company-news.png'), fullPage: true });
   expect(errors).toEqual([]);
 
   await teacher.close();
