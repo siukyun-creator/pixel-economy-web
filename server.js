@@ -160,6 +160,7 @@ function finishTurn() {
   if (gameStatus !== 'running') return;
   const endedTurn = turnState.turnNumber;
   if (marketClock.marketOpen) advanceMarket();
+  else setMarketClock((marketClock.dayIndex + 1) % MARKET_DAYS.length, '09:00', marketClock.turnMinutes);
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name])).sort((a, b) => b.totalAssets - a.totalAssets);
   results.forEach((row, index) => { row.rank = index + 1; });
   turnState.summary = { turnNumber: endedTurn, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), results };
