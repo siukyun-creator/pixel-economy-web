@@ -59,6 +59,7 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await expect(page.locator('#finalResults')).toBeVisible({ timeout: 75000 });
     await expect(page.locator('#finalResults')).toContainText('우리 반 경제 활동 시상식');
     await expect(page.locator('#teacherCeoAward')).toContainText('토요일 장 마감');
+    await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-awards-teacher.png'),fullPage:true});
   });
 
   await page.goto('about:blank');
@@ -105,28 +106,22 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#newStoreName')).toBeVisible();
   await expect(page.locator('.storeWizardPanel')).toHaveCount(3);
   await page.locator('#newStoreName').fill('단계별 가게');
-  const drawingCanvas = page.locator('#foodPreview');
-  await drawingCanvas.scrollIntoViewIfNeeded();
-  let drawingBounds = await drawingCanvas.boundingBox();
-  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 15);
-  await page.mouse.down();
-  await expect.poll(() => page.evaluate(() => foodPointerDown)).toBe(true);
-  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 15, { steps: 8 });
-  await expect.poll(() => page.locator('#foodPreview').evaluate(canvas => {
-    const data = canvas.getContext('2d').getImageData(15, 15, 1, 1).data;
-    return data[0] !== 255 || data[1] !== 240 || data[2] !== 207;
-  })).toBe(true);
-  await page.mouse.up();
-  await page.getByRole('button', { name: '그림 등록하기' }).click();
-  await page.getByRole('button', { name: '다음 단계' }).click();
+  await expect(page.locator('.storeWizardPanel')).toHaveCount(3);
+  await expect(page.locator('#foodArtRegister')).toHaveCount(0);
+  await expect(page.locator('.foodDrawingTools')).toHaveCount(0);
+  await expect(page.locator('#foodProductChoices [role="radio"]')).toHaveCount(3);
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-store-step-1-menu.png'),fullPage:false});
+  await page.getByRole('button',{name:'다음 단계'}).click();
   await expect(page.locator('.storeWizardPanel').nth(1)).toBeVisible();
-  await page.getByRole('button', { name: '다음 단계' }).click();
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-store-step-2-design.png'),fullPage:false});
+  await page.getByRole('button',{name:'다음 단계'}).click();
   await expect(page.locator('.storeWizardPanel').nth(2)).toBeVisible();
-  await page.getByRole('button', { name: '이전' }).click();
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-store-step-3-confirm.png'),fullPage:false});
+  await page.getByRole('button',{name:'이전'}).click();
   await expect(page.locator('.storeWizardPanel').nth(1)).toBeVisible();
-  await page.getByRole('button', { name: '이전' }).click();
+  await page.getByRole('button',{name:'이전'}).click();
   await expect(page.locator('#newStoreName')).toHaveValue('단계별 가게');
-  await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.getByRole('button',{name:'닫기 ✕'}).click();
   await page.getByRole('button', { name: /채용·지원/ }).click();
   await expect(page.locator('.employmentPanel')).toContainText('장애인 고용과 포용적인 일터');
   await expect(page.locator('.employmentPanel')).toContainText('자발적으로 지원한 학생만 채용');
@@ -142,93 +137,31 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await page.getByRole('button', { name: '가게 만들기' }).click();
-  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(0);
   const foodChoices = page.locator('#foodProductChoices [role="radio"]');
   await expect(foodChoices).toHaveCount(3);
-  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
+  await expect(page.locator('#foodArtRegister')).toHaveCount(0);
+  await expect(page.locator('.foodDrawingTools')).toHaveCount(0);
   await foodChoices.nth(1).click();
-  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
   await expect(page.locator('#foodProductChoices')).toHaveAttribute('data-selected', 'croissant');
-  await expect(page.locator('#foodArtRegister')).toBeVisible();
-  const paintStroke = async (colorIndex, start, end) => {
-    await page.getByRole('button', { name: '그림 색상 ' + colorIndex }).click();
-    await drawingCanvas.scrollIntoViewIfNeeded();
-    drawingBounds = await drawingCanvas.boundingBox();
-    await page.mouse.move(drawingBounds.x + start.x, drawingBounds.y + start.y);
-    await page.mouse.down();
-    await page.mouse.move(drawingBounds.x + end.x, drawingBounds.y + end.y, { steps: 8 });
-    await page.mouse.up();
-  };
-  await page.getByRole('button', { name: '그림 색상 1' }).click();
-  await drawingCanvas.scrollIntoViewIfNeeded();
-  drawingBounds = await drawingCanvas.boundingBox();
-  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 15);
-  await page.mouse.down();
-  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 15, { steps: 8 });
-  await page.mouse.up();
-  await page.getByRole('button', { name: '그림 색상 2' }).click();
-  await drawingCanvas.scrollIntoViewIfNeeded();
-  drawingBounds = await drawingCanvas.boundingBox();
-  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 75);
-  await page.mouse.down();
-  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 75, { steps: 8 });
-  await page.mouse.up();
-  await page.locator('#newStoreFood').selectOption('cafe');
-  await expect.poll(() => page.evaluate(() => foodPixelArt.every(color => color === '#fff0cf'))).toBe(true);
-  await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
-  await paintStroke(1, { x: 85, y: 70 }, { x: 245, y: 70 });
-  await paintStroke(1, { x: 95, y: 70 }, { x: 95, y: 245 });
-  await paintStroke(1, { x: 235, y: 70 }, { x: 235, y: 245 });
-  await paintStroke(1, { x: 95, y: 245 }, { x: 235, y: 245 });
-  await paintStroke(6, { x: 115, y: 110 }, { x: 215, y: 110 });
-  await paintStroke(6, { x: 115, y: 145 }, { x: 215, y: 145 });
-  await paintStroke(6, { x: 115, y: 180 }, { x: 215, y: 180 });
-  await paintStroke(6, { x: 115, y: 215 }, { x: 215, y: 215 });
-  await paintStroke(3, { x: 170, y: 35 }, { x: 195, y: 75 });
-  await page.getByRole('button', { name: '그림 등록하기' }).click();
-  await expect(page.locator('#foodArtStatus')).toContainText('그림이 대표 메뉴에 등록됐어요.');
-  await expect.poll(() => page.evaluate(() => foodArtRegistered)).toBe(true);
-  await expect.poll(() => page.evaluate(() => new Set(foodPixelArt).size)).toBeGreaterThan(1);
-  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#ef6876'))).toBe(true);
-  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#fff0cf'))).toBe(true);
-  await page.screenshot({
-    path: path.join(resultsDir, 'screenshots', 'pixel-town-menu-drawing.png'),
-    fullPage: false
-  });
-
-  const artworkResponses = await Promise.all([
-    '/assets/food/pixel-bread.svg',
-    '/assets/food/pixel-coffee.svg',
-    '/assets/food/pixel-pizza.svg',
-    '/assets/food/pixel-juice.svg',
-    '/assets/food/pixel-steak.svg'
-  ].map(assetPath => fetch(new URL(assetPath, baseURL).toString())));
-  expect(artworkResponses.map(response => response.status)).toEqual([200, 200, 200, 200, 200]);
-  expect(artworkResponses.map(response => response.headers.get('content-type')))
-    .toEqual(Array(5).fill('image/svg+xml'));
-
-  fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
-  await page.screenshot({
-    path: path.join(resultsDir, 'screenshots', 'pixel-town-shop-desktop.png'),
-    fullPage: false
-  });
-
-  await page.setViewportSize({ width: 820, height: 1024 });
-  const panelBounds = await page.locator('#menuPanel').evaluate(panel => {
-    const { x, y, width, height } = panel.getBoundingClientRect();
-    return { x, y, width, height, viewportWidth: innerWidth, viewportHeight: innerHeight };
-  });
+  await expect(page.locator('#foodPreview')).toBeVisible();
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-menu-choice-no-drawing.png'),fullPage:false});
+  await page.getByRole('button', { name: '다음 단계' }).click();
+  await page.getByRole('button', { name: '다음 단계' }).click();
+  await expect(page.locator('.storeWizardPanel').nth(2)).toBeVisible();
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-store-final-step.png'),fullPage:false});
+  const artworkResponses = await Promise.all(['/assets/food/pixel-bread.svg','/assets/food/pixel-coffee.svg','/assets/food/pixel-pizza.svg','/assets/food/pixel-juice.svg','/assets/food/pixel-steak.svg'].map(assetPath => fetch(new URL(assetPath, baseURL).toString())));
+  expect(artworkResponses.map(response => response.status)).toEqual([200,200,200,200,200]);
+  expect(artworkResponses.map(response => response.headers.get('content-type'))).toEqual(Array(5).fill('image/svg+xml'));
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-shop-desktop.png'),fullPage:false});
+  await page.setViewportSize({width:820,height:1024});
+  const panelBounds=await page.locator('#menuPanel').evaluate(panel=>{const{x,y,width,height}=panel.getBoundingClientRect();return{x,y,width,height,viewportWidth:innerWidth,viewportHeight:innerHeight}});
   expect(panelBounds.x).toBeGreaterThanOrEqual(0);
   expect(panelBounds.y).toBeGreaterThanOrEqual(0);
-  expect(panelBounds.x + panelBounds.width).toBeLessThanOrEqual(panelBounds.viewportWidth);
-  expect(panelBounds.y + panelBounds.height).toBeLessThanOrEqual(panelBounds.viewportHeight);
-  await page.screenshot({
-    path: path.join(resultsDir, 'screenshots', 'pixel-town-shop-tablet.png'),
-    fullPage: false
-  });
+  expect(panelBounds.x+panelBounds.width).toBeLessThanOrEqual(panelBounds.viewportWidth);
+  expect(panelBounds.y+panelBounds.height).toBeLessThanOrEqual(panelBounds.viewportHeight);
+  await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-shop-tablet.png'),fullPage:false});
+  await page.goto('about:blank');await page.close();
 
-  await page.goto('about:blank');
-  await page.close();
 });
 
 
