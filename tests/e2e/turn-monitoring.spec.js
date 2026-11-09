@@ -55,7 +55,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await expect(student.locator('#newsTicker')).toContainText(/호재 뉴스|악재 뉴스/);
   await expect(teacher.locator('#teacherNewsFeed')).toContainText('뉴스테스트기업');
   await expect(student.locator('#finalResults')).toContainText('뉴스테스트기업');
-  await expect(student.locator('#turnSummaryOverlay')).toBeVisible();
+  await expect(student.locator('#turnSummaryOverlay')).toContainText('이번 턴 결과');
   const screenshotDir = path.resolve(__dirname, '..', '..', 'test-results', 'screenshots');
   fs.mkdirSync(screenshotDir, { recursive: true });
   await teacher.screenshot({ path: path.join(screenshotDir, 'pixel-town-teacher-news-monitor.png'), fullPage: true });
