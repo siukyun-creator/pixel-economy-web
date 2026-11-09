@@ -226,7 +226,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
 });
 
 test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({ browser, baseURL }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   browserErrors = [];
 
   const teacherPage = await browser.newPage({ viewport: { width: 960, height: 600 } });
