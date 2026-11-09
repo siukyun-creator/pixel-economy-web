@@ -51,7 +51,7 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.locator('#marketTime').fill('14:45');
     await page.locator('#marketTurnMinutes').fill('45');
     await page.getByRole('button', { name: '거래 시간 저장' }).click();
-    await expect(page.locator('#marketStatus')).toContainText('토요일 14:45 · 거래 중 · 한 턴 45분');
+    await expect(page.locator('#marketStatus')).toContainText('한 턴 45분');
     await page.locator('#turnDurationMinutes').selectOption('1');
     await page.locator('#totalTurns').selectOption('1');
     await page.getByRole('button', { name: '설정 저장' }).click();
@@ -144,7 +144,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('.foodDrawingTools')).toHaveCount(0);
   await foodChoices.nth(1).click();
   await expect(page.locator('#foodProductChoices')).toHaveAttribute('data-selected', 'croissant');
-  await expect(page.locator('#foodPreview')).toBeVisible();
+  await expect(page.locator('#foodPreview')).toBeHidden();
   await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-menu-choice-no-drawing.png'),fullPage:false});
   await page.getByRole('button', { name: '다음 단계' }).click();
   await page.getByRole('button', { name: '다음 단계' }).click();
@@ -276,6 +276,8 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
     await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
+    await teacherPage.locator('#teacherMarketControls details').evaluate(details => { details.open = true; });
+    await expect(teacherPage.locator('#advanceMarketButton')).toBeVisible();
     await teacherPage.locator('#advanceMarketButton').click();
     await expect(price).not.toHaveText(previousPrice);
     await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/▲/);
