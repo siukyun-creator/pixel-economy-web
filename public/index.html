@@ -1159,8 +1159,9 @@ function renderFinalResults(state){
  panel.style.display='block';
  const result=state.finalAwards||{players:[],companies:[],ceo:null};
  const awards=(result.awards||[]).map(award=>'<article class="awardCard"><div class="awardEmoji">'+esc(award.emoji||'🏅')+'</div><div><b>'+esc(award.title)+'</b><strong>'+esc(award.winner)+'</strong><small>'+esc(award.detail)+'</small></div></article>').join('');
+ const studentRows=(result.students||[]).map(player=>'<div class="companyResultRow"><b>'+esc(player.name)+'</b><span>현금 '+Number(player.cash||0).toLocaleString('ko-KR')+'원 · 예금 '+Number(player.bank||0).toLocaleString('ko-KR')+'원 · 대출 '+Number(player.loan||0).toLocaleString('ko-KR')+'원 · 총자산 '+Number(player.totalAssets||0).toLocaleString('ko-KR')+'원</span></div>').join('');
  const companyRows=result.companies.map(company=>'<div class="companyResultRow"><b>'+esc(company.name)+'</b><span>'+esc(company.sectorName||'기업')+' · 매출 '+Number(company.revenue||0).toLocaleString('ko-KR')+'원 · 영업이익 '+Number(company.operatingProfit||0).toLocaleString('ko-KR')+'원</span></div>').join('');
- panel.innerHTML='<button style="float:right" onclick="closeFinalResults()">닫기</button><span class="lessonKicker">월요일~토요일 수업 결과</span><h2>🎉 우리 반 경제 활동 시상식</h2><p>실적 순위 대신 각 분야에서 활약한 학생에게 상을 수여해요.</p><div class="awardGrid">'+(awards||'<p>이번 수업에서 수여할 상이 없어요.</p>')+'</div><h3>🏢 기업 활동 결과</h3><div class="companyResultList">'+(companyRows||'<p>등록된 기업이 없어요.</p>')+'</div><p class="small">모든 주가와 기업 활동은 경제 학습용 모의 기록입니다.</p>';
+ panel.innerHTML='<button style="float:right" onclick="closeFinalResults()">닫기</button><span class="lessonKicker">월요일~토요일 수업 결과</span><h2>🎉 우리 반 경제 활동 시상식</h2><p>실적 순위 대신 각 분야에서 활약한 학생에게 상을 수여해요.</p><div class="awardGrid">'+(awards||'<p>이번 수업에서 수여할 상이 없어요.</p>')+'</div><h3>👥 학생별 마감 현황</h3><div class="companyResultList">'+(studentRows||'<p>학생 기록이 없어요.</p>')+'</div><h3>🏢 기업 활동 결과</h3><div class="companyResultList">'+(companyRows||'<p>등록된 기업이 없어요.</p>')+'</div><p class="small">모든 주가와 기업 활동은 경제 학습용 모의 기록입니다.</p>';
 }
 function closeFinalResults(){if($('finalResults'))$('finalResults').style.display='none'}
 function openMenu(m){
