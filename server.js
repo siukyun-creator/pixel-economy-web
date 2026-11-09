@@ -194,17 +194,31 @@ function simulateCompanyCustomers() {
     const expected = Math.max(1, Math.round((1 + Math.random() * 3) * demand / 100));
     const customers = Math.min(Math.max(0, Number(company.inventory) || 0), expected);
     company.lastTurnCustomers = customers;
-    if (!customers) continue;
-    const revenue = customers * Number(company.unitPrice || 0);
-    company.inventory -= customers;
-    company.soldUnits = (company.soldUnits || 0) + customers;
-    company.customerCount = (company.customerCount || 0) + customers;
-    company.revenue = (company.revenue || 0) + revenue;
-    company.operatingProfit = company.revenue - (company.costs || 0);
-    const owner = players.get(company.ownerId);
-    if (owner) {
-      owner.money += revenue;
-      owner.earnedTotal = (owner.earnedTotal || 0) + revenue;
+    company.lastTurnSalesRate = Math.round(customers / expected * 100);
+    if (customers > 0) {
+      const revenue = customers * Number(company.unitPrice || 0);
+      company.inventory -= customers;
+      company.soldUnits = (company.soldUnits || 0) + customers;
+      company.customerCount = (company.customerCount || 0) + customers;
+      company.revenue = (company.revenue || 0) + revenue;
+      company.operatingProfit = company.revenue - (company.costs || 0);
+      const owner = players.get(company.ownerId);
+      if (owner) {
+        owner.money += revenue;
+        owner.earnedTotal = (owner.earnedTotal || 0) + revenue;
+      }
+    }
+
+    // 한 턴 판매율이 낮으면 해당 기업 주가에도 즉시 반영
+    const salesRate = company.lastTurnSalesRate;
+    const stockRate = salesRate < 30 ? -0.03 : salesRate < 60 ? -0.015 : 0;
+    if (stockRate < 0) {
+      applyImmediateStockMove(company.ticker, stockRate, '판매율 저조 (' + salesRate + '%)');
+    } else if (salesRate >= 90) {
+      applyImmediateStockMove(company.ticker, 0.01, '판매 호조 (' + salesRate + '%)');
+    } else {
+      const stock = stocks[company.ticker];
+      if (stock) stock.lastReason = '판매율 보통 (' + salesRate + '%)';
     }
   }
 }
