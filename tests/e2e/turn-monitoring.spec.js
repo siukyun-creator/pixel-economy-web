@@ -35,7 +35,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
 
   await expect(student.locator('#finalResults')).toBeVisible({ timeout: 75000 });
   await expect(teacher.locator('#finalResults')).toBeVisible({ timeout: 10000 });
-  await expect(student.locator('#finalResults')).toContainText('학생 최종 자산 순위');
+  await expect(student.locator('#finalResults')).toContainText('학생별 마감 현황');
   await expect(teacher.locator('#finalResults')).toContainText('턴테스트학생');
   await expect(student.locator('#turnSummaryOverlay')).toBeVisible();
   expect(errors).toEqual([]);
