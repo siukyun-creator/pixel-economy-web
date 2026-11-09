@@ -307,9 +307,6 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.getByRole('button', { name: /주식/ }).click();
     await expect(page.locator('#companyMarket')).toContainText('E2E기업 경영');
     await expect(page.locator('#companyMarket img').first()).toHaveAttribute('src', /pixel-smartphone\.svg$/);
-    await page.getByRole('button', { name: '제품 생산' }).click();
-    await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBe(1);
-
     const wholesalePage = await browser.newPage({ viewport: { width: 960, height: 600 } });
     collectBrowserErrors(wholesalePage);
     await wholesalePage.goto(baseURL);
@@ -344,6 +341,13 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
     await wholesalePage.getByRole('button', { name: /기업 제품/ }).click();
     await expect(wholesalePage.locator('.companyProductCard')).toContainText('픽셀 스마트폰');
+    // 상품 재고는 실시간 고객 판매로 줄어들 수 있으므로 구매 직전에 다시 생산한다.
+    await page.getByRole('button', { name: '닫기 ✕' }).click();
+    await page.getByRole('button', { name: /주식/ }).click();
+    for (let i = 0; i < 5; i++) {
+      await page.getByRole('button', { name: '제품 생산' }).click();
+    }
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
     await wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' }).click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].operatingProfit)).toBe(10000);
     await wholesalePage.close();
