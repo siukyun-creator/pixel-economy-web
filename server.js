@@ -68,7 +68,8 @@ const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) |
 let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
-const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, turnConfig, turnState, finalAwards });
+let storeCustomerRate = 50;
+const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
 const msg = (s, t) => s.emit('notice', t);
@@ -221,6 +222,31 @@ function simulateCompanyCustomers() {
       changed = true;
     }
   }
+  // Each store gets one virtual customer opportunity every five seconds.
+  for (const store of stores) {
+    store.lastTurnExpectedVisitors = (store.lastTurnExpectedVisitors || 0) + 1;
+    if (Math.random() * 100 >= storeCustomerRate) continue;
+    store.visitorCount = (store.visitorCount || 0) + 1;
+    store.lastTurnVisitors = (store.lastTurnVisitors || 0) + 1;
+    changed = true;
+    const productId = String(store.productId || '');
+    const item = store.products?.[productId];
+    if (!item || Number(item.stock) <= 0) continue;
+    const price = Math.max(0, Math.floor(Number(item.price || store.price) || 0));
+    item.stock = Math.max(0, Number(item.stock) - 1);
+    if (productId === store.productId) store.stock = item.stock;
+    store.customerCount = (store.customerCount || 0) + 1;
+    store.soldUnits = (store.soldUnits || 0) + 1;
+    store.revenue = (store.revenue || 0) + price;
+    store.salesHistory = store.salesHistory || [];
+    store.salesHistory.push({ at: Date.now(), amount: price, quantity: 1, source: 'virtualCustomer' });
+    if (store.salesHistory.length > 100) store.salesHistory.shift();
+    const owner = players.get(store.ownerId);
+    if (owner) {
+      owner.money += price;
+      owner.earnedTotal = (owner.earnedTotal || 0) + price;
+    }
+  }
   return changed;
 }
 function playerAssetValue(player) {
@@ -253,6 +279,7 @@ function finishTurn() {
   updateStockPrices();
   const todayNews = generateCompanyNews();
   companies.forEach(company => { company.lastTurnCustomers = 0; company.lastTurnExpectedCustomers = 0; company.lastTurnSalesRate = 0; });
+  stores.forEach(store => { store.lastTurnVisitors = 0; store.lastTurnExpectedVisitors = 0; });
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
   turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
   turnState.turnNumber = endedTurn + 1;
@@ -463,7 +490,7 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee,totalCosts:storeFee,createdAt:Date.now(),salesHistory:[],color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee,totalCosts:storeFee,createdAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -749,6 +776,7 @@ roomIo.on('connection', socket => {
       console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
     }
     if(c.type==='shops')shopsEnabled=!!c.value;
+    if(c.type==='storeCustomerRate')storeCustomerRate=bounded(c.value,0,100);
     if(c.type==='marketTime'){
       if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||''),Number(c.value?.turnMinutes)))msg(socket,'요일·시각 또는 한 턴 가상 시각을 확인해 주세요.');
     }
