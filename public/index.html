@@ -667,7 +667,7 @@ s.on('wholesaleEntered',()=>{openMenu('wholesale');showNotice('📦 도매상에
 s.on('wholesaleExited',()=>{if(me){me.position.set(-22,0,8);socket.emit('move3d',{x:-22,z:8,jump:false});}closeMenu();showNotice('도매상 밖으로 나왔어요.')});
 s.on('storePurchaseResult',r=>{if(r?.store){selectedStore=r.store;if(latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='playerStore')drawMenu()}});
 s.on('wholesalePurchaseResult',r=>{if(r?.store&&latestState)latestState.stores=(latestState.stores||[]).map(v=>v.id===r.store.id?r.store:v);if(menu==='wholesale')drawMenu()});s.on('receiptIssued',r=>showReceipt(r));s.on('wholesaleBusinessCreated',r=>{if(r?.ok){if(latestState)latestState.wholesaleShop=r.shop;if(scene)syncBusinessBuildings(latestState?.wholesaleShop,latestState?.companies||[]);showNotice('🎉 내 도매상이 문을 열었어요!');if(menu==='wholesale')drawMenu();if(menu==='businessHub')drawBusinessHub()}});s.on('wholesaleAdminResult',r=>{if(r&&latestState)latestState.wholesaleShop=r;if(menu==='wholesale')drawMenu()});
-s.on('state',s=>{render(s);renderTurnSummary(s);renderTurnClock(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});s.on('employmentChanged',()=>{if(menu==='myStore')drawMenu()});s.on('teacherOK',state=>{setupTeacherMarketControls();renderTeacherMarketControls(state)});s.on('state',state=>{renderTeacherMarketControls(state);renderFinalResults(state);if(menu==='stocks')drawCompanyMarket(state);if(['companyProducts','companyJobs','news'].includes(menu)&&$('menuPanel').style.display==='block'&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))drawMenu()});
+s.on('state',s=>{render(s);renderTurnSummary(s);renderTurnClock(s);if(menu==='stocks')updateStockCards(s);if(scene)syncBusinessBuildings(s.wholesaleShop,s.companies||[]);if(menu==='businessHub')refreshBusinessHub();if($('notice').textContent.includes('새로고침'))showNotice('✅ 게임 정보가 최신 상태로 바뀌었어요.')});s.on('employmentChanged',()=>{if(menu==='myStore'||menu==='companyJobs')drawMenu()});s.on('teacherOK',state=>{setupTeacherMarketControls();renderTeacherMarketControls(state)});s.on('state',state=>{renderTeacherMarketControls(state);renderFinalResults(state);if(menu==='stocks')drawCompanyMarket(state);if(['companyProducts','companyJobs','news'].includes(menu)&&$('menuPanel').style.display==='block'&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))drawMenu()});
 }
 managerSocket.on('connect',()=>$('connection').textContent='서버 연결됨');
 
@@ -1061,7 +1061,7 @@ function drawInclusiveEmploymentPanel(player,store){
   return '<section class="cookCard employmentPanel"><span class="lessonKicker">일자리와 포용</span><h3>🤝 장애인 고용과 포용적인 일터</h3><p>가게 주인은 지원한 학생 가운데 최대 3명을 채용하고 직원별 월급을 정할 수 있어요. 장애 여부는 묻거나 표시하지 않으며, 누구나 필요한 편의와 공정한 대우를 받는 일터를 함께 배워요.</p><div class="employmentStatus">현재 직원 '+employees.length+' / 3명 · 한 달 월급 합계 '+total.toLocaleString('ko-KR')+'원'+(paid?' · 이번 달 지급 완료':' · 이번 달 지급 전')+'</div><h4>채용된 직원</h4><div class="employmentList">'+staff+'</div><h4>지원자</h4><div class="employmentList">'+applicants+'</div><button onclick="payInclusivePayroll(&quot;'+esc(store.id)+'&quot;)" '+(employees.length===0||paid?'disabled':'')+'>💵 이번 달 월급 지급 ('+total.toLocaleString('ko-KR')+'원)</button><p class="small">월급은 수업에서 정한 한 달 급여예요. 지급 버튼을 누르면 가게 주인의 현금에서 직원에게 전달되며, 매달 한 번만 지급할 수 있어요.</p></section>';
  }
  const stores=latestState?.stores||[],employed=Boolean(player?.employerStoreId),applications=stores.flatMap(value=>(value.employmentApplications||[]).filter(application=>application.playerId===myId).map(()=>value.id));
- const opportunities=stores.filter(value=>value.ownerId!==myId&&(value.employees||[]).length<3);
+ const opportunities=(store?[store]:stores).filter(value=>value.ownerId!==myId&&(value.employees||[]).length<3);
  const rows=opportunities.map(value=>{
   const applied=applications.includes(value.id),ownApplication=(value.employmentApplications||[]).some(application=>application.playerId===myId);
   return '<div class="employmentRow"><span><b>'+esc(value.name)+'</b><small>포용 고용 · 직원 '+(value.employees||[]).length+'/3명 · 월급은 채용 때 협의</small></span><button onclick="applyInclusiveEmployment(&quot;'+esc(value.id)+'&quot;)" '+(employed||applied||ownApplication?'disabled':'')+'>'+(employed?'이미 근무 중':applied||ownApplication?'지원 완료':'자발적으로 지원')+'</button></div>';
@@ -1115,9 +1115,10 @@ function drawCompanyProductsMenu(){
  return '<div class="cookCard"><h3>🛍️ 학생 기업 제품 구매</h3><p>친구가 만든 기업의 제품을 구매할 수 있어요. 구매 금액은 기업 매출에 들어갑니다.</p></div><div class="companyProductGrid">'+(cards||'<div class="cookCard"><p>아직 구매할 수 있는 다른 학생 기업 제품이 없어요.</p></div>')+'</div>';
 }
 function drawCompanyJobsMenu(){
- const companies=latestState?.companies||[];
- return '<div class="cookCard"><h3>🤝 회사 채용·지원 센터</h3><p>친구 회사의 일자리에 지원하거나, 내 회사의 지원자를 확인하고 채용할 수 있어요.</p></div>'+
- (companies.length?companies.map(company=>drawCompanyEmploymentPanel(company)).join(''):'<div class="cookCard"><p>아직 창업한 회사가 없어요.</p></div>');
+ const companies=latestState?.companies||[],stores=latestState?.stores||[],player=players.find(value=>value.id===myId);
+ const storePanels=stores.map(store=>drawInclusiveEmploymentPanel(player,store)).join('');
+ const companyPanels=companies.map(company=>drawCompanyEmploymentPanel(company)).join('');
+ return '<div class="cookCard"><h3>🤝 채용·지원 센터</h3><p>친구 가게나 회사에 지원서를 내고, 내 사업장의 지원자도 확인할 수 있어요.</p></div>'+(storePanels||'')+(companyPanels||(!stores.length&&!companies.length?'<div class="cookCard"><p>아직 채용 중인 가게나 회사가 없어요.</p></div>':''));
 }
 function drawCompanyMarket(state=latestState){
  const root=$('menuContent');if(!root||menu!=='stocks')return;
