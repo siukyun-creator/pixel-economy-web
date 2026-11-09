@@ -1017,7 +1017,7 @@ function updateStockCards(state){
  const list=holdings?.querySelector('.stockHoldingsList');
  if(list&&player){
   const rows=Object.entries(player.shares||{}).filter(([,quantity])=>quantity>0);
-  list.innerHTML=rows.length?rows.map(([ticker,quantity])=>{const stock=state.stocks[ticker],value=(stock?.price||0)*quantity;return '<div class="stockHoldingRow" data-ticker="'+esc(ticker)+'"><span><b>'+esc(stock?.name||ticker)+'</b><small>'+esc(ticker)+' · '+quantity+'주</small></span><strong>'+value.toLocaleString('ko-KR')+'원</strong></div>'}).join(''):'<p class="small">아직 보유한 주식이 없어요. 위 종목에서 매수하면 이곳에 표시돼요.</p>';
+  list.innerHTML=rows.length?rows.map(([ticker,quantity])=>{const stock=state.stocks[ticker],value=(stock?.price||0)*quantity,cost=Number(player.shareCostBasis?.[ticker]||0),profit=value-cost;return '<div class="stockHoldingRow" data-ticker="'+esc(ticker)+'"><span><b>'+esc(stock?.name||ticker)+'</b><small>'+esc(ticker)+' · '+quantity+'주 · 평균 매수가 '+(quantity?Math.round(cost/quantity):0).toLocaleString('ko-KR')+'원 · 평가손익 '+(profit>=0?'+':'')+profit.toLocaleString('ko-KR')+'원</small></span><strong>'+value.toLocaleString('ko-KR')+'원</strong></div>'}).join(''):'<p class="small">아직 보유한 주식이 없어요. 위 종목에서 매수하면 이곳에 표시돼요.</p>';
   const total=rows.reduce((sum,[ticker,quantity])=>sum+(state.stocks[ticker]?.price||0)*quantity,0);
   holdings.querySelector('.stockHoldingsTotal').textContent=total.toLocaleString('ko-KR')+'원';
  }
@@ -1115,7 +1115,7 @@ function renderFinalResults(state){
  const result=state.finalAwards||{players:[],companies:[],ceo:null};
  const studentRows=result.players.map((player,index)=>'<li>'+(['🥇','🥈','🥉'][index]||'🏅')+' '+esc(player.name)+' · 총자산 '+Number(player.totalAssets||0).toLocaleString('ko-KR')+'원 · 누적 수익 '+Number(player.profit||0).toLocaleString('ko-KR')+'원 · 누적 손실 '+Number(player.loss||0).toLocaleString('ko-KR')+'원</li>').join('');
  const companyRows=result.companies.map(company=>'<li>'+esc(company.name)+' · '+esc(company.sectorName)+' · 시가총액 '+Number(company.marketValue).toLocaleString('ko-KR')+'원 · 영업이익 '+Number(company.operatingProfit||0).toLocaleString('ko-KR')+'원</li>').join('');
- panel.innerHTML='<button style="float:right" onclick="closeFinalResults()">닫기</button><span class="lessonKicker">수업 결과</span><h2>🎉 우리 반 경제 활동 성과</h2><h3>🏆 최고의 CEO상</h3>'+(result.ceo?'<p><b>'+esc(result.ceo.owner)+' · '+esc(result.ceo.name)+'</b> — 시가총액 '+Number(result.ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(result.ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p>':'<p>이번 수업에서 창업한 회사가 없어 CEO상을 선정하지 않았어요.</p>')+'<h3>학생 누적 수익</h3><ol>'+studentRows+'</ol><h3>기업 성과</h3><ol>'+companyRows+'</ol><p class="small">CEO상은 회사 시가총액과 누적 영업이익을 합산해 선정했어요. 주식·기업 결과는 학습용 모의 기록입니다.</p>';
+ panel.innerHTML='<button style="float:right" onclick="closeFinalResults()">닫기</button><span class="lessonKicker">수업 결과</span><h2>🎉 우리 반 경제 활동 성과</h2><h3>🏆 최고의 CEO상</h3>'+(result.ceo?'<p><b>'+esc(result.ceo.owner)+' · '+esc(result.ceo.name)+'</b> — 시가총액 '+Number(result.ceo.marketValue).toLocaleString('ko-KR')+'원 + 누적 영업이익 '+Number(result.ceo.operatingProfit||0).toLocaleString('ko-KR')+'원</p>':'<p>이번 수업에서 창업한 회사가 없어 CEO상을 선정하지 않았어요.</p>')+'<h3>학생 최종 자산 순위</h3><ol>'+studentRows+'</ol><h3>기업 성과</h3><ol>'+companyRows+'</ol><p class="small">CEO상은 회사 시가총액과 누적 영업이익을 합산해 선정했어요. 주식·기업 결과는 학습용 모의 기록입니다.</p>';
 }
 function closeFinalResults(){if($('finalResults'))$('finalResults').style.display='none'}
 function openMenu(m){
