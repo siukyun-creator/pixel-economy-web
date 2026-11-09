@@ -189,13 +189,16 @@ function generateCompanyNews() {
   return entry;
 }
 function simulateCompanyCustomers() {
+  let changed = false;
   for (const company of companies) {
     const demand = Math.max(30, Math.min(180, Number(company.customerDemand) || 100));
-    const expected = Math.max(1, Math.round((1 + Math.random() * 3) * demand / 100));
-    const customers = Math.min(Math.max(0, Number(company.inventory) || 0), expected);
-    company.lastTurnCustomers = customers;
-    company.lastTurnSalesRate = Math.round(customers / expected * 100);
-    if (customers > 0) {
+    const expected = Math.random() < demand / 180 ? 1 : 0;
+    const customers = expected && Number(company.inventory) > 0 ? 1 : 0;
+    company.lastTurnExpectedCustomers = (company.lastTurnExpectedCustomers || 0) + expected;
+    company.lastTurnCustomers = (company.lastTurnCustomers || 0) + customers;
+    company.lastTurnSalesRate = company.lastTurnExpectedCustomers
+      ? Math.round(company.lastTurnCustomers / company.lastTurnExpectedCustomers * 100) : 0;
+    if (customers) {
       const revenue = customers * Number(company.unitPrice || 0);
       company.inventory -= customers;
       company.soldUnits = (company.soldUnits || 0) + customers;
@@ -207,20 +210,18 @@ function simulateCompanyCustomers() {
         owner.money += revenue;
         owner.earnedTotal = (owner.earnedTotal || 0) + revenue;
       }
+      changed = true;
     }
-
-    // 한 턴 판매율이 낮으면 해당 기업 주가에도 즉시 반영
     const salesRate = company.lastTurnSalesRate;
-    const stockRate = salesRate < 30 ? -0.03 : salesRate < 60 ? -0.015 : 0;
-    if (stockRate < 0) {
-      applyImmediateStockMove(company.ticker, stockRate, '판매율 저조 (' + salesRate + '%)');
-    } else if (salesRate >= 90) {
-      applyImmediateStockMove(company.ticker, 0.01, '판매 호조 (' + salesRate + '%)');
-    } else {
-      const stock = stocks[company.ticker];
-      if (stock) stock.lastReason = '판매율 보통 (' + salesRate + '%)';
+    const stock = stocks[company.ticker];
+    if (stock && company.lastTurnExpectedCustomers > 0) {
+      if (salesRate < 30) applyImmediateStockMove(company.ticker, -0.001, '실시간 판매율 저조 (' + salesRate + '%)');
+      else if (salesRate >= 90) applyImmediateStockMove(company.ticker, 0.001, '실시간 판매 호조 (' + salesRate + '%)');
+      else stock.lastReason = '실시간 판매율 ' + salesRate + '%';
+      changed = true;
     }
   }
+  return changed;
 }
 function playerAssetValue(player) {
   const sharesValue = Object.entries(player.shares || {}).reduce((sum, [ticker, quantity]) => sum + (stocks[ticker]?.price || 0) * Math.max(0, Number(quantity) || 0), 0);
@@ -251,7 +252,7 @@ function finishTurn() {
   const endedTurn = turnState.turnNumber;
   updateStockPrices();
   const todayNews = generateCompanyNews();
-  simulateCompanyCustomers();
+  companies.forEach(company => { company.lastTurnCustomers = 0; company.lastTurnExpectedCustomers = 0; company.lastTurnSalesRate = 0; });
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
   turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
   turnState.turnNumber = endedTurn + 1;
@@ -802,6 +803,10 @@ roomIo.on('connection', socket => {
   });
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
+  const salesTimer = setInterval(() => {
+    if (gameStatus === 'running' && simulateCompanyCustomers()) broadcast();
+  }, 5000);
+  salesTimer.unref?.();
   const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
   turnTimer.unref?.();
   return roomIo;
