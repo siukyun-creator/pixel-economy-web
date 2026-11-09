@@ -739,7 +739,7 @@ roomIo.on('connection', socket => {
     if(c.type==='turnSettings'){
       const duration=Number(c.value?.durationMinutes),total=Number(c.value?.totalTurns);
       if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>6)msg(socket,'실제 턴 시간은 1~60분, 전체 턴은 월~토 6회 이내로 설정해 주세요.');
-      else {turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;}
+      else {turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;else if(gameStatus==='paused')turnState.remainingMs=duration*60000;}
     }
     if(c.type==='advanceMarket'){
       if(gameStatus!=='running')msg(socket,'수업을 시작한 뒤 거래 시점을 진행할 수 있어요.');
