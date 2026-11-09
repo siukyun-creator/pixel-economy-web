@@ -45,6 +45,8 @@ const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant
 const stockHistory = {};
 const stockOrders = {};
 let marketClock = { dayIndex: 0, day: MARKET_DAYS[0], time: '09:00', marketOpen: true, turnMinutes: 30 };
+const turnConfig = { durationMinutes: 3, totalTurns: 10 };
+let turnState = { turnNumber: 1, endsAt: null, remainingMs: null, summary: null, baseline: {}, initialAssets: {} };
 let finalAwards = null;
 const properties = [
   { id: 'house1', name: '작은 집', price: 50000000, owner: null },
@@ -65,7 +67,7 @@ const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) |
 let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
-const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, finalAwards });
+const snapshot = () => ({ players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
 const msg = (s, t) => s.emit('notice', t);
@@ -130,22 +132,51 @@ function updateStockPrices() {
   }
   return true;
 }
+function playerAssetValue(player) {
+  const sharesValue = Object.entries(player.shares || {}).reduce((sum, [ticker, quantity]) => sum + (stocks[ticker]?.price || 0) * Math.max(0, Number(quantity) || 0), 0);
+  return Math.round((player.money || 0) + (player.bank || 0) - (player.loan || 0) + sharesValue);
+}
+function playerResult(player, baseline) {
+  const totalAssets = playerAssetValue(player);
+  const change = totalAssets - (Number.isFinite(baseline) ? baseline : totalAssets);
+  const initial = Number.isFinite(turnState.initialAssets[player.name]) ? turnState.initialAssets[player.name] : totalAssets;
+  const sharesValue = Object.entries(player.shares || {}).reduce((sum, [ticker, quantity]) => sum + (stocks[ticker]?.price || 0) * Math.max(0, Number(quantity) || 0), 0);
+  return { name: player.name, totalAssets, cash: player.money || 0, bank: player.bank || 0, loan: player.loan || 0, earnedTotal: player.earnedTotal || 0, sharesValue, turnChange: change, turnProfit: Math.max(0, change), turnLoss: Math.max(0, -change), profit: Math.max(0, totalAssets - initial), loss: Math.max(0, initial - totalAssets) };
+}
+function captureTurnBaseline() {
+  turnState.baseline = {};
+  for (const player of players.values()) {
+    const value = playerAssetValue(player);
+    turnState.baseline[player.name] = value;
+    if (!Object.prototype.hasOwnProperty.call(turnState.initialAssets, player.name)) turnState.initialAssets[player.name] = value;
+  }
+}
+function beginTurn() {
+  captureTurnBaseline();
+  turnState.endsAt = Date.now() + turnConfig.durationMinutes * 60 * 1000;
+  turnState.remainingMs = null;
+}
+function finishTurn() {
+  if (gameStatus !== 'running') return;
+  const endedTurn = turnState.turnNumber;
+  if (marketClock.marketOpen) advanceMarket();
+  const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name])).sort((a, b) => b.totalAssets - a.totalAssets);
+  results.forEach((row, index) => { row.rank = index + 1; });
+  turnState.summary = { turnNumber: endedTurn, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), results };
+  turnState.turnNumber = endedTurn + 1;
+  if (gameStatus === 'ended' || endedTurn >= turnConfig.totalTurns) {
+    gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null; finalAwards = calculateFinalAwards();
+  } else beginTurn();
+  broadcast();
+}
 function calculateFinalAwards() {
   const rankedCompanies = companies.map(company => {
     const marketValue = (stocks[company.ticker]?.price || company.price || 0) * 10;
     return { ...company, marketValue, score: marketValue + (company.operatingProfit || 0) };
   }).sort((a, b) => b.score - a.score);
-  const rankedPlayers = [...players.values()].map(player => ({
-    name: player.name,
-    earnedTotal: player.earnedTotal || 0,
-    cash: player.money || 0,
-    bank: player.bank || 0
-  })).sort((a, b) => b.earnedTotal - a.earnedTotal);
-  return {
-    players: rankedPlayers.slice(0, 10),
-    ceo: rankedCompanies.length ? rankedCompanies[0] : null,
-    companies: rankedCompanies
-  };
+  const rankedPlayers = [...players.values()].map(player => playerResult(player, turnState.initialAssets[player.name])).sort((a, b) => b.totalAssets - a.totalAssets);
+  rankedPlayers.forEach((row, index) => { row.rank = index + 1; });
+  return { players: rankedPlayers, ceo: rankedCompanies.length ? rankedCompanies[0] : null, companies: rankedCompanies };
 }
 roomIo.on('connection', socket => {
   socket.on('join', (data, ack) => {
@@ -179,9 +210,10 @@ roomIo.on('connection', socket => {
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
       const seat = randomSeat();
-      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {}, shareCostBasis: {}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     }
     players.set(socket.id, p);
+    if (gameStatus === 'running' && !Object.prototype.hasOwnProperty.call(turnState.baseline, p.name)) { const value = playerAssetValue(p); turnState.baseline[p.name] = value; turnState.initialAssets[p.name] ??= value; }
     socket.join(ROOM);
     reply(true, '입장 성공');
     socket.emit('joined', {id: socket.id, resumed: !!saved});
@@ -308,7 +340,7 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee,totalCosts:storeFee,createdAt:Date.now(),salesHistory:[],color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -352,7 +384,7 @@ roomIo.on('connection', socket => {
        for(const row of a.items){const id=String(row?.productId||''),qty=Number(row?.amount),product=foodProducts[id],item=wholesaleShop.inventory[id];if(!product||product.category!==st.food||!item||!Number.isInteger(qty)||qty<1||qty>99)return msg(socket,'상품 또는 수량을 다시 확인해 주세요.');if(item.stock<qty)return msg(socket,product.name+' 재고가 부족해요. 현재 '+item.stock+'개 있어요.');lines.push({productId:id,name:product.name,quantity:qty,unitPrice:item.price,subtotal:item.price*qty});total+=item.price*qty;}
        if(p.money<total)return msg(socket,'결제 금액이 부족해요. '+total.toLocaleString('ko-KR')+'원 필요 · 보유 '+p.money.toLocaleString('ko-KR')+'원');
        lines.forEach(line=>{wholesaleShop.inventory[line.productId].stock-=line.quantity;st.products=st.products||{};st.products[line.productId]=st.products[line.productId]||{stock:0,price:retailPrices[line.productId]||3500,ingredients:0};st.products[line.productId].ingredients=(st.products[line.productId].ingredients||0)+line.quantity;});
-       p.money-=total;const seller=players.get(wholesaleShop.ownerId);if(seller){seller.money+=total;seller.earnedTotal=(seller.earnedTotal||0)+total;}
+       p.money-=total;st.totalCosts=(st.totalCosts||st.setupCost||0)+total;st.purchaseHistory=st.purchaseHistory||[];st.purchaseHistory.push({at:Date.now(),amount:total,items:lines.map(line=>({productId:line.productId,quantity:line.quantity}))});const seller=players.get(wholesaleShop.ownerId);if(seller){seller.money+=total;seller.earnedTotal=(seller.earnedTotal||0)+total;}
        socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:wholesaleShop.name,buyer:p.name,lines,total,payment:'현금',balance:p.money});
        msg(socket,'🧾 결제 완료! '+total.toLocaleString('ko-KR')+'원 · 영수증을 발급했어요.');broadcast();return;
      }
@@ -379,7 +411,7 @@ roomIo.on('connection', socket => {
       const st=stores.find(v=>v.id===String(a.storeId));
       if(!st||st.ownerId!==p.id)return msg(socket,'내 가게에서만 재고를 채울 수 있어요.');
       const cost=5000;if(p.money<cost)return msg(socket,'재고 5개 준비에는 5,000원이 필요해요.');
-      p.money-=cost;st.stock+=5;msg(socket,'📦 재고 보충! '+foods[st.food].name+' 5개 추가 · 잔액 '+p.money+'원');
+      p.money-=cost;st.totalCosts=(st.totalCosts||st.setupCost||0)+cost;st.stock+=5;msg(socket,'📦 재고 보충! '+foods[st.food].name+' 5개 추가 · 잔액 '+p.money+'원');
     }
     else if(a.type==='work'){const paid=credit(p,10000);p.job='마을 아르바이트';msg(socket,`✅ 일하기 성공! +10,000원 · 세금 ${paid.tax.toLocaleString('ko-KR')}원 · 실제 수령 ${paid.net.toLocaleString('ko-KR')}원 · 잔액 ${p.money.toLocaleString('ko-KR')}원`);}
     else if(a.type==='buy'||a.type==='sell'){
@@ -393,10 +425,10 @@ roomIo.on('connection', socket => {
     else if(a.type==='loan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<10000||v>100000||v%10000!==0)return msg(socket,'대출은 10,000원 단위로 10,000~100,000원까지 신청할 수 있어요.');if((p.loan||0)+v>200000)return msg(socket,'대출 한도는 총 200,000원이에요.');p.loan=(p.loan||0)+v;p.money+=v;msg(socket,`🏦 대출 완료! ${v.toLocaleString('ko-KR')}원 · 갚을 돈 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='repayLoan'){const v=Number(a.amount);if(!Number.isInteger(v)||v<1000||v>200000)return msg(socket,'상환 금액을 확인해 주세요.');const pay=Math.min(v,p.loan||0);if(!pay)return msg(socket,'갚을 대출금이 없어요.');if(p.money<pay)return msg(socket,'현금이 부족해요.');p.money-=pay;p.loan-=pay;msg(socket,`🏦 대출 상환! ${pay.toLocaleString('ko-KR')}원 · 남은 빚 ${p.loan.toLocaleString('ko-KR')}원`);}
     else if(a.type==='donate'){const v=Number(a.amount),cause=DONATION_CAUSES.includes(a.cause)?a.cause:'community';if(!Number.isInteger(v)||v<1000||v>100000)return msg(socket,'기부는 1,000~100,000원 사이로 입력해 주세요.');if(p.money<v)return msg(socket,'기부할 현금이 부족해요.');p.money-=v;p.socialDonated=(p.socialDonated||0)+v;p.donations||=emptyDonations();p.donations[cause]=(p.donations[cause]||0)+v;const relief=Math.floor(v*.1);p.taxRelief=(p.taxRelief||0)+relief;const causeName={community:'지역사회',disability:'장애인 지원',seniors:'어르신 지원',inclusiveEmployment:'장애인 고용 지원'}[cause];msg(socket,`💛 ${causeName}에 ${v.toLocaleString('ko-KR')}원 기부 · 앞으로 낼 세금 ${relief.toLocaleString('ko-KR')}원 감면권 획득`);}
-    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shares[item]=(p.shares[item]||0)+n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].buys += n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
-    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);p.shares[item]-=n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].sells += n;const paid=credit(p,st.price*n);msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
+    else if(a.type==='stockBuy'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');const cost=st.price*n;if(p.money<cost)return msg(socket,`❌ 매수 실패: 돈이 부족해요. 필요 ${cost}원 · 보유 ${p.money}원`);p.money-=cost;p.shareCostBasis ||= {};p.shareCostBasis[item]=(p.shareCostBasis[item]||0)+cost;p.shares[item]=(p.shares[item]||0)+n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].buys += n;msg(socket,`📈 매수 성공! ${st.name} ${n}주 · 총 ${cost}원 · 보유 ${p.shares[item]}주 · 잔액 ${p.money}원`);}
+    else if(a.type==='stockSell'){const st=stocks[item];if(!st)return msg(socket,'❌ 해당 주식을 찾을 수 없어요.');if(!marketClock.marketOpen)return msg(socket,'주식 시장은 월~토 09:00~15:30에 열려요. 선생님이 거래 시간을 조정해 주세요.');if((p.shares[item]||0)<n)return msg(socket,`📉 매도 실패: 보유 주식이 부족해요. 현재 ${p.shares[item]||0}주`);const held=p.shares[item]||0,averageCost=(p.shareCostBasis?.[item]||0)/Math.max(1,held),realized=(st.price-averageCost)*n;p.shareCostBasis ||= {};p.shareCostBasis[item]=Math.max(0,(p.shareCostBasis[item]||0)-averageCost*n);p.shares[item]-=n;stockOrders[item] ||= { buys: 0, sells: 0 };stockOrders[item].sells += n;const paid=credit(p,st.price*n);p.realizedStockProfit=(p.realizedStockProfit||0)+realized;msg(socket,`📉 매도 성공! ${st.name} ${n}주 · 세금 ${paid.tax}원 · 받은 돈 ${paid.net}원 · 남은 주식 ${p.shares[item]}주`);}
     else if(a.type==='property'){const q=properties.find(x=>x.id===item);if(!q||q.owner||p.money<q.price)return msg(socket,'❌ 구매 실패: 이미 주인이 있거나 돈이 부족해요.');p.money-=q.price;q.owner=p.name;p.property.push(q.id);msg(socket,`🏠 구매 성공! ${q.name} 소유 · 잔액 ${p.money}원`);}
-    else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
+    else if(a.type==='startup'){const companyName=safeName(a.item);if(p.company)return msg(socket,'이미 창업한 회사가 있어요.');if(p.storeId||(wholesaleShop&&wholesaleShop.ownerId===socket.id))return msg(socket,'이미 다른 사업을 운영하고 있어요. 한 학생은 한 가지 사업만 선택할 수 있어요.');if(companyName==='학생'||p.money<100000)return msg(socket,'회사 이름을 입력하고 창업 비용 100,000원을 준비해 주세요.');const ticker='CO'+String(companies.length+1).padStart(2,'0');p.money-=100000;p.company=ticker;p.shares[ticker]=10;p.shareCostBasis ||= {};p.shareCostBasis[ticker]=0;stocks[ticker]={name:companyName,price:10000,owner:p.name};stockHistory[ticker]=[10000];companies.push({ticker,name:companyName,owner:p.name,price:10000});msg(socket,`🏭 창업 성공! ${companyName} · 주식 10주 지급 · 잔액 ${p.money}원`);}
     else if(a.type==='transfer'){const target=[...players.values()].find(x=>x.name===safeName(item)&&x.id!==p.id);const v=bounded(a.amount,1,1000000);if(!target||p.money<v)return msg(socket,'친구 이름이나 금액을 확인해 주세요.');p.money-=v;target.money+=v;msg(socket,`송금 성공! ${target.name}에게 ${v}원 · 잔액 ${p.money}원`);}
     else return;
     broadcast();
@@ -417,6 +449,7 @@ roomIo.on('connection', socket => {
       player.money -= 100000;
       player.company = ticker;
       player.shares[ticker] = 10;
+      player.shareCostBasis ||= {}; player.shareCostBasis[ticker] = 0;
       stocks[ticker] = { name: companyName, price: 10000, owner: player.name, sector };
       stockHistory[ticker] = [10000];
       stockOrders[ticker] = { buys: 0, sells: 0 };
@@ -593,7 +626,12 @@ roomIo.on('connection', socket => {
     }
     if(c.type==='shops')shopsEnabled=!!c.value;
     if(c.type==='marketTime'){
-      if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||''),Number(c.value?.turnMinutes)))msg(socket,'요일·시각 또는 한 턴 진행 시간을 확인해 주세요.');
+      if(!setMarketClock(Number(c.value?.dayIndex),String(c.value?.time||''),Number(c.value?.turnMinutes)))msg(socket,'요일·시각 또는 한 턴 가상 시각을 확인해 주세요.');
+    }
+    if(c.type==='turnSettings'){
+      const duration=Number(c.value?.durationMinutes),total=Number(c.value?.totalTurns);
+      if(!Number.isInteger(duration)||duration<1||duration>60||!Number.isInteger(total)||total<1||total>30)msg(socket,'실제 턴 시간은 1~60분, 전체 턴은 1~30회로 설정해 주세요.');
+      else {turnConfig.durationMinutes=duration;turnConfig.totalTurns=total;if(gameStatus==='running')turnState.endsAt=Date.now()+duration*60000;}
     }
     if(c.type==='advanceMarket'){
       if(gameStatus!=='running')msg(socket,'수업을 시작한 뒤 거래 시점을 진행할 수 있어요.');
@@ -610,14 +648,14 @@ roomIo.on('connection', socket => {
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){gameStatus='running';finalAwards=null;}
-    if(c.type==='pause' && gameStatus==='running')gameStatus='paused';
-    if(c.type==='resume' && gameStatus==='paused')gameStatus='running';
-    if(c.type==='end'){gameStatus='ended';finalAwards=calculateFinalAwards();}
-    if(c.type==='reset'){gameStatus='waiting';finalAwards=null;}
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){gameStatus='running';finalAwards=null;turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
+    if(c.type==='pause' && gameStatus==='running'){turnState.remainingMs=Math.max(0,(turnState.endsAt||Date.now())-Date.now());turnState.endsAt=null;gameStatus='paused';}
+    if(c.type==='resume' && gameStatus==='paused'){gameStatus='running';turnState.endsAt=Date.now()+(turnState.remainingMs??turnConfig.durationMinutes*60000);turnState.remainingMs=null;}
+    if(c.type==='end'){gameStatus='ended';turnState.endsAt=null;turnState.remainingMs=null;finalAwards=calculateFinalAwards();}
+    if(c.type==='reset'){gameStatus='waiting';turnState.endsAt=null;turnState.remainingMs=null;turnState.turnNumber=1;turnState.summary=null;turnState.baseline={};turnState.initialAssets={};finalAwards=null;}
     if(c.type==='resetEconomy'){
-      setMarketClock(0,'09:00',30);finalAwards=null;
-      players.forEach(player=>{player.companyGoods={};});
+      setMarketClock(0,'09:00',30);finalAwards=null;turnState.turnNumber=1;turnState.endsAt=null;turnState.remainingMs=null;turnState.summary=null;turnState.baseline={};turnState.initialAssets={};
+      players.forEach(player=>{player.companyGoods={};player.shareCostBasis={};player.realizedStockProfit=0;});
     }
     if(c.type==='randomize'){
       const cells=[];for(let x=-24;x<=24;x+=4)for(let z=-6;z<=6;z+=3)cells.push({x,z});
@@ -630,6 +668,8 @@ roomIo.on('connection', socket => {
   });
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
+  const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
+  turnTimer.unref?.();
   return roomIo;
 }
 const initialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : makeRoomCode();
