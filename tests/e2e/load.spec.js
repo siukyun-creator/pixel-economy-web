@@ -31,7 +31,7 @@ function joinClassroom(baseURL, roomCode, name, clients) {
   });
 }
 
-test('30명의 동시 학생 접속은 허용하고 31번째 신규 접속은 거부한다', async ({ baseURL }) => {
+test('30명의 동시 학생 접속은 허용하고 31번째 신규 접속은 거부한다', async ({ baseURL, page }) => {
   test.setTimeout(90000);
   const manager = io(baseURL, {
     transports: ['websocket'],
@@ -61,6 +61,9 @@ test('30명의 동시 학생 접속은 허용하고 31번째 신규 접속은 �
       )
     );
     expect(joined).toHaveLength(30);
+    fs.mkdirSync(path.join(resultsDir,'screenshots'),{recursive:true});
+    await page.goto(baseURL);
+    await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-30-client-load-screen.png'),fullPage:true});
     expect(joined.every(entry => entry.result?.ok)).toBe(true);
     expect(new Set(joined.map(entry => entry.result.ok)).size).toBe(1);
 
