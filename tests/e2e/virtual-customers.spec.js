@@ -20,6 +20,22 @@ function emitAck(client, event, payload) {
   });
 }
 
+function requestState(client) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      client.off('state', onState);
+      reject(new Error('상태 동기화 시간 초과'));
+    }, 5000);
+    const onState = state => {
+      clearTimeout(timer);
+      client.off('state', onState);
+      resolve(state);
+    };
+    client.once('state', onState);
+    client.emit('sync');
+  });
+}
+
 test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·매출·현금이 반영된다', async ({ browser, baseURL }) => {
   test.setTimeout(90000);
   const manager = await connectSocket(baseURL);
@@ -66,7 +82,7 @@ test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·�
 
     const initialMoney = 200000 - 30000;
     await expect.poll(async () => {
-      const state = await emitAck(student, 'sync', {});
+      const state = await requestState(student);
       const store = state.stores.find(item => item.id === createdStore.id);
       const owner = state.players.find(item => item.name === '가상손님테스트주인');
       return {
@@ -82,7 +98,7 @@ test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·�
       money: expect.any(Number)
     });
 
-    const finalState = await emitAck(student, 'sync', {});
+    const finalState = await requestState(student);
     const finalStore = finalState.stores.find(item => item.id === createdStore.id);
     const owner = finalState.players.find(item => item.name === '가상손님테스트주인');
     expect(finalStore.visitorCount).toBeGreaterThanOrEqual(1);
