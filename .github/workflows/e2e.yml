@@ -1,5 +1,9 @@
 name: PIXEL TOWN verification
 
+concurrency:
+  group: pixel-town-verification-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: ["**"]
@@ -24,3 +28,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser tests
         run: npm run test:e2e
+      - name: Upload UI screenshots and Playwright reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixel-town-ui-screenshots
+          path: |
+            test-results/screenshots/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 7
