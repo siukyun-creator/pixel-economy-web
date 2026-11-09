@@ -102,7 +102,17 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('.storeWizardPanel')).toHaveCount(3);
   await page.locator('#newStoreName').fill('단계별 가게');
   const drawingCanvas = page.locator('#foodPreview');
-  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await drawingCanvas.scrollIntoViewIfNeeded();
+  let drawingBounds = await drawingCanvas.boundingBox();
+  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 15);
+  await page.mouse.down();
+  await expect.poll(() => page.evaluate(() => foodPointerDown)).toBe(true);
+  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 15, { steps: 8 });
+  await expect.poll(() => page.locator('#foodPreview').evaluate(canvas => {
+    const data = canvas.getContext('2d').getImageData(15, 15, 1, 1).data;
+    return data[0] !== 255 || data[1] !== 240 || data[2] !== 207;
+  })).toBe(true);
+  await page.mouse.up();
   await page.getByRole('button', { name: '그림 등록하기' }).click();
   await page.getByRole('button', { name: '다음 단계' }).click();
   await expect(page.locator('.storeWizardPanel').nth(1)).toBeVisible();
@@ -134,20 +144,47 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
   await expect(page.locator('#foodProductChoices')).toHaveAttribute('data-selected', 'croissant');
   await expect(page.locator('#foodArtRegister')).toBeVisible();
+  const paintStroke = async (colorIndex, start, end) => {
+    await page.getByRole('button', { name: '그림 색상 ' + colorIndex }).click();
+    await drawingCanvas.scrollIntoViewIfNeeded();
+    drawingBounds = await drawingCanvas.boundingBox();
+    await page.mouse.move(drawingBounds.x + start.x, drawingBounds.y + start.y);
+    await page.mouse.down();
+    await page.mouse.move(drawingBounds.x + end.x, drawingBounds.y + end.y, { steps: 8 });
+    await page.mouse.up();
+  };
   await page.getByRole('button', { name: '그림 색상 1' }).click();
-  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await drawingCanvas.scrollIntoViewIfNeeded();
+  drawingBounds = await drawingCanvas.boundingBox();
+  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 15, { steps: 8 });
+  await page.mouse.up();
   await page.getByRole('button', { name: '그림 색상 2' }).click();
-  await drawingCanvas.click({ position: { x: 10, y: 10 } });
-  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#e7a94f'))).toBe(true);
+  await drawingCanvas.scrollIntoViewIfNeeded();
+  drawingBounds = await drawingCanvas.boundingBox();
+  await page.mouse.move(drawingBounds.x + 15, drawingBounds.y + 75);
+  await page.mouse.down();
+  await page.mouse.move(drawingBounds.x + 105, drawingBounds.y + 75, { steps: 8 });
+  await page.mouse.up();
   await page.locator('#newStoreFood').selectOption('cafe');
   await expect.poll(() => page.evaluate(() => foodPixelArt.every(color => color === '#fff0cf'))).toBe(true);
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
-  await page.getByRole('button', { name: '그림 색상 3' }).click();
-  await drawingCanvas.click({ position: { x: 10, y: 10 } });
-  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#ef6876'))).toBe(true);
+  await paintStroke(1, { x: 85, y: 70 }, { x: 245, y: 70 });
+  await paintStroke(1, { x: 95, y: 70 }, { x: 95, y: 245 });
+  await paintStroke(1, { x: 235, y: 70 }, { x: 235, y: 245 });
+  await paintStroke(1, { x: 95, y: 245 }, { x: 235, y: 245 });
+  await paintStroke(6, { x: 115, y: 110 }, { x: 215, y: 110 });
+  await paintStroke(6, { x: 115, y: 145 }, { x: 215, y: 145 });
+  await paintStroke(6, { x: 115, y: 180 }, { x: 215, y: 180 });
+  await paintStroke(6, { x: 115, y: 215 }, { x: 215, y: 215 });
+  await paintStroke(3, { x: 170, y: 35 }, { x: 195, y: 75 });
   await page.getByRole('button', { name: '그림 등록하기' }).click();
   await expect(page.locator('#foodArtStatus')).toContainText('그림이 대표 메뉴에 등록됐어요.');
   await expect.poll(() => page.evaluate(() => foodArtRegistered)).toBe(true);
+  await expect.poll(() => page.evaluate(() => new Set(foodPixelArt).size)).toBeGreaterThan(1);
+  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#ef6876'))).toBe(true);
+  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#fff0cf'))).toBe(true);
   await page.screenshot({
     path: path.join(resultsDir, 'screenshots', 'pixel-town-menu-drawing.png'),
     fullPage: false

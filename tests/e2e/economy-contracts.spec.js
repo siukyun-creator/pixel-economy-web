@@ -33,23 +33,46 @@ function joinStudent(client, name, roomCode) {
   return new Promise((resolve, reject) => {
     let acknowledged = false;
     let joined = false;
-    const timer = setTimeout(
-      () => reject(new Error(`${name} 입장 시간 초과 (ack=${acknowledged}, joined=${joined})`)),
-      20000
-    );
+    let receivedState = false;
+    let receivedWelcome = false;
+    let syncedState;
+    let syncRequested = false;
+    const cleanup = () => {
+      clearTimeout(timer);
+      client.off('state', onState);
+      client.off('notice', onNotice);
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`${name} 입장 시간 초과 (ack=${acknowledged}, joined=${joined})`));
+    }, 20000);
+    const finishIfReady = () => {
+      if (!acknowledged || !joined || !receivedState || !receivedWelcome) return;
+      cleanup();
+      resolve(syncedState);
+    };
+    const onState = state => {
+      syncedState = state;
+      receivedState = true;
+      finishIfReady();
+    };
+    const onNotice = message => {
+      if (message.includes(name) && message.includes('입장!')) {
+        receivedWelcome = true;
+        finishIfReady();
+      }
+    };
     const syncIfReady = () => {
-      if (!acknowledged || !joined) return;
-      client.once('state', state => {
-        clearTimeout(timer);
-        resolve(state);
-      });
+      if (!acknowledged || !joined || syncRequested) return;
+      syncRequested = true;
+      client.on('state', onState);
       client.emit('sync');
     };
-
     client.once('connect_error', error => {
-      clearTimeout(timer);
+      cleanup();
       reject(error);
     });
+    client.on('notice', onNotice);
     client.once('joined', () => {
       joined = true;
       syncIfReady();
@@ -57,7 +80,7 @@ function joinStudent(client, name, roomCode) {
     client.once('connect', () => {
       client.timeout(7000).emit('join', { name, room: roomCode }, (error, result) => {
         if (error || !result?.ok) {
-          clearTimeout(timer);
+          cleanup();
           reject(new Error(result?.message || error?.message || `${name} 입장 실패`));
           return;
         }
