@@ -648,12 +648,12 @@ function createStudentStore(){
  if(storeCreatePending)return;
  if(!socket.connected){showNotice('서버 연결이 끊겼어요. 연결된 뒤 다시 눌러 주세요.');return}
  if(!name){showNotice('가게 이름을 입력해 주세요.');$('newStoreName')?.focus();return}
- if(!foodArtRegistered){showNotice('대표 메뉴를 직접 그리고 그림 등록하기를 눌러 주세요.');$('foodArtRegister')?.focus();return}
+ 
  if(p?.storeId||p?.company||latestState?.wholesaleShop?.ownerId===myId){showNotice('한 학생은 가게·도매상·회사 중 하나만 선택할 수 있어요.');return}
  if(p && p.money < (latestState?.storeFee ?? 250)){showNotice('가게 개설비가 부족해요. 은행 잔액이 아니라 현금이 필요해요.');return}
  storeCreatePending=true;if(button){button.disabled=true;button.textContent='🏗️ 가게를 짓는 중...'}
  showNotice('🏗️ '+product.name+' 가게를 짓고 있어요...');
- socket.emit('action',{type:'createStore',name,sign:sign||name,food,color,productId:product.id,pixelArt:foodPixelArt,pixelArtProductId:product.id,wallColor:$('newWallColor')?.value,signStyle:$('newSignStyle')?.value,signColor:$('newSignColor')?.value,awningStyle:$('newAwningStyle')?.value,decor:$('newStoreDecor')?.value});
+ socket.emit('action',{type:'createStore',name,sign:sign||name,food,color,productId:product.id,wallColor:$('newWallColor')?.value,signStyle:$('newSignStyle')?.value,signColor:$('newSignColor')?.value,awningStyle:$('newAwningStyle')?.value,decor:$('newStoreDecor')?.value});
  window.setTimeout(()=>{if(storeCreatePending){storeCreatePending=false;const b=document.querySelector('#menuContent button[onclick="createStudentStore()"]');if(b){b.disabled=false;b.textContent='🏗️ 이 디자인으로 가게 만들기'}showNotice('응답이 늦어요. 서버 연결 상태를 확인하고 다시 시도해 주세요.')}},7000);
 }
 function syncGame(){if(!socket.connected){$('connection').textContent='재연결 중...';socket.connect();return}$('notice').textContent='↻ 게임 정보를 새로고침하는 중...';socket.emit('sync')}
@@ -842,60 +842,36 @@ function attachCameraControls(){const canvas=$('game').querySelector('canvas');i
 function enterNearbyStore(){if(!nearbyStore){showNotice('가까운 가게가 없어요.');return}socket.emit('enterStore',nearbyStore.id)}function enterNearbyWholesale(){if(!nearbyWholesale){showNotice('도매상 입구까지 걸어와 주세요.');return}socket.emit('enterWholesale')}function buyWholesaleIngredients(id){addWholesaleToCart(id)}function createWholesaleBusiness(){const name=$('wholesaleBusinessName')?.value?.trim();if(!name){showNotice('도매상 이름을 입력해 주세요.');return}socket.emit('action',{type:'createWholesale',name})}function addWholesaleToCart(id){const qty=Number($('wholesaleQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>99){showNotice('수량은 1~99개로 입력해 주세요.');return}const old=wholesaleCart.find(v=>v.productId===id);if(old)old.amount=Math.min(99,old.amount+qty);else wholesaleCart.push({productId:id,amount:qty});drawMenu();showNotice('장바구니에 담았어요.')}function removeWholesaleFromCart(id){wholesaleCart=wholesaleCart.filter(v=>v.productId!==id);drawMenu()}function checkoutWholesale(){if(!wholesaleCart.length){showNotice('장바구니가 비어 있어요.');return}if(!confirm('장바구니 상품을 결제할까요?'))return;socket.emit('action',{type:'wholesaleCheckout',items:wholesaleCart})}function restockWholesale(id){const qty=Number($('restockQty_'+id)?.value||1);if(!Number.isInteger(qty)||qty<1||qty>100){showNotice('수량은 1~100개로 입력해 주세요.');return}socket.emit('action',{type:'wholesaleStockUp',productId:id,amount:qty})}function setWholesalePrice(id){const price=Number($('wholesalePrice_'+id)?.value||0);socket.emit('action',{type:'setWholesalePrice',productId:id,amount:price})}function showReceipt(r){const root=$('receiptPaper');if(!root)return;root.innerHTML='<h2>PIXEL TOWN</h2><div class="receiptSub">구매 영수증 · '+esc(r.receiptNo||'')+'</div><hr><div class="receiptLine"><span>판매자</span><span>'+esc(r.seller||'')+'</span></div><div class="receiptLine"><span>구매자</span><span>'+esc(r.buyer||'')+'</span></div><hr>'+(r.lines||[]).map(v=>'<div class="receiptLine"><span>'+esc(v.name)+' × '+v.quantity+'</span><b>'+Number(v.subtotal).toLocaleString('ko-KR')+'원</b></div>').join('')+'<hr><div class="receiptLine"><b>결제 금액</b><b>'+Number(r.total).toLocaleString('ko-KR')+'원</b></div><div class="receiptLine"><span>결제 후 잔액</span><b>'+Number(r.balance).toLocaleString('ko-KR')+'원</b></div><div class="receiptActions"><button onclick="window.print()">인쇄</button><button onclick="closeReceipt()">영수증 확인 완료</button></div>';$('receiptOverlay').classList.add('show')}function closeReceipt(){$('receiptOverlay').classList.remove('show');wholesaleCart=[];if(menu==='wholesale')drawMenu()}function exitWholesale(){socket.emit('exitWholesale')}function openMenu(m){menu=m;$('menuPanel').style.display='block';$('menuPanel').classList.add('menu-fullscreen');document.body.classList.add('menuFullscreen');document.body.classList.toggle('cookingMode',m==='kitchen');if(m==='businessHub'){drawBusinessHub();return}drawMenu();if(m==='createStore'){setupStoreCreationWizard();wireStoreStylePreview()}}function closeMenu(){if(cookRunning)stopCookGame();$('menuPanel').style.display='none';$('menuPanel').classList.remove('menu-fullscreen','cook-fullscreen');document.body.classList.remove('cookingMode','menuFullscreen')}
 let storeWizardStep=0;
 function setupStoreCreationWizard(){
- const card=document.querySelector('#menuContent .cookCard');
- if(!card||card.querySelector('.storeWizardPanel'))return;
- const intro=card.querySelector(':scope > p');
- const heading=card.querySelector(':scope > b');
+ const card=document.querySelector('#menuContent .cookCard');if(!card||card.querySelector('.storeWizardPanel'))return;
+ const intro=card.querySelector(':scope > p'),heading=card.querySelector(':scope > b');
  const panels=[0,1,2].map(()=>{const panel=document.createElement('section');panel.className='storeWizardPanel';panel.hidden=true;return panel});
  const move=(selector,panel)=>{const element=card.querySelector(selector);if(element)panel.appendChild(element)};
- if(heading)panels[0].appendChild(heading);
- if(intro)panels[0].appendChild(intro);
- ['newStoreName','newStoreSign','newStoreFood'].forEach(id=>{
-  move('label[for="'+id+'"]',panels[0]);
-  move('#'+id,panels[0]);
- });
- const shelf=card.querySelector('.foodArtShelf');if(shelf)shelf.remove();
- ['#foodProductChoices','#foodPreview','#foodProductName'].forEach(selector=>move(selector,panels[0]));
- const drawing=document.createElement('div');drawing.className='foodDrawingTools';
- drawing.innerHTML='<p><b>✏️ 선택한 메뉴를 그림판처럼 직접 그려 등록하세요</b><br><span class="small">마우스나 손가락을 누른 채 자유롭게 그리세요. 등록하면 음식 픽셀 그림으로 바뀌어 다른 학생에게도 보여요.</span></p><div class="pixelPalette" aria-label="그림 색상">'+['#533527','#e7a94f','#ef6876','#ffce4c','#69aa5d','#a7e3f0','#ffffff','#fff0cf','#202020'].map((color,index)=>'<button type="button" aria-label="그림 색상 '+(index+1)+'" data-food-color="'+color+'" style="background:'+color+'"></button>').join('')+'</div><div class="foodBrushSizes" aria-label="붓 굵기"><button type="button" data-brush-size="10">얇게</button><button type="button" data-brush-size="22" class="active">보통</button><button type="button" data-brush-size="36">굵게</button></div><button type="button" class="secondary" onclick="clearFoodPixelArt()">그림 지우기</button><button type="button" id="foodArtRegister" onclick="registerFoodPixelArt()">그림 등록하기</button><p id="foodArtStatus" role="status">그림을 그린 뒤 등록해 주세요.</p>';
- const canvas=panels[0].querySelector('#foodPreview');
- if(canvas){canvas.width=360;canvas.height=360;canvas.setAttribute('aria-label','자유롭게 그리는 메뉴 그림판');canvas.style.width='min(100%, 360px)';canvas.style.touchAction='none';canvas.parentNode.insertBefore(drawing,canvas);canvas.addEventListener('pointerdown',paintFoodPixel);canvas.addEventListener('pointermove',paintFoodPixel);canvas.addEventListener('pointerup',()=>{foodPointerDown=false});canvas.addEventListener('pointercancel',()=>{foodPointerDown=false});canvas.addEventListener('lostpointercapture',()=>{foodPointerDown=false});}
- drawing.querySelectorAll('[data-food-color]').forEach(button=>button.addEventListener('click',()=>{foodPixelColor=button.dataset.foodColor;drawing.querySelectorAll('[data-food-color]').forEach(item=>item.classList.toggle('active',item===button))}));
- drawing.querySelectorAll('[data-brush-size]').forEach(button=>button.addEventListener('click',()=>{foodBrushSize=Number(button.dataset.brushSize);drawing.querySelectorAll('[data-brush-size]').forEach(item=>item.classList.toggle('active',item===button))}));
- drawFoodPixelCanvas();
- move('label[for="newStoreColor"]',panels[1]);
- move('#newStoreColor',panels[1]);
- move('.storeCustomize',panels[1]);
- const fee=Array.from(card.children).find(element=>element.tagName==='P'&&element.textContent.includes('가게 개설'));
- if(fee)panels[2].appendChild(fee);
+ if(heading)panels[0].appendChild(heading);if(intro)panels[0].appendChild(intro);
+ ['newStoreName','newStoreSign','newStoreFood'].forEach(id=>{move('label[for="'+id+'"]',panels[0]);move('#'+id,panels[0]);});
+ move('#foodProductChoices',panels[0]);move('#foodPreview',panels[0]);move('#foodProductName',panels[0]);
+ const preview=panels[0].querySelector('#foodPreview');if(preview){preview.width=260;preview.height=210;preview.style.width='min(100%, 260px)';preview.style.height='auto';preview.style.pointerEvents='none';}
+ move('label[for="newStoreColor"]',panels[1]);move('#newStoreColor',panels[1]);move('.storeCustomize',panels[1]);
+ const fee=Array.from(card.children).find(element=>element.tagName==='P'&&element.textContent.includes('가게 개설'));if(fee)panels[2].appendChild(fee);
  move('button[onclick="createStudentStore()"]',panels[2]);
  const introBar=document.createElement('div');introBar.className='storeWizardIntro';
- const copy=document.createElement('div');copy.innerHTML='<strong>가게 창업 계획</strong><div class="small">메뉴와 디자인을 차례대로 정해요.</div>';
+ const copy=document.createElement('div');copy.innerHTML='<strong>가게 창업</strong><div class="small">음식과 대표 메뉴를 고른 뒤 가게 모양을 정하면 끝!</div>';
  const progress=document.createElement('div');progress.className='storeWizardSteps';
- ['메뉴 선택','가게 디자인','최종 확인'].forEach((label,index)=>{const item=document.createElement('span');item.dataset.step=String(index);item.textContent=(index+1)+' '+label;progress.appendChild(item)});
- introBar.append(copy,progress);
- const nav=document.createElement('div');nav.className='storeWizardNav';
+ ['음식·메뉴 선택','가게 디자인','창업 완료'].forEach((label,index)=>{const item=document.createElement('span');item.dataset.step=String(index);item.textContent=(index+1)+' '+label;progress.appendChild(item)});
+ introBar.append(copy,progress);const nav=document.createElement('div');nav.className='storeWizardNav';
  nav.innerHTML='<button type="button" class="secondary" onclick="moveStoreWizard(-1)">이전</button><button type="button" onclick="moveStoreWizard(1)">다음 단계</button>';
- card.prepend(introBar);
- panels.forEach(panel=>card.appendChild(panel));
- card.appendChild(nav);
- storeWizardStep=0;updateStoreWizard();updateFoodProductChoices();
+ card.prepend(introBar);panels.forEach(panel=>card.appendChild(panel));card.appendChild(nav);storeWizardStep=0;updateStoreWizard();updateFoodProductChoices();
 }
 function updateStoreWizard(){
- const card=document.querySelector('#menuContent .cookCard');
- if(!card)return;
+ const card=document.querySelector('#menuContent .cookCard');if(!card)return;
  card.querySelectorAll('.storeWizardPanel').forEach((panel,index)=>{panel.hidden=index!==storeWizardStep});
  card.querySelectorAll('.storeWizardSteps span').forEach((step,index)=>step.classList.toggle('active',index===storeWizardStep));
- const buttons=card.querySelectorAll('.storeWizardNav button');
- if(buttons[0])buttons[0].disabled=storeWizardStep===0;
+ const buttons=card.querySelectorAll('.storeWizardNav button');if(buttons[0])buttons[0].disabled=storeWizardStep===0;
  if(buttons[1])buttons[1].textContent=storeWizardStep===2?'처음으로':'다음 단계';
 }
 function moveStoreWizard(direction){
  const next=storeWizardStep+direction;
- if(direction>0&&storeWizardStep===0&&!$('newStoreName')?.value.trim()){showNotice('먼저 가게 이름을 입력해 주세요.');$('newStoreName')?.focus();return}
- if(direction>0&&storeWizardStep===0&&!foodArtRegistered){showNotice('대표 메뉴를 그리고 그림 등록하기를 눌러 주세요.');$('foodArtRegister')?.focus();return}
- if(next>2){storeWizardStep=0}else if(next>=0)storeWizardStep=next;
- updateStoreWizard();
+ if(direction>0&&storeWizardStep===0&&!$('newStoreName')?.value.trim()){showNotice('가게 이름을 입력해 주세요.');$('newStoreName')?.focus();return}
+ if(next>2){storeWizardStep=0}else if(next>=0)storeWizardStep=next;updateStoreWizard();
 }
 function drawBusinessHub(){
  const p=players.find(v=>v.id===myId),store=p?.storeId,wholesale=latestState?.wholesaleShop,company=p?.company,selectedBusiness=store?'가게':wholesale?.ownerId===myId?'도매상':company?'회사':null;
@@ -957,8 +933,8 @@ function drawMenu(){const titles={news:'📰 기업 뉴스',companyProducts:'�
 
 function wireStoreStylePreview(){['newWallColor','newStoreColor','newSignColor','newSignStyle'].forEach(id=>{const el=$(id);if(el)el.onchange=updateStoreStylePreview});updateStoreStylePreview();}
 function getSelectedFoodProduct(){const kind=$('newStoreFood')?.value||'bread',id=$('foodProductChoices')?.dataset.selected||FOOD_PRODUCTS[kind][0].id;return FOOD_PRODUCTS[kind].find(p=>p.id===id)||FOOD_PRODUCTS[kind][0];}
-function updateFoodProductChoices(){const kind=$('newStoreFood')?.value||'bread',root=$('foodProductChoices');if(!root)return;root.innerHTML=FOOD_PRODUCTS[kind].map((p,i)=>'<button type="button" role="radio" aria-checked="'+(i===0)+'" class="foodChoice '+(i===0?'active':'')+'" data-product="'+p.id+'" onclick="selectFoodProduct(\''+p.id+'\')"><span>'+p.emoji+'</span><b>'+p.name+'</b></button>').join('');root.setAttribute('role','radiogroup');root.setAttribute('aria-label','가게 대표 메뉴 하나 선택');root.dataset.selected=FOOD_PRODUCTS[kind][0].id;foodPixelArt=Array(144).fill('#fff0cf');foodArtRegistered=false;const label=$('foodProductName');if(label)label.textContent='✏️ '+FOOD_PRODUCTS[kind][0].name+' 그림';drawFoodPixelCanvas();}
-function selectFoodProduct(id){const kind=$('newStoreFood')?.value||'bread',p=FOOD_PRODUCTS[kind].find(v=>v.id===id);if(!p)return;const root=$('foodProductChoices');root.dataset.selected=id;root.querySelectorAll('.foodChoice').forEach(b=>{const selected=b.dataset.product===id;b.classList.toggle('active',selected);b.setAttribute('aria-checked',String(selected))});foodPixelArt=Array(144).fill('#fff0cf');foodArtRegistered=false;const label=$('foodProductName');if(label)label.textContent='✏️ '+p.name+' 그림';drawFoodPixelCanvas();}
+function updateFoodProductChoices(){const kind=$('newStoreFood')?.value||'bread',root=$('foodProductChoices');if(!root)return;root.innerHTML=FOOD_PRODUCTS[kind].map((p,i)=>'<button type="button" role="radio" aria-checked="'+(i===0)+'" class="foodChoice '+(i===0?'active':'')+'" data-product="'+p.id+'" onclick="selectFoodProduct(\''+p.id+'\')"><span>'+p.emoji+'</span><b>'+p.name+'</b></button>').join('');root.setAttribute('role','radiogroup');root.setAttribute('aria-label','가게 대표 메뉴 하나 선택');root.dataset.selected=FOOD_PRODUCTS[kind][0].id;drawVoxelPreview(FOOD_PRODUCTS[kind][0]);}
+function selectFoodProduct(id){const kind=$('newStoreFood')?.value||'bread',p=FOOD_PRODUCTS[kind].find(v=>v.id===id);if(!p)return;const root=$('foodProductChoices');root.dataset.selected=id;root.querySelectorAll('.foodChoice').forEach(b=>{const selected=b.dataset.product===id;b.classList.toggle('active',selected);b.setAttribute('aria-checked',String(selected))});drawVoxelPreview(p);}
 function drawFoodPixelCanvas(){const canvas=$('foodPreview');if(!canvas)return;const ctx=canvas.getContext('2d'),cell=canvas.width/12;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#fff0cf';ctx.fillRect(0,0,canvas.width,canvas.height);if(foodArtRegistered)foodPixelArt.forEach((color,index)=>{ctx.fillStyle=color;ctx.fillRect(index%12*cell,Math.floor(index/12)*cell,cell,cell)});const status=$('foodArtStatus');if(status)status.textContent=foodArtRegistered?'그림이 대표 메뉴에 등록됐어요. 창업을 완료하면 모든 학생에게 보여요.':'마우스나 손가락을 누른 채 자유롭게 그려 보세요.';}
 function paintFoodPixel(event){const canvas=$('foodPreview');if(!canvas)return;event.preventDefault();const bounds=canvas.getBoundingClientRect(),point={x:(event.clientX-bounds.left)*canvas.width/bounds.width,y:(event.clientY-bounds.top)*canvas.height/bounds.height},ctx=canvas.getContext('2d');if(event.type==='pointerdown'){foodPointerDown=true;canvas.setPointerCapture(event.pointerId);lastFoodPoint=point;ctx.beginPath();ctx.arc(point.x,point.y,foodBrushSize/2,0,Math.PI*2);ctx.fillStyle=foodPixelColor;ctx.fill();}else if(foodPointerDown&&lastFoodPoint){ctx.beginPath();ctx.moveTo(lastFoodPoint.x,lastFoodPoint.y);ctx.lineTo(point.x,point.y);ctx.strokeStyle=foodPixelColor;ctx.lineWidth=foodBrushSize;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();lastFoodPoint=point;}foodArtRegistered=false;}
 function clearFoodPixelArt(){foodPixelArt=Array(144).fill('#fff0cf');foodArtRegistered=false;const canvas=$('foodPreview');if(canvas){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#fff0cf';ctx.fillRect(0,0,canvas.width,canvas.height);}drawFoodPixelCanvas();}
