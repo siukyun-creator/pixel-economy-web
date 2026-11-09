@@ -336,6 +336,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const previousPrice = await price.textContent();
     await expect(page.locator('#companyMarket')).toContainText('제품 생산');
     await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
+    await expect(price).not.toHaveText(previousPrice);
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
     await expect(page.locator('.stockHoldingsTotal')).toHaveText(/원/);
