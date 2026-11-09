@@ -96,7 +96,7 @@ test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성
     expect(results.every(result => result.ok && result.store?.id)).toBe(true);
 
     await expect.poll(() => page.evaluate(() => latestState?.stores?.length || 0), { timeout: 20000 }).toBe(30);
-    await expect.poll(() => page.evaluate(() => businessVisuals?.size || 0), { timeout: 20000 }).toBe(30);
+    await expect.poll(() => page.evaluate(() => storeVisuals?.size || 0), { timeout: 20000 }).toBe(30);
 
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
     await page.screenshot({
@@ -114,7 +114,7 @@ test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성
         roomCode,
         students: 30,
         storesCreated: results.length,
-        renderedStoreBuildings: await page.evaluate(() => businessVisuals.size),
+        renderedStoreBuildings: await page.evaluate(() => storeVisuals.size),
         storeNames: results.map(result => result.store.name)
       }, null, 2)),
       contentType: 'application/json'
