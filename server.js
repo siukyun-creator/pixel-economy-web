@@ -756,7 +756,7 @@ roomIo.on('connection', socket => {
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){const restarting=gameStatus==='ended';gameStatus='running';finalAwards=null;newsFeed=[];news='마을 경제가 시작됐어요!';if(restarting)setMarketClock(0,'09:00',marketClock.turnMinutes);turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){const restarting=gameStatus==='ended';gameStatus='running';finalAwards=null;newsFeed=[];news='마을 경제가 시작됐어요!';setMarketClock(0,'09:00',marketClock.turnMinutes);turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
     if(c.type==='pause' && gameStatus==='running'){turnState.remainingMs=Math.max(0,(turnState.endsAt||Date.now())-Date.now());turnState.endsAt=null;gameStatus='paused';}
     if(c.type==='resume' && gameStatus==='paused'){gameStatus='running';turnState.endsAt=Date.now()+(turnState.remainingMs??turnConfig.durationMinutes*60000);turnState.remainingMs=null;}
     if(c.type==='end'){gameStatus='ended';turnState.endsAt=null;turnState.remainingMs=null;finalAwards=calculateFinalAwards();}
