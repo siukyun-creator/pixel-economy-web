@@ -1,0 +1,100 @@
+'use strict';
+
+const { io } = require('socket.io-client');
+const { test, expect } = require('@playwright/test');
+
+function connectSocket(url) {
+  return new Promise((resolve, reject) => {
+    const client = io(url, { transports: ['websocket'], reconnection: false, timeout: 10000 });
+    client.once('connect_error', reject);
+    client.once('connect', () => resolve(client));
+  });
+}
+
+function emitAck(client, event, payload) {
+  return new Promise((resolve, reject) => {
+    client.timeout(12000).emit(event, payload, (error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
+}
+
+test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·매출·현금이 반영된다', async ({ browser, baseURL }) => {
+  test.setTimeout(90000);
+  const manager = await connectSocket(baseURL);
+  let teacher;
+  let student;
+  let page;
+  try {
+    const created = await emitAck(manager, 'createClassroom', { pin: '6582' });
+    expect(created.ok).toBe(true);
+    const roomCode = created.roomCode;
+
+    teacher = await connectSocket(`${baseURL}/classrooms/${roomCode}`);
+    expect((await emitAck(teacher, 'teacherLogin', '6582')).ok).toBe(true);
+    const rateResult = await emitAck(teacher, 'teacherCommand', {
+      pin: '6582', type: 'storeCustomerRate', value: 100
+    });
+    expect(rateResult.ok).toBe(true);
+    const startResult = await emitAck(teacher, 'teacherCommand', { pin: '6582', type: 'start' });
+    expect(startResult.ok).toBe(true);
+
+    page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(baseURL);
+    await page.locator('#name').fill('가상손님테스트학생');
+    await page.locator('#room').fill(roomCode);
+    await page.locator('#joinButton').click();
+    await expect(page.locator('#gameArea')).toBeVisible();
+
+    student = await connectSocket(`${baseURL}/classrooms/${roomCode}`);
+    const joined = await emitAck(student, 'join', { name: '가상손님테스트주인', room: roomCode });
+    expect(joined.ok).toBe(true);
+
+    const createdStore = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('가게 생성 응답 시간 초과')), 10000);
+      student.once('storeCreated', result => {
+        clearTimeout(timer);
+        result?.ok ? resolve(result.store) : reject(new Error('가게 생성 실패'));
+      });
+      student.emit('action', {
+        type: 'createStore', name: '가상손님빵집', sign: '빵집',
+        food: 'bread', productId: 'milk_bread'
+      });
+    });
+    expect(createdStore.products.milk_bread.stock).toBe(10);
+
+    const initialMoney = 200000 - 30000;
+    await expect.poll(async () => {
+      const state = await emitAck(student, 'sync', {});
+      const store = state.stores.find(item => item.id === createdStore.id);
+      const owner = state.players.find(item => item.name === '가상손님테스트주인');
+      return {
+        visitors: store?.visitorCount || 0,
+        stock: store?.products?.milk_bread?.stock,
+        revenue: store?.revenue || 0,
+        money: owner?.money
+      };
+    }, { timeout: 15000, intervals: [500, 1000] }).toEqual({
+      visitors: expect.any(Number),
+      stock: expect.any(Number),
+      revenue: expect.any(Number),
+      money: expect.any(Number)
+    });
+
+    const finalState = await emitAck(student, 'sync', {});
+    const finalStore = finalState.stores.find(item => item.id === createdStore.id);
+    const owner = finalState.players.find(item => item.name === '가상손님테스트주인');
+    expect(finalStore.visitorCount).toBeGreaterThanOrEqual(1);
+    expect(finalStore.products.milk_bread.stock).toBeLessThan(10);
+    expect(finalStore.soldUnits).toBeGreaterThanOrEqual(1);
+    expect(finalStore.revenue).toBeGreaterThanOrEqual(3500);
+    expect(owner.money).toBeGreaterThan(initialMoney);
+    await page.screenshot({ path: 'test-results/virtual-customer-store.png', fullPage: true });
+  } finally {
+    student?.disconnect();
+    teacher?.disconnect();
+    manager.disconnect();
+    await page?.close();
+  }
+});
