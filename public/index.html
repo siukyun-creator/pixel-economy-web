@@ -848,8 +848,8 @@ function setupStoreCreationWizard(){
  const move=(selector,panel)=>{const element=card.querySelector(selector);if(element)panel.appendChild(element)};
  if(heading)panels[0].appendChild(heading);if(intro)panels[0].appendChild(intro);
  ['newStoreName','newStoreSign','newStoreFood'].forEach(id=>{move('label[for="'+id+'"]',panels[0]);move('#'+id,panels[0]);});
- move('#foodProductChoices',panels[0]);move('#foodPreview',panels[0]);move('#foodProductName',panels[0]);
- const preview=panels[0].querySelector('#foodPreview');if(preview){preview.width=260;preview.height=210;preview.style.width='min(100%, 260px)';preview.style.height='auto';preview.style.pointerEvents='none';}
+ move('#foodProductChoices',panels[0]);move('#foodProductName',panels[0]);
+ const preview=card.querySelector('#foodPreview');if(preview){preview.hidden=true;preview.style.display='none';preview.setAttribute('aria-hidden','true');}
  move('label[for="newStoreColor"]',panels[1]);move('#newStoreColor',panels[1]);move('.storeCustomize',panels[1]);
  const fee=Array.from(card.children).find(element=>element.tagName==='P'&&element.textContent.includes('가게 개설'));if(fee)panels[2].appendChild(fee);
  move('button[onclick="createStudentStore()"]',panels[2]);
