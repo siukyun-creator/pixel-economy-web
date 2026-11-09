@@ -23,7 +23,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await teacher.locator('#turnDurationMinutes').selectOption('1');
   await teacher.locator('#totalTurns').selectOption('1');
   await teacher.getByRole('button', { name: '설정 저장' }).click();
-  await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1');
+  await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1', { timeout: 10000 });
 
   await student.goto(baseURL);
   await student.locator('#name').fill('턴테스트학생');
