@@ -36,5 +36,7 @@ jobs:
           path: |
             test-results/screenshots/
             test-results/playwright/
+            test-results/server.log
+            test-results/server-errors.log
           if-no-files-found: ignore
           retention-days: 7
