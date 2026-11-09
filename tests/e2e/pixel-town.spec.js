@@ -55,7 +55,7 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await expect(page.locator('#teacherCount')).toContainText('진행 중');
     await page.getByRole('button', { name: '⏩ 다음 거래 턴 진행' }).click();
     await expect(page.locator('#finalResults')).toBeVisible();
-    await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
+    await expect(page.locator('#finalResults')).toContainText('우리 반 경제 활동 시상식');
     await expect(page.locator('#teacherCeoAward')).toContainText('토요일 장 마감');
   });
 
