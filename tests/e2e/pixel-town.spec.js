@@ -394,7 +394,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
       path: path.join(resultsDir, 'screenshots', 'pixel-town-company-employment.png'),
       fullPage: true
     });
-    await wholesalePage.locator('#menuContent').getByRole('button', { name: /사업 시작/ }).click();
+    await wholesalePage.getByRole('button', { name: /사업 시작/ }).click();
     await wholesalePage.locator('#hubWholesaleName').fill('E2E도매');
     await wholesalePage.getByRole('button', { name: '도매상 창업하기' }).click();
     await expect.poll(() => wholesalePage.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
