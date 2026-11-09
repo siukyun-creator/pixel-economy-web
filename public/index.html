@@ -523,6 +523,41 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
 @media(max-width:650px){.companyProductStats{grid-template-columns:1fr 1fr}.teacherStats{grid-template-columns:repeat(2,minmax(0,1fr))}.companyResultRow{display:grid}}
 
 .teacherNewsFeed{display:grid;gap:8px;margin:10px 0}.teacherNewsItem{display:grid;gap:4px;padding:10px 12px;border-radius:11px;background:#fff;border:1px solid #e9e0cc}.teacherNewsItem span{font-weight:700}.teacherNewsItem small{color:#746b57}
+
+/* Mobile + tablet layout and always-visible panel close controls */
+*,*::before,*::after{box-sizing:border-box}
+@media (max-width:900px){
+  html,body{max-width:100%;overflow-x:hidden}
+  #menuPanel{box-sizing:border-box;max-width:calc(100vw - 16px);max-height:calc(100dvh - 112px);overflow-y:auto;overscroll-behavior:contain}
+  #menuPanel>.row:first-child{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px;background:inherit}
+  #menuPanel>.row:first-child button{position:relative;z-index:31;flex:0 0 auto;min-width:76px;min-height:42px;padding:10px 14px;white-space:nowrap}
+  #teacher{box-sizing:border-box;max-width:100vw;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain}
+  #teacher .teacherHeader{position:sticky;top:-1px;z-index:35;padding:8px 0;background:inherit}
+  #teacher .teacherHeader>.row{position:sticky;right:0;z-index:36;flex:0 0 auto}
+  #teacher .teacherHeader button{min-width:76px;min-height:42px;padding:10px 14px;white-space:nowrap}
+  .turnSummaryOverlay{box-sizing:border-box;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain}
+  .turnSummaryOverlay .summaryClose{position:sticky;top:0;z-index:20;float:right;min-width:76px;min-height:42px;padding:10px;background:#fffdf5;color:#35332d}
+  #receiptOverlay{overflow-y:auto;align-items:flex-start;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
+  .receiptPaper{max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+}
+@media (max-width:600px){
+  #menuPanel{left:8px!important;right:8px!important;width:auto!important;top:max(8px,env(safe-area-inset-top))!important;max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+  #menuPanel.menu-fullscreen{inset:0!important;width:100vw!important;height:100dvh!important;max-height:100dvh!important;padding:calc(10px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))!important}
+  #menuPanel.menu-fullscreen>.row:first-child{top:0;padding-top:8px}
+  #teacher.teacher-fullscreen{padding:calc(10px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))!important}
+  #teacher .teacherHeader{gap:8px;align-items:flex-start}
+  #teacher .teacherHeader h2{font-size:19px}
+  #teacher .teacherHeader>.row{margin-left:auto}
+  #teacher .teacherHeader button{font-size:13px}
+  #lobbyOverlay{max-width:calc(100vw - 20px);max-height:calc(100dvh - 24px);overflow-y:auto}
+  #touchPad{bottom:calc(12px + env(safe-area-inset-bottom))}
+  #jump{bottom:calc(20px + env(safe-area-inset-bottom))}
+}
+@media (min-width:601px) and (max-width:900px){
+  #menuPanel.menu-fullscreen{inset:0!important;width:100vw!important;height:100dvh!important;max-height:100dvh!important;padding:calc(14px + env(safe-area-inset-top)) 20px!important}
+  #teacher.teacher-fullscreen{padding:calc(14px + env(safe-area-inset-top)) 20px!important}
+  #teacher .teacherHeader{gap:12px}
+}
 </style></head><body>
 <header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('news')">📰 기업 뉴스</button><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('companyProducts')">🛍️ 기업 제품</button><button onclick="openMenu('companyJobs')">🤝 채용·지원</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도 숨기기</button><button class="refreshBtn" onclick="fullScreenGame()">⛶ 전체 화면</button><span id="connection">서버 연결 중</span></header>
 <section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 인증 코드"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 인증 코드를 입력하면 새 교실과 4자리 접속 코드가 만들어져요.</p></section>
