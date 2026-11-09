@@ -211,6 +211,9 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(state.stocks[publicTicker].price).toBeLessThan(priceBeforeSupply);
     expect(playerFrom(state).taxPaid).toBeGreaterThan(500);
 
+    const customFoodArt = Array(144).fill('#fff0cf');
+    customFoodArt[0] = '#533527';
+    customFoodArt[1] = '#e7a94f';
     const storeCreationPromise = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('가게 생성 응답 시간 초과')), 5000);
       student.once('storeCreated', result => {
@@ -223,7 +226,9 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
       name: '경제 베이커리',
       sign: '경제 베이커리',
       food: 'bread',
-      productId: 'milk_bread'
+      productId: 'milk_bread',
+      pixelArt: customFoodArt,
+      pixelArtProductId: 'milk_bread'
     });
     const storeCreation = await new Promise((resolve, reject) => {
       storeCreationPromise.then(resolve, reject);
@@ -231,6 +236,8 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(storeCreation?.ok).toBe(true);
     const store = state.stores.find(entry => entry.id === storeCreation.store.id);
     expect(store).toBeTruthy();
+    expect(store.pixelArt).toEqual(customFoodArt);
+    expect(store.pixelArtProductId).toBe('milk_bread');
     const companyNotice = new Promise(resolve => student.once('notice', resolve));
     student.emit('action', { type: 'startup', item: '두 번째 회사' });
     expect(await companyNotice).toContain('한 학생은');
@@ -251,6 +258,30 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     const company = entrepreneurState.companies.find(entry => entry.ticker === ticker);
     expect(company.sector).toBe('electronics');
     expect(company.productName).toBe('픽셀 스마트폰');
+    const companyEmployee = io(`${baseURL}/classrooms/${roomCode}`, {
+      transports: ['websocket'],
+      reconnection: false,
+      timeout: 10000
+    });
+    extraStudents.push(companyEmployee);
+    let companyEmployeeState = await joinStudent(companyEmployee, '회사취업학생', roomCode);
+    const companyEmployeeId = companyEmployeeState.players.find(player => player.name === '회사취업학생').id;
+    const companyEmployeeFrom = current => current.players.find(player => player.id === companyEmployeeId);
+    companyEmployeeState = await act(companyEmployee, { type: 'companyEmploymentApply', ticker });
+    expect(companyEmployeeState.companies.find(entry => entry.ticker === ticker).employmentApplications)
+      .toContainEqual({ playerId: companyEmployeeId, name: '회사취업학생' });
+    entrepreneurState = await act(entrepreneur, {
+      type: 'companyHireEmployee',
+      ticker,
+      employeeId: companyEmployeeId,
+      salary: 12000
+    });
+    expect(entrepreneurState.companies.find(entry => entry.ticker === ticker).employees)
+      .toContainEqual({ playerId: companyEmployeeId, name: '회사취업학생', salary: 12000 });
+    const employeeCashBeforePayroll = companyEmployeeFrom(entrepreneurState).money;
+    entrepreneurState = await act(entrepreneur, { type: 'companyPayroll', ticker });
+    expect(companyEmployeeFrom(entrepreneurState).money).toBe(employeeCashBeforePayroll + 12000);
+    expect(entrepreneurState.companies.find(entry => entry.ticker === ticker).payrollMonth).toBeTruthy();
     entrepreneurState = await act(entrepreneur, { type: 'produceCompanyGoods', amount: 1 });
     expect(entrepreneurState.companies.find(entry => entry.ticker === ticker).inventory).toBe(1);
     state = await act(student, { type: 'buyCompanyGoods', ticker, amount: 1 });

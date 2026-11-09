@@ -170,7 +170,11 @@ roomIo.on('connection', socket => {
         (st.employees||[]).forEach(employee=>{if(employee.playerId===oldId)employee.playerId=socket.id;});
         (st.employmentApplications||[]).forEach(application=>{if(application.playerId===oldId)application.playerId=socket.id;});
       });
-      companies.forEach(company=>{if(company.ownerId===oldId)company.ownerId=socket.id;});
+      companies.forEach(company=>{
+        if(company.ownerId===oldId)company.ownerId=socket.id;
+        (company.employees||[]).forEach(employee=>{if(employee.playerId===oldId)employee.playerId=socket.id;});
+        (company.employmentApplications||[]).forEach(application=>{if(application.playerId===oldId)application.playerId=socket.id;});
+      });
       if (wholesaleShop && wholesaleShop.ownerId === oldId) wholesaleShop.ownerId = socket.id;
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
@@ -303,7 +307,8 @@ roomIo.on('connection', socket => {
       const awningStyle=['stripe','solid','scallop'].includes(String(a.awningStyle))?String(a.awningStyle):'stripe';
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
@@ -415,9 +420,94 @@ roomIo.on('connection', socket => {
       stocks[ticker] = { name: companyName, price: 10000, owner: player.name, sector };
       stockHistory[ticker] = [10000];
       stockOrders[ticker] = { buys: 0, sells: 0 };
-      companies.push({ ticker, name: companyName, owner: player.name, ownerId: socket.id, sector, sectorName: product.name, productId: product.productId, productName: product.productName, unitCost: product.unitCost, unitPrice: product.unitPrice, inventory: 0, producedUnits: 0, soldUnits: 0, revenue: 0, costs: 0, operatingProfit: 0, price: 10000 });
+      companies.push({ ticker, name: companyName, owner: player.name, ownerId: socket.id, sector, sectorName: product.name, productId: product.productId, productName: product.productName, unitCost: product.unitCost, unitPrice: product.unitPrice, inventory: 0, producedUnits: 0, soldUnits: 0, revenue: 0, costs: 0, operatingProfit: 0, price: 10000, employees: [], employmentApplications: [], payrollMonth: null });
       msg(socket, `🏭 ${product.name} 회사 ${companyName} 창업 성공! 주식 10주 지급 · 잔액 ${player.money.toLocaleString('ko-KR')}원`);
       broadcast();
+      return;
+    }
+    if (a.type === 'companyEmploymentApply') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      if (gameStatus !== 'running') return msg(socket, '수업을 시작한 뒤 회사 일자리에 지원할 수 있어요.');
+      if (!company) return msg(socket, '지원할 회사를 찾을 수 없어요.');
+      if (company.ownerId === socket.id) return msg(socket, '내 회사에는 지원할 수 없어요.');
+      if (player.employerStoreId) return msg(socket, '이미 다른 사업장에서 일하고 있어요.');
+      company.employees ||= [];
+      company.employmentApplications ||= [];
+      if (company.employmentApplications.some(value => value.playerId === socket.id) || company.employees.some(value => value.playerId === socket.id)) return msg(socket, '이미 지원했거나 근무 중이에요.');
+      if (company.employees.length >= MAX_STORE_EMPLOYEES) return msg(socket, '이 회사의 채용 인원이 가득 찼어요.');
+      company.employmentApplications.push({ playerId: socket.id, name: player.name });
+      msg(socket, company.name + '의 회사 일자리에 지원했어요.');
+      broadcastEmployment();
+      return;
+    }
+    if (a.type === 'companyHireEmployee') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      if (!company || company.ownerId !== socket.id) return msg(socket, '회사 대표만 지원자를 채용할 수 있어요.');
+      if (gameStatus !== 'running') return msg(socket, '수업을 시작한 뒤 채용할 수 있어요.');
+      company.employees ||= [];
+      company.employmentApplications ||= [];
+      if (company.employees.length >= MAX_STORE_EMPLOYEES) return msg(socket, '직원은 최대 3명까지 채용할 수 있어요.');
+      const application = company.employmentApplications.find(value => value.playerId === String(a.employeeId));
+      const employee = players.get(String(a.employeeId));
+      const salary = Number(a.salary);
+      if (!application || !employee) return msg(socket, '지원자 정보를 확인할 수 없어요.');
+      if (employee.employerStoreId || company.employees.some(value => value.playerId === employee.id)) return msg(socket, '지원자가 이미 다른 곳에서 근무 중이에요.');
+      if (!Number.isInteger(salary) || salary < 1000 || salary > 100000 || salary % 1000 !== 0) return msg(socket, '월급은 1,000원 단위로 1,000~100,000원 사이에서 정해 주세요.');
+      company.employees.push({ playerId: employee.id, name: employee.name, salary });
+      company.employmentApplications = company.employmentApplications.filter(value => value.playerId !== employee.id);
+      employee.employerStoreId = 'company-' + company.ticker;
+      employee.job = '회사 직원 · ' + company.name;
+      msg(socket, employee.name + ' 학생을 월급 ' + salary.toLocaleString('ko-KR') + '원으로 채용했어요.');
+      roomIo.to(employee.id).emit('notice', company.name + '에 채용됐어요. 월급을 확인해 주세요.');
+      broadcastEmployment();
+      return;
+    }
+    if (a.type === 'setCompanyEmployeeSalary') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      if (!company || company.ownerId !== socket.id) return msg(socket, '회사 대표만 직원 월급을 정할 수 있어요.');
+      const employee = (company.employees || []).find(value => value.playerId === String(a.employeeId));
+      const salary = Number(a.salary);
+      if (!employee) return msg(socket, '직원 정보를 확인할 수 없어요.');
+      if (!Number.isInteger(salary) || salary < 1000 || salary > 100000 || salary % 1000 !== 0) return msg(socket, '월급은 1,000원 단위로 1,000~100,000원 사이에서 정해 주세요.');
+      employee.salary = salary;
+      msg(socket, employee.name + ' 학생의 월급을 ' + salary.toLocaleString('ko-KR') + '원으로 변경했어요.');
+      broadcastEmployment();
+      return;
+    }
+    if (a.type === 'removeCompanyEmployee') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      if (!company || company.ownerId !== socket.id) return msg(socket, '회사 대표만 직원을 내보낼 수 있어요.');
+      const [employee] = (company.employees || []).filter(value => value.playerId === String(a.employeeId));
+      if (!employee) return msg(socket, '직원 정보를 확인할 수 없어요.');
+      company.employees = company.employees.filter(value => value.playerId !== employee.playerId);
+      const employeePlayer = players.get(employee.playerId);
+      if (employeePlayer) {
+        employeePlayer.employerStoreId = null;
+        employeePlayer.job = '무직';
+      }
+      msg(socket, employee.name + ' 학생의 회사 근무를 종료했어요.');
+      broadcastEmployment();
+      return;
+    }
+    if (a.type === 'companyPayroll') {
+      const company = companies.find(value => value.ticker === String(a.ticker || ''));
+      if (!company || company.ownerId !== socket.id) return msg(socket, '회사 대표만 월급을 지급할 수 있어요.');
+      const employees = company.employees || [];
+      if (!employees.length) return msg(socket, '월급을 지급할 직원이 없어요.');
+      if (company.payrollMonth === monthlyPeriod()) return msg(socket, '이번 달 회사 월급은 이미 지급했어요.');
+      const total = employees.reduce((sum, employee) => sum + employee.salary, 0);
+      if (player.money < total) return msg(socket, '직원 월급 지급에 필요한 현금이 부족해요.');
+      player.money -= total;
+      employees.forEach(value => {
+        const employee = players.get(value.playerId);
+        if (employee) {
+          employee.money += value.salary;
+          employee.earnedTotal = (employee.earnedTotal || 0) + value.salary;
+        }
+      });
+      company.payrollMonth = monthlyPeriod();
+      msg(socket, '회사 월급 ' + total.toLocaleString('ko-KR') + '원을 직원 ' + employees.length + '명에게 지급했어요.');
+      broadcastEmployment();
       return;
     }
     if (a.type === 'startup') {

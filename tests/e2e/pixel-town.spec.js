@@ -101,6 +101,9 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#newStoreName')).toBeVisible();
   await expect(page.locator('.storeWizardPanel')).toHaveCount(3);
   await page.locator('#newStoreName').fill('단계별 가게');
+  const drawingCanvas = page.locator('#foodPreview');
+  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await page.getByRole('button', { name: '그림 등록하기' }).click();
   await page.getByRole('button', { name: '다음 단계' }).click();
   await expect(page.locator('.storeWizardPanel').nth(1)).toBeVisible();
   await page.getByRole('button', { name: '다음 단계' }).click();
@@ -123,56 +126,30 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await page.getByRole('button', { name: '가게 만들기' }).click();
-  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(3);
+  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(0);
   const foodChoices = page.locator('#foodProductChoices [role="radio"]');
   await expect(foodChoices).toHaveCount(3);
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
   await foodChoices.nth(1).click();
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
   await expect(page.locator('#foodProductChoices')).toHaveAttribute('data-selected', 'croissant');
-  const breadArt = await page.locator('.foodChoices .foodPixelArt').evaluateAll(images =>
-    images.map(image => image.src)
-  );
-  expect(new Set(breadArt).size).toBe(3);
+  await expect(page.locator('#foodArtRegister')).toBeVisible();
+  await page.getByRole('button', { name: '그림 색상 1' }).click();
+  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await page.getByRole('button', { name: '그림 색상 2' }).click();
+  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#e7a94f'))).toBe(true);
   await page.locator('#newStoreFood').selectOption('cafe');
-  await expect(page.locator('.foodChoices .foodPixelArt')).toHaveCount(3);
-  const cafeArt = await page.locator('.foodChoices .foodPixelArt').evaluateAll(images =>
-    images.map(image => image.src)
-  );
-  expect(new Set(cafeArt).size).toBe(3);
-  expect(cafeArt).not.toEqual(breadArt);
-  expect(cafeArt[0]).toMatch(/pixel-coffee\.svg$/);
+  await expect.poll(() => page.evaluate(() => foodPixelArt.every(color => color === '#fff0cf'))).toBe(true);
   await expect(page.locator('#foodProductChoices [aria-checked="true"]')).toHaveCount(1);
-  const coffeeModel = await page.evaluate(() => {
-    const product = FOOD_PRODUCTS.cafe[0];
-    const pixels = new Set(product.layers.flatMap(layer => layer.flatMap(row => Array.from(row))));
-    const canvas = document.querySelector('#foodPreview');
-    const ctx = canvas.getContext('2d');
-    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let minY = canvas.height, maxY = 0, minX = canvas.width, maxX = 0;
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        const index = (y * canvas.width + x) * 4;
-        if (image.data[index] !== 234 || image.data[index + 1] !== 245 || image.data[index + 2] !== 255) {
-          minY = Math.min(minY, y);
-          maxY = Math.max(maxY, y);
-          minX = Math.min(minX, x);
-          maxX = Math.max(maxX, x);
-        }
-      }
-    }
-    return {
-      layers: product.layers.length,
-      materials: [...pixels].filter(pixel => pixel !== '.'),
-      width: maxX - minX + 1,
-      height: maxY - minY + 1
-    };
-  });
-  expect(coffeeModel.layers).toBeGreaterThanOrEqual(12);
-  expect(coffeeModel.materials).toEqual(expect.arrayContaining(['i', 'a', 'e', 'h', 's']));
-  expect(coffeeModel.height).toBeGreaterThan(coffeeModel.width * 0.7);
+  await page.getByRole('button', { name: '그림 색상 3' }).click();
+  await drawingCanvas.click({ position: { x: 10, y: 10 } });
+  await expect.poll(() => page.evaluate(() => foodPixelArt.includes('#ef6876'))).toBe(true);
+  await page.getByRole('button', { name: '그림 등록하기' }).click();
+  await expect(page.locator('#foodArtStatus')).toContainText('그림이 대표 메뉴에 등록됐어요.');
+  await expect.poll(() => page.evaluate(() => foodArtRegistered)).toBe(true);
   await page.screenshot({
-    path: path.join(resultsDir, 'screenshots', 'pixel-town-iced-americano.png'),
+    path: path.join(resultsDir, 'screenshots', 'pixel-town-menu-drawing.png'),
     fullPage: false
   });
 
@@ -282,7 +259,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     const price = page.locator('#menuContent .stockCard .stockPrice').first();
     await expect(price).toBeVisible();
     const previousPrice = await price.textContent();
-    await expect(page.locator('#companyMarket')).toContainText('소비자의 구매가 기업 실적과 주가에 영향을 줍니다.');
+    await expect(page.locator('#companyMarket')).toContainText('기업은 제품 매출과 생산비로 영업이익을 기록합니다.');
     await page.locator('#menuContent .stockCard').first().getByRole('button', { name: /매수/ }).click();
     const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
     await expect(page.locator('#stockHoldings .stockHoldingRow[data-ticker="' + companyTicker + '"]')).toContainText('11주');
@@ -303,6 +280,14 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect.poll(() => page.evaluate(() => latestState.companies.length)).toBe(1);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(1);
     await expect(page.locator('.businessChoice').nth(2)).toContainText('이미 회사를 창업했어요.');
+    await page.getByRole('button', { name: /내 가게/ }).click();
+    await expect(page.locator('[data-my-company]')).toContainText('E2E기업');
+    await expect(page.locator('[data-my-company]')).toContainText('픽셀 스마트폰');
+    await page.screenshot({
+      path: path.join(resultsDir, 'screenshots', 'pixel-town-company-dashboard.png'),
+      fullPage: false
+    });
+    await page.getByRole('button', { name: '닫기 ✕' }).click();
     await page.getByRole('button', { name: /주식/ }).click();
     await expect(page.locator('#companyMarket')).toContainText('E2E기업 경영');
     await expect(page.locator('#companyMarket img').first()).toHaveAttribute('src', /pixel-smartphone\.svg$/);
@@ -316,12 +301,31 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.locator('#room').fill(roomCode);
     await wholesalePage.locator('#joinButton').click();
     await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden();
-    await wholesalePage.getByRole('button', { name: /사업 시작/ }).click();
+    await wholesalePage.getByRole('button', { name: /내 가게/ }).click();
+    const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
+    await wholesalePage.locator('[data-company-employment="' + companyTicker + '"]')
+      .getByRole('button', { name: '회사에 지원하기' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].employmentApplications.length)).toBe(1);
+    await page.getByRole('button', { name: /내 가게/ }).click();
+    await expect(page.locator('[data-company-employment="' + companyTicker + '"]')).toContainText('E2E도매학생');
+    const employeeId = await wholesalePage.evaluate(() => myId);
+    await page.locator('#company-offer-' + employeeId).fill('12000');
+    await page.locator('[data-company-employment="' + companyTicker + '"]')
+      .getByRole('button', { name: '채용하고 월급 정하기' }).click();
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].employees.length)).toBe(1);
+    await expect.poll(() => wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).job))
+      .toContain('회사 직원');
+    await page.screenshot({
+      path: path.join(resultsDir, 'screenshots', 'pixel-town-company-employment.png'),
+      fullPage: true
+    });
+    await wholesalePage.locator('#menuContent').getByRole('button', { name: /사업 시작/ }).click();
     await wholesalePage.locator('#hubWholesaleName').fill('E2E도매');
     await wholesalePage.getByRole('button', { name: '도매상 창업하기' }).click();
     await expect.poll(() => wholesalePage.evaluate(() => Boolean(latestState.wholesaleShop))).toBe(true);
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
     await expect(wholesalePage.locator('.businessChoice').nth(1)).toContainText('내 도매상을 운영');
+    await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
     await wholesalePage.getByRole('button', { name: /주식/ }).click();
     await expect(wholesalePage.locator('#companyMarket')).toContainText('픽셀 스마트폰');
     await wholesalePage.getByRole('button', { name: '제품 1개 구매' }).click();
