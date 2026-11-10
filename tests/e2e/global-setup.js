@@ -8,6 +8,7 @@ const projectRoot = path.resolve(__dirname, '..', '..');
 const resultsDir = path.join(projectRoot, 'test-results');
 const serverLogPath = path.join(resultsDir, 'server.log');
 const serverErrorsPath = path.join(resultsDir, 'server-errors.log');
+const dataDir = path.join(resultsDir, 'server-data');
 const port = '4178';
 
 function appendLine(filePath, stream, chunk) {
@@ -20,10 +21,11 @@ module.exports = async function globalSetup() {
   fs.mkdirSync(resultsDir, { recursive: true });
   fs.writeFileSync(serverLogPath, '');
   fs.writeFileSync(serverErrorsPath, '');
+  fs.rmSync(dataDir, { recursive: true, force: true });
 
   const server = spawn(process.execPath, [path.join(projectRoot, 'server.js')], {
     cwd: projectRoot,
-    env: { ...process.env, PORT: port, TEACHER_PIN: '6582' },
+    env: { ...process.env, PORT: port, TEACHER_PIN: '6582', DATA_DIR: dataDir },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let spawnError;

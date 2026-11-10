@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('node:fs');
+const path = require('node:path');
 const http = require('http');
 const { Server } = require('socket.io');
 const app = express();
@@ -16,6 +18,47 @@ const COMPANY_PRODUCTS = {
   food: { name: '식품', productId: 'snack', productName: '픽셀 에너지바', unitCost: 5000, unitPrice: 8000 },
   toys: { name: '장난감·학용품', productId: 'robotKit', productName: '픽셀 로봇 조립 키트', unitCost: 10000, unitPrice: 16000 }
 };
+const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'));
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const DATA_FILE = path.join(DATA_DIR, 'pixel-town-save.json');
+function readPersistedRooms() {
+  if (!fs.existsSync(DATA_FILE)) return new Map();
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch (error) {
+    throw new Error('저장 데이터 파일을 읽을 수 없습니다. 원본 파일을 보존하고 복구해 주세요: ' + error.message);
+  }
+  if (parsed?.version !== 1 || !Array.isArray(parsed.rooms)) {
+    throw new Error('저장 데이터 버전이 올바르지 않습니다. 기존 파일을 보존하고 확인해 주세요.');
+  }
+  return new Map(parsed.rooms
+    .filter(entry => /^\\d{4}$/.test(String(entry?.roomCode || '')) && entry.state && typeof entry.state === 'object')
+    .map(entry => [String(entry.roomCode), entry.state]));
+}
+const persistedRooms = readPersistedRooms();
+let persistenceTimer = null;
+function flushPersistence() {
+  if (persistenceTimer) clearTimeout(persistenceTimer);
+  persistenceTimer = null;
+  const payload = JSON.stringify({ version: 1, savedAt: Date.now(), rooms: [...persistedRooms].map(([roomCode, state]) => ({ roomCode, state })) });
+  const temporaryFile = DATA_FILE + '.' + process.pid + '.tmp';
+  fs.writeFileSync(temporaryFile, payload, { encoding: 'utf8', mode: 0o600 });
+  fs.renameSync(temporaryFile, DATA_FILE);
+}
+function schedulePersistence() {
+  if (persistenceTimer) return;
+  persistenceTimer = setTimeout(() => {
+    persistenceTimer = null;
+    try { flushPersistence(); }
+    catch (error) { console.error('[PIXEL TOWN] Persistence save failed:', error); }
+  }, 250);
+  persistenceTimer.unref?.();
+}
+function persistRoom(roomCode, state) {
+  persistedRooms.set(String(roomCode), JSON.parse(JSON.stringify(state)));
+  schedulePersistence();
+}
 const roomCodeMap = new Map();
 function makeRoomCode() {
   let code;
@@ -98,8 +141,53 @@ let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
 let storeCustomerRate = 50;
-const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
-const broadcast = () => roomIo.emit('state', snapshot());
+const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, stockOrders, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
+function restorePersistedState(saved) {
+  if (!saved || typeof saved !== 'object') return;
+  players.clear();
+  for (const player of Array.isArray(saved.players) ? saved.players : []) {
+    if (!player || !player.id || !player.name) continue;
+    player.connected = false;
+    player.insideStore = null;
+    player.insideWholesale = false;
+    player.jump = false;
+    players.set(String(player.id), player);
+  }
+  Object.assign(market, saved.market || {});
+  for (const target of [stocks, stockHistory, stockOrders]) {
+    for (const key of Object.keys(target)) delete target[key];
+  }
+  Object.assign(stocks, saved.stocks || {});
+  Object.assign(stockHistory, saved.stockHistory || {});
+  Object.assign(stockOrders, saved.stockOrders || {});
+  companies.splice(0, companies.length, ...(Array.isArray(saved.companies) ? saved.companies : []));
+  stores.splice(0, stores.length, ...(Array.isArray(saved.stores) ? saved.stores : []));
+  wholesaleShop = saved.wholesaleShop || null;
+  properties.splice(0, properties.length, ...(Array.isArray(saved.properties) ? saved.properties : properties));
+  news = typeof saved.news === 'string' ? saved.news : news;
+  newsFeed = Array.isArray(saved.newsFeed) ? saved.newsFeed : [];
+  taxRate = Number.isFinite(Number(saved.taxRate)) ? Number(saved.taxRate) : taxRate;
+  gameStatus = ['waiting', 'running', 'paused', 'ended'].includes(saved.gameStatus) ? saved.gameStatus : 'waiting';
+  shopsEnabled = saved.shopsEnabled !== false;
+  startingMoney = Number.isFinite(Number(saved.startingMoney)) ? Number(saved.startingMoney) : startingMoney;
+  storeFee = Number.isFinite(Number(saved.storeFee)) ? Number(saved.storeFee) : storeFee;
+  storeCustomerRate = Number.isFinite(Number(saved.storeCustomerRate)) ? Number(saved.storeCustomerRate) : storeCustomerRate;
+  if (saved.marketClock && typeof saved.marketClock === 'object') marketClock = { ...marketClock, ...saved.marketClock };
+  if (saved.turnConfig && typeof saved.turnConfig === 'object') Object.assign(turnConfig, saved.turnConfig);
+  if (saved.turnState && typeof saved.turnState === 'object') turnState = { ...turnState, ...saved.turnState };
+  finalAwards = saved.finalAwards || null;
+  if (gameStatus === 'running') {
+    turnState.remainingMs = Math.max(0, Number(turnState.endsAt || 0) - Date.now());
+    turnState.endsAt = null;
+    gameStatus = 'paused';
+  }
+}
+const savedRoomState = persistedRooms.get(ROOM);
+if (savedRoomState) restorePersistedState(savedRoomState);
+const broadcast = () => {
+  persistRoom(ROOM, { ...snapshot(), stockOrders });
+  roomIo.emit('state', snapshot());
+};
 const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
@@ -825,6 +913,7 @@ roomIo.on('connection', socket => {
       do { nextRoom = String(Math.floor(1000 + Math.random() * 9000)); } while (roomCodeMap.has(nextRoom));
       ROOM = nextRoom;
       roomCodeMap.delete(previousRoom);
+      persistedRooms.delete(previousRoom);
       roomCodeMap.set(ROOM, roomIo);
       socket.emit('roomCodeUpdated', { roomCode: ROOM });
       broadcast();
@@ -920,6 +1009,19 @@ io.on('connection', socket => {
     console.log('[PIXEL TOWN] New classroom created: ' + code);
     if (typeof ack === 'function') ack({ok:true, roomCode:code, namespace:room.name});
   });
+});
+function shutdown() {
+  try { flushPersistence(); }
+  catch (error) { console.error('[PIXEL TOWN] Final persistence save failed:', error); }
+  const forceExit = setTimeout(() => process.exit(0), 2500);
+  forceExit.unref?.();
+  io.close(() => { clearTimeout(forceExit); process.exit(0); });
+}
+process.once('SIGTERM', shutdown);
+process.once('SIGINT', shutdown);
+process.once('beforeExit', () => {
+  try { flushPersistence(); }
+  catch (error) { console.error('[PIXEL TOWN] Exit persistence save failed:', error); }
 });
 server.listen(PORT,'0.0.0.0',()=>{
   console.log('Pixel Economy multi-classroom server listening on '+PORT);
