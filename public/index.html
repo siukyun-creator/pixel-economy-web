@@ -740,7 +740,7 @@ building(22,-17,12,10,7,0x8ab5d7,0x3e6592,'은행',1);building(38,-17,12,10,8,0x
 for(let i=-4;i<=4;i++){makeBlock(.3,.04,1.2,0x477f47,i*5,.02,6);makeBlock(1.2,.04,.3,0x477f47,6,.02,i*5)}
 for(let i=0;i<42;i++){const x=(Math.random()-.5)*180,z=(Math.random()-.5)*180;if((Math.abs(x)<25&&Math.abs(z)<25)||Math.abs(z)<30)continue;makeBlock(.65,2.3,.65,0x805333,x,1.15,z);const crown=new THREE.Mesh(new THREE.BoxGeometry(2.7,2.5,2.7),new THREE.MeshStandardMaterial({color:i%3===0?0x4b9b55:0x39854a,roughness:1}));crown.position.set(x,3.3,z);crown.castShadow=true;crown.receiveShadow=true;world.add(crown);const crown2=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.8,1.9),new THREE.MeshStandardMaterial({color:0x5aa95d,roughness:1}));crown2.position.set(x,4.35,z);crown2.castShadow=true;world.add(crown2)}
 if(!teacher&&myId){me=makePlayer(myId,$('name').value||'나',0xf0c64b);scene.add(me);me.position.set(0,0,0)}else{me=null;camera.position.set(0,34,42);camera.lookAt(0,0,0)}
-removeCenterBenches();removeTownBuildings();window.addEventListener('resize',resize3D);requestAnimationFrame(loop)}
+removeCenterBenches();window.addEventListener('resize',resize3D);requestAnimationFrame(loop)}
 let centerBenchesRemoved=false;
 function removeCenterBenches(){
  if(!world||centerBenchesRemoved)return;
