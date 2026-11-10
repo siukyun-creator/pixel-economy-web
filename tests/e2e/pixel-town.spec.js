@@ -345,7 +345,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.getByRole('button', { name: '닫기 ✕' }).click();
     await page.getByRole('button', { name: /주식/ }).click();
     for (let i = 0; i < 5; i++) {
-      await page.getByRole('button', { name: '제품 생산' }).click();
+      await page.locator('button[onclick="produceCompanyGoods()"]:visible').evaluate(button => button.click());
     }
     await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
     await wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' }).click();
