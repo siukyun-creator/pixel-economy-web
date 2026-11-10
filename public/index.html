@@ -786,8 +786,10 @@ function syncStoreBuildings(stores){
   const group=new THREE.Group();world.add(group);activeBuildGroup=group;storeVisuals.set(st.id,group);
   const x=0,z=0;group.position.set(st.x,0,st.z);if(st.face===-1)group.rotation.y=Math.PI;
   const colorOf=(v,fallback)=>Number.parseInt(String(v||fallback).replace('#','0x'))||0xf4e3c1;
-  const wall=colorOf(st.wallColor,'#f4e3c1'),accent=colorOf(st.color,'#e5a84b');
-  const trim=0x52667b,glass=0xa9e6f4;
+  const themes={bread:{wall:'#f5dfb8',roof:'#c87935',trim:0x89542f},cafe:{wall:'#e7d9c8',roof:'#6b8d78',trim:0x526b60},pizza:{wall:'#f0d1b4',roof:'#b94d3d',trim:0x7d382e},juice:{wall:'#d9efcf',roof:'#63a96c',trim:0x397b4c},meat:{wall:'#e4c6bd',roof:'#873e3b',trim:0x542b2a}};
+  const theme=themes[st.food]||themes.bread;
+  const wall=colorOf(theme.wall,'#f4e3c1'),accent=colorOf(theme.roof,'#e5a84b');
+  const trim=theme.trim,glass=0xa9e6f4;
   // 바닥과 테두리
   makeBlock(6.4,.32,6.2,0xc9c7bc,x,.16,z);
   makeBlock(6.05,.12,5.85,0xf5edda,x,.36,z);
@@ -835,6 +837,12 @@ function syncStoreBuildings(stores){
   makeBlock(.09,1.45,.1,0xf5d779,x+2.36,2.15,z+3.04);
   makeBlock(1.5,.12,.12,0xf5d779,x,2.94,z+3.04);
   const shopLight=new THREE.PointLight(0xffedba,.45,10);shopLight.position.set(x,3,z+1.7);group.add(shopLight);
+  // 업종마다 외관과 대표 설비 실루엣을 다르게 표시
+  if(st.food==='bread'){makeBlock(.85,1.8,.85,0x9a6842,x-2.1,5.2,z-1.8);makeBlock(.95,.22,.95,0x754a31,x-2.1,6.15,z-1.8);}
+  if(st.food==='cafe'){makeBlock(1.35,.12,1.35,0x8b6546,x+4.1,.75,z+2.4);makeBlock(.16,1.1,.16,0x8b6546,x+3.55,1.25,z+2.4);makeBlock(.16,1.1,.16,0x8b6546,x+4.65,1.25,z+2.4);makeBlock(1.5,.12,1.5,0x8b6546,x+4.1,1.85,z+2.4);}
+  if(st.food==='pizza'){makeBlock(1.25,1.5,1.15,0xb94d3d,x-2.1,4.9,z-1.7);makeBlock(1.45,.2,1.35,0x79352c,x-2.1,5.75,z-1.7);makeBlock(.5,1.1,.5,0x8a5540,x-2.1,6.55,z-1.7);}
+  if(st.food==='juice'){makeBlock(.72,1.15,.22,0x62b978,x-2.1,2.25,z+3.08);makeBlock(.72,1.15,.22,0x62b978,x+2.1,2.25,z+3.08);makeBlock(.22,.7,.22,0x3f9c5c,x,4.9,z);}
+  if(st.food==='meat'){makeBlock(2.1,.42,1.2,0x55464a,x,1.0,z+1.8);makeBlock(1.7,.12,.8,0xb94d3d,x,1.3,z+1.8);makeBlock(.18,1.4,.18,0x55515a,x+2.4,4.9,z-2.1);}
   // 선택한 외부 장식
   if(st.decor==='plant'||st.decor==='flower'){
    for(const side of [-1,1]){
