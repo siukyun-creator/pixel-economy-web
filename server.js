@@ -91,6 +91,13 @@ function randomSeat() {
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
 function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const rawTax=Math.floor(amount*taxRate);const relief=Math.min(rawTax,Math.max(0,Math.floor(p.taxRelief||0)));p.taxRelief=Math.max(0,(p.taxRelief||0)-relief);const tax=rawTax-relief;p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;p.earnedTotal=(p.earnedTotal||0)+(amount-tax);return {amount,tax,relief,net:amount-tax};}
+const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
+let shopsEnabled = true;
+let startingMoney = 200000;
+let storeFee = 30000;
+let storeCustomerRate = 50;
+const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
+const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
