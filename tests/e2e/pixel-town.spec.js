@@ -348,10 +348,14 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.locator('button[onclick="produceCompanyGoods()"]:visible').click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
     const soldBeforePurchase = await page.evaluate(() => latestState.companies[0].soldUnits);
+    const inventoryBeforePurchase = await page.evaluate(() => latestState.companies[0].inventory);
+    const buyerMoneyBeforePurchase = await wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).money);
     await expect(wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' })).toBeEnabled();
     await wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' }).click();
+    // 가방 기능은 없으므로 구매자의 돈과 회사 재고·판매량으로 거래 성공을 확인한다.
     await expect.poll(() => page.evaluate(() => latestState.companies[0].soldUnits)).toBeGreaterThan(soldBeforePurchase);
-    await expect.poll(() => wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).companyGoods.smartphone)).toBe(1);
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeLessThan(inventoryBeforePurchase);
+    await expect.poll(() => wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).money)).toBeLessThan(buyerMoneyBeforePurchase);
     await wholesalePage.close();
     await teacherPage.getByRole('button', { name: '■ 종료' }).click();
     await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
