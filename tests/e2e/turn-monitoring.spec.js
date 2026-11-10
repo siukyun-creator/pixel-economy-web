@@ -40,8 +40,15 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await student.getByRole('button', { name: '기업 창업하기' }).click();
   await expect.poll(() => student.evaluate(() => latestState.companies.length)).toBe(1);
   await student.getByRole('button', { name: /내 가게/ }).click();
+  const productionPlan = await student.evaluate(() => {
+    const company = latestState.companies[0];
+    const owner = latestState.players.find(player => player.id === myId);
+    return Math.min(10, Math.floor(owner.money / company.unitCost));
+  });
+  expect(productionPlan, '창업 후 남은 현금으로 생산할 수 있는 수량을 계산한다').toBeGreaterThan(0);
+  await student.locator('#myCompanyProduceQty').fill(String(productionPlan));
   await student.getByRole('button', { name: '제품 생산' }).click();
-  await expect.poll(() => student.evaluate(() => latestState.companies[0].inventory)).toBe(1);
+  await expect.poll(() => student.evaluate(() => latestState.companies[0].inventory)).toBe(productionPlan);
   await expect(student.locator('#turnHud')).toContainText('턴 1/1');
   await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1');
   await student.getByRole('button', { name: '닫기 ✕' }).click();
