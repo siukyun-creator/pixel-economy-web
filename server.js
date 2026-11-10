@@ -249,10 +249,16 @@ function simulateCompanyCustomers() {
       changed = true;
     }
   }
-  // Each store gets one virtual customer opportunity every five seconds.
+  // A store gets at most one virtual-customer opportunity per minute.
+  // Premium equipment gives only a small capped chance bonus; it cannot multiply sales rapidly.
   for (const store of stores) {
+    const now = Date.now();
+    if (now < Number(store.nextCustomerAt || 0)) continue;
+    store.nextCustomerAt = now + 60000;
     store.lastTurnExpectedVisitors = (store.lastTurnExpectedVisitors || 0) + 1;
-    if (Math.random() * 100 >= Math.min(100, storeCustomerRate * (1 + Math.max(0, Number(store.customerBoost) || 0)))) continue;
+    const equipmentBonus = Math.min(0.10, Math.max(0, Number(store.customerBoost) || 0) * 0.25);
+    const visitChance = Math.min(100, storeCustomerRate * (1 + equipmentBonus));
+    if (Math.random() * 100 >= visitChance) continue;
     store.visitorCount = (store.visitorCount || 0) + 1;
     store.lastTurnVisitors = (store.lastTurnVisitors || 0) + 1;
     changed = true;
@@ -522,7 +528,7 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
       p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
