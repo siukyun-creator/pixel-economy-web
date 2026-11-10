@@ -558,6 +558,14 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
   #teacher.teacher-fullscreen{padding:calc(14px + env(safe-area-inset-top)) 20px!important}
   #teacher .teacherHeader{gap:12px}
 }
+
+/* 업종별 설비 선택 카드 */
+.storeEquipmentPanel{padding:12px;border:1px solid #c5dceb;border-radius:14px;background:#edf6fc;color:#24445e;margin:10px 0}
+.storeEquipmentPanel h3{margin:0 0 6px}.storeEquipmentPanel>p{margin:5px 0 10px}
+#storeEquipmentChoices{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px}
+#storeEquipmentChoices label{display:block;padding:10px;border:1px solid #c7d9e7;border-radius:11px;background:#fff;color:#29465e;font-weight:800}
+#storeEquipmentChoices select{display:block;width:100%;margin:7px 0 0!important;background:#f6fbff!important;color:#20364b!important}
+#storeEquipmentChoices .equipmentTotal{grid-column:1/-1;font-weight:900;color:#a35b18}
 </style></head><body>
 <header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('news')">📰 기업 뉴스</button><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('companyProducts')">🛍️ 기업 제품</button><button onclick="openMenu('companyJobs')">🤝 채용·지원</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도 숨기기</button><button class="refreshBtn" onclick="fullScreenGame()">⛶ 전체 화면</button><span id="connection">서버 연결 중</span></header>
 <section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 인증 코드"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 인증 코드를 입력하면 새 교실과 4자리 접속 코드가 만들어져요.</p></section>
