@@ -871,7 +871,7 @@ roomIo.on('connection', socket => {
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
   const salesTimer = setInterval(() => {
-    if (gameStatus === 'running' && (simulateCompanyCustomers() || processAutomaticPayroll())) broadcast();
+    if (gameStatus === 'running') { const salesChanged=simulateCompanyCustomers(); const payrollChanged=processAutomaticPayroll(); if(salesChanged||payrollChanged) broadcast(); }
   }, 5000);
   salesTimer.unref?.();
   const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
