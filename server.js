@@ -91,6 +91,7 @@ function randomSeat() {
   return cells.find(c=>![...players.values()].some(p=>Math.abs(p.x-c.x)<2.2&&Math.abs(p.z-c.z)<2.2)) || {x:0,z:0};
 }
 function credit(p,gross){const amount=Math.max(0,Math.floor(gross));const rawTax=Math.floor(amount*taxRate);const relief=Math.min(rawTax,Math.max(0,Math.floor(p.taxRelief||0)));p.taxRelief=Math.max(0,(p.taxRelief||0)-relief);const tax=rawTax-relief;p.money+=amount-tax;p.taxPaid=(p.taxPaid||0)+tax;p.earnedTotal=(p.earnedTotal||0)+(amount-tax);return {amount,tax,relief,net:amount-tax};}
+function processAutomaticPayroll(){const period=monthlyPeriod();let changed=false;for(const st of stores){if(!st.employees?.length)continue;if(!st.payrollMonth){st.payrollMonth=period;continue;}if(st.payrollMonth===period)continue;const owner=players.get(st.ownerId);const total=st.employees.reduce((sum,e)=>sum+(Number(e.salary)||0),0);if(!owner||owner.money<total)continue;owner.money-=total;for(const e of st.employees){const employee=players.get(e.playerId);if(employee)credit(employee,e.salary);}st.payrollMonth=period;changed=true;}for(const company of companies){if(!company.employees?.length)continue;if(!company.payrollMonth){company.payrollMonth=period;continue;}if(company.payrollMonth===period)continue;const owner=players.get(company.ownerId);const total=company.employees.reduce((sum,e)=>sum+(Number(e.salary)||0),0);if(!owner||owner.money<total)continue;owner.money-=total;for(const e of company.employees){const employee=players.get(e.playerId);if(employee)credit(employee,e.salary);}company.payrollMonth=period;changed=true;}return changed;}
 const safeName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 12) || '학생';
 let shopsEnabled = true;
 let startingMoney = 200000;
@@ -578,7 +579,7 @@ roomIo.on('connection', socket => {
      }
      if(a.type==='wholesaleBuy')return msg(socket,'새 장바구니 결제 기능을 이용해 주세요.');
       if(a.type==='cook'){
-      const st=stores.find(v=>v.ownerId===socket.id);if(!st||p.storeId!==st.id)return msg(socket,'먼저 내 가게를 만들어 주세요.');
+      const st=stores.find(v=>v.ownerId===socket.id||(v.employees||[]).some(employee=>employee.playerId===socket.id));if(!st)return msg(socket,'가게에 채용된 뒤 주방을 이용할 수 있어요.');
       const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'이 가게에서 만들 수 없는 메뉴예요.');
       const score=bounded(a.score,0,100);
       st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20,ingredients:0}};st.products[productId]=st.products[productId]||{stock:0,price:retailPrices[productId]||3500,ingredients:0};const recipe=st.products[productId];recipe.ingredients=Number(recipe.ingredients)||0;if(recipe.ingredients<1)return msg(socket,'🥕 재료가 없어요! 도매상에서 재료를 먼저 구매해 주세요.');recipe.ingredients--;if(score<35)msg(socket,'🍳 요리가 아쉬워요! '+score+'점 · 재료 1개 사용');else{const made=Math.max(1,Math.floor(score/20));recipe.stock+=made;if(productId===st.productId)st.stock=recipe.stock;msg(socket,'✨ '+product.name+' '+made+'개 완성! 재고 '+recipe.stock+'개 · 남은 재료 '+recipe.ingredients+'개');}broadcast();return;
@@ -870,7 +871,7 @@ roomIo.on('connection', socket => {
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
   const salesTimer = setInterval(() => {
-    if (gameStatus === 'running' && simulateCompanyCustomers()) broadcast();
+    if (gameStatus === 'running' && (simulateCompanyCustomers() || processAutomaticPayroll())) broadcast();
   }, 5000);
   salesTimer.unref?.();
   const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
