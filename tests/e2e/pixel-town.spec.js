@@ -228,10 +228,15 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
       const door = world.children.find(object =>
         object.material?.color?.getHex() === 0x65432c &&
         Math.abs(object.position.x - 22) < 0.1 &&
-        Math.abs(object.position.y - 0.8) < 0.1
+        Math.abs(object.position.y - 0.8) < 0.1 &&
+        Math.abs(object.position.z - (-11.92)) < 0.1
       );
-      return door ? Math.sign(door.position.z - (-17)) : 0;
-    })).toBe(1);
+      const windows = world.children.filter(object =>
+        object.material?.color?.getHex() === 0x9cdbed &&
+        Math.abs(object.position.z - (-11.93)) < 0.1
+      );
+      return { doorExists: Boolean(door), frontWindows: windows.length };
+    })).toEqual({ doorExists: true, frontWindows: 2 });
     await expect.poll(() => page.evaluate(() =>
       world.children.filter(object =>
         object.material?.color?.getHex() === 0x8a5a35 &&
