@@ -33,7 +33,7 @@ function readPersistedRooms() {
     throw new Error('저장 데이터 버전이 올바르지 않습니다. 기존 파일을 보존하고 확인해 주세요.');
   }
   return new Map(parsed.rooms
-    .filter(entry => /^\\d{4}$/.test(String(entry?.roomCode || '')) && entry.state && typeof entry.state === 'object')
+    .filter(entry => /^\d{4}$/.test(String(entry?.roomCode || '')) && entry.state && typeof entry.state === 'object')
     .map(entry => [String(entry.roomCode), entry.state]));
 }
 const persistedRooms = readPersistedRooms();
@@ -983,8 +983,10 @@ roomIo.on('connection', socket => {
   turnTimer.unref?.();
   return roomIo;
 }
-const initialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : makeRoomCode();
-createClassroom(initialCode);
+const savedRoomCodes = [...persistedRooms.keys()].filter(code => /^\d{4}$/.test(code));
+const configuredInitialCode = /^\d{4}$/.test(String(process.env.ROOM_CODE || '').trim()) ? String(process.env.ROOM_CODE).trim() : null;
+const initialCode = configuredInitialCode || savedRoomCodes[0] || makeRoomCode();
+for (const code of new Set([...savedRoomCodes, initialCode])) createClassroom(code);
 io.on('connection', socket => {
   socket.on('openClassroom', (data, ack) => {
     const code = String(data?.roomCode || '').trim();
