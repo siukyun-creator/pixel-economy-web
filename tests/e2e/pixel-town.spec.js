@@ -372,3 +372,45 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
   await page.close();
   await teacherPage.close();
 });
+
+ 
+test('학생·선생님 세금 내역과 업종별 가게 3D 디자인을 확인한다', async ({ browser, baseURL }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(baseURL);
+  await page.locator('#gameArea').evaluate(area => {
+    area.style.display = 'block';
+    document.querySelector('#login').style.display = 'none';
+  });
+  const result = await page.evaluate(() => {
+    init3D();
+    const sampleTax = [
+      { id: 't1', at: Date.now(), source: '마을 아르바이트', gross: 10000, rate: .05, rawTax: 500, relief: 0, tax: 500, net: 9500 },
+      { id: 't2', at: Date.now() - 1000, source: '상점 물품 판매', gross: 2000, rate: .05, rawTax: 100, relief: 0, tax: 100, net: 1900 }
+    ];
+    myId = 'tax-student';
+    players = [{ id: myId, name: '세금학생', money: 100000, bank: 0, loan: 0, taxPaid: 600, taxHistory: sampleTax, earnedTotal: 11400, socialDonated: 0, donations: {}, job: '무직', shares: {}, inventory: {}, connected: true }];
+    latestState = { players, taxRate: .05, stores: [], companies: [], gameStatus: 'running' };
+    menu = 'taxHistory';
+    drawMenu();
+    const studentTaxVisible = document.querySelector('#menuContent .taxHistoryCard')?.innerText || '';
+    teacher = true;
+    renderTeacherTaxReport(latestState);
+    const teacherTaxVisible = document.querySelector('#teacherTaxReport')?.innerText || '';
+    const kinds = ['bread', 'cafe', 'pizza', 'juice', 'meat'];
+    syncStoreBuildings(kinds.map((food, index) => ({ id: 'design-' + food, ownerId: 'owner-' + index, name: food + ' shop', sign: food, food, productId: ({ bread: 'milk_bread', cafe: 'coffee', pizza: 'pizza', juice: 'orange_juice', meat: 'steak' })[food], x: index * 10, z: -20, face: 1 })));
+    const designs = kinds.map(food => {
+      const group = storeVisuals.get('design-' + food);
+      return { food, design: group?.userData.design, features: group?.userData.features || [], children: group?.children.length || 0 };
+    });
+    return { studentTaxVisible, teacherTaxVisible, designs };
+  });
+  expect(result.studentTaxVisible).toContain('마을 아르바이트');
+  expect(result.studentTaxVisible).toContain('500원');
+  expect(result.teacherTaxVisible).toContain('세금학생');
+  expect(result.teacherTaxVisible).toContain('600원');
+  expect(result.designs.map(item => item.design)).toEqual(['bread', 'cafe', 'pizza', 'juice', 'meat']);
+  expect(result.designs.every(item => item.children >= 12)).toBe(true);
+  expect(new Set(result.designs.map(item => item.features.join('|'))).size).toBe(5);
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-sector-store-designs.png'), fullPage: false });
+  await page.close();
+});
