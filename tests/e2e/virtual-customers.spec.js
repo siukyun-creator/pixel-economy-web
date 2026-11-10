@@ -84,19 +84,8 @@ test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·�
     await expect.poll(async () => {
       const state = await requestState(student);
       const store = state.stores.find(item => item.id === createdStore.id);
-      const owner = state.players.find(item => item.name === '가상손님테스트주인');
-      return {
-        visitors: store?.visitorCount || 0,
-        stock: store?.products?.milk_bread?.stock,
-        revenue: store?.revenue || 0,
-        money: owner?.money
-      };
-    }, { timeout: 15000, intervals: [500, 1000] }).toEqual({
-      visitors: expect.any(Number),
-      stock: expect.any(Number),
-      revenue: expect.any(Number),
-      money: expect.any(Number)
-    });
+      return store?.visitorCount || 0;
+    }, { timeout: 15000, intervals: [500, 1000] }).toBeGreaterThanOrEqual(1);
 
     const finalState = await requestState(student);
     const finalStore = finalState.stores.find(item => item.id === createdStore.id);
