@@ -181,6 +181,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(playerFrom(state).money).toBe(initialMoney + 9500);
     expect(playerFrom(state).taxPaid).toBe(500);
     expect(playerFrom(state).earnedTotal).toBe(9500);
+    expect(playerFrom(state).taxHistory.at(-1)).toMatchObject({ source: '마을 아르바이트', gross: 10000, tax: 500, net: 9500 });
 
     state = await act(student, { type: 'deposit', amount: 1 });
     expect(playerFrom(state).bank).toBe(10000);
@@ -205,6 +206,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(playerFrom(state).inventory.apple).toBe(1);
     state = await act(student, { type: 'sell', item: 'apple', amount: 1 });
     expect(playerFrom(state).inventory.apple).toBe(0);
+    expect(playerFrom(state).taxHistory.at(-1).source).toBe('상점 물품 판매');
     expect(playerFrom(state).money).toBeLessThan(initialMoney + 9500);
 
     const stockOwner = io(`${baseURL}/classrooms/${roomCode}`, {
@@ -228,6 +230,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(state.stocks[publicTicker].price).toBeGreaterThan(priceBeforeDemand);
     state = await act(student, { type: 'stockSell', item: publicTicker, amount: 1 });
     expect(playerFrom(state).shares[publicTicker]).toBe(0);
+    expect(playerFrom(state).taxHistory.some(entry => entry.source.includes('주식 매도'))).toBe(true);
     const priceBeforeSupply = state.stocks[publicTicker].price;
     await teacherCommand('advanceMarket');
     state = await syncStudent();
