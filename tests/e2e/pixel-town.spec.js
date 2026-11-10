@@ -341,15 +341,17 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
     await wholesalePage.getByRole('button', { name: /기업 제품/ }).click();
     await expect(wholesalePage.locator('.companyProductCard')).toContainText('픽셀 스마트폰');
-    // 상품 재고는 실시간 고객 판매로 줄어들 수 있으므로 구매 직전에 다시 생산한다.
+    // 실시간 NPC 손님이 재고를 판매하므로 한 번에 충분한 수량을 생산하고 바로 구매한다.
     await page.getByRole('button', { name: '닫기 ✕' }).click();
     await page.getByRole('button', { name: /주식/ }).click();
-    for (let i = 0; i < 5; i++) {
-      await page.locator('button[onclick="produceCompanyGoods()"]:visible').evaluate(button => button.click());
-    }
+    await page.locator('#companyProduceQty').fill('10');
+    await page.locator('button[onclick="produceCompanyGoods()"]:visible').click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
+    const soldBeforePurchase = await page.evaluate(() => latestState.companies[0].soldUnits);
+    await expect(wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' })).toBeEnabled();
     await wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' }).click();
-    await expect.poll(() => page.evaluate(() => latestState.companies[0].operatingProfit)).toBe(10000);
+    await expect.poll(() => page.evaluate(() => latestState.companies[0].soldUnits)).toBeGreaterThan(soldBeforePurchase);
+    await expect.poll(() => wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).companyGoods.smartphone)).toBe(1);
     await wholesalePage.close();
     await teacherPage.getByRole('button', { name: '■ 종료' }).click();
     await expect(page.locator('#finalResults')).toContainText('최고의 CEO상');
