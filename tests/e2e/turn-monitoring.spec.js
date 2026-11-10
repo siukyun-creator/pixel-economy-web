@@ -48,7 +48,9 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   expect(productionPlan, '창업 후 남은 현금으로 생산할 수 있는 수량을 계산한다').toBeGreaterThan(0);
   await student.locator('#myCompanyProduceQty').fill(String(productionPlan));
   await student.getByRole('button', { name: '제품 생산' }).click();
-  await expect.poll(() => student.evaluate(() => latestState.companies[0].inventory)).toBe(productionPlan);
+  // 자동 손님이 재고를 판매할 수 있으므로 생산량은 재고+판매량으로 검증한다.
+  await expect.poll(() => student.evaluate(() => latestState.companies[0].producedUnits)).toBe(productionPlan);
+  await expect.poll(() => student.evaluate(() => latestState.companies[0].inventory + latestState.companies[0].soldUnits)).toBe(productionPlan);
   await expect(student.locator('#turnHud')).toContainText('턴 1/1');
   await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1');
   await student.getByRole('button', { name: '닫기 ✕' }).click();
