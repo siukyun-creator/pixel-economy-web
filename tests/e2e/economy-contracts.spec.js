@@ -410,10 +410,8 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(resetState.stocks[publicTicker]).toBeUndefined();
     expect(playerFrom(resetState).company).toBeNull();
     expect(playerFrom(resetState).donations).toEqual({
-      community: 0,
-      disability: 0,
-      seniors: 0,
-      inclusiveEmployment: 0
+      community: 0, disability: 0, seniors: 0, inclusiveEmployment: 0,
+      education: 0, environment: 0, animalWelfare: 0, disasterRelief: 0, volunteering: 0
     });
     expect(playerFrom(resetState).shares).toEqual({});
   } finally {
