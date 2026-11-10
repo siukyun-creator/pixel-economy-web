@@ -424,6 +424,7 @@ roomIo.on('connection', socket => {
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
     const p=players.get(socket.id);if(!p||!a)return;
+    if(['employmentApply','hireEmployee','setEmployeeSalary','removeEmployee','payroll','companyEmploymentApply','companyHireEmployee','setCompanyEmployeeSalary','removeCompanyEmployee','companyPayroll'].includes(a.type))return msg(socket,'알바생·직원 기능은 현재 운영하지 않아요.');
     if(a.type==='employmentApply'){
       const st=stores.find(value=>value.id===String(a.storeId));
       if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 일자리에 지원할 수 있어요.');
