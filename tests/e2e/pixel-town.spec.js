@@ -344,7 +344,13 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     // 실시간 NPC 손님이 재고를 판매하므로 한 번에 충분한 수량을 생산하고 바로 구매한다.
     await page.getByRole('button', { name: '닫기 ✕' }).click();
     await page.getByRole('button', { name: /주식/ }).click();
-    await page.locator('#companyProduceQty').fill('10');
+    const productionPlan = await page.evaluate(() => {
+      const company = latestState.companies[0];
+      const owner = latestState.players.find(player => player.id === myId);
+      return Math.min(10, Math.floor(owner.money / company.unitCost));
+    });
+    expect(productionPlan, '회사 대표가 보유한 현금으로 최소 1개는 생산할 수 있어야 한다').toBeGreaterThan(0);
+    await page.locator('#companyProduceQty').fill(String(productionPlan));
     await page.locator('button[onclick="produceCompanyGoods()"]:visible').click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
     const soldBeforePurchase = await page.evaluate(() => latestState.companies[0].soldUnits);
