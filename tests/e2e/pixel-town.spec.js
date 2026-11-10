@@ -206,6 +206,12 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
   const roomCode = await teacherPage.locator('#teacherRoomCode').textContent();
   await teacherPage.getByRole('button', { name: '▶ 시작' }).click();
   await expect(teacherPage.locator('#teacherCount')).toContainText('진행 중');
+  // 이 테스트는 입장·기업 거래 흐름을 검증하므로 중간에 자동 턴이 끝나지 않게 한다.
+  await teacherPage.locator('#teacherMarketControls details').evaluate(details => { details.open = true; });
+  await teacherPage.locator('#turnDurationMinutes').selectOption('60');
+  await teacherPage.locator('#totalTurns').selectOption('6');
+  await teacherPage.getByRole('button', { name: '설정 저장' }).click();
+  await expect(teacherPage.locator('#marketStatus')).toContainText('실제 턴 1/6');
   const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
   collectBrowserErrors(page);
   await page.goto(baseURL);
@@ -304,7 +310,9 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.locator('#name').fill('E2E도매학생');
     await wholesalePage.locator('#room').fill(roomCode);
     await wholesalePage.locator('#joinButton').click();
-    await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden();
+    await expect(wholesalePage.locator('#gameArea')).toBeVisible({ timeout: 15000 });
+    await expect.poll(() => wholesalePage.evaluate(() => Boolean(myId && latestState?.players?.some(player => player.id === myId))), { timeout: 15000 }).toBe(true);
+    await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden({ timeout: 15000 });
     await wholesalePage.getByRole('button', { name: /사업 시작/ }).click();
     await wholesalePage.locator('#hubWholesaleName').fill('E2E도매');
     await wholesalePage.getByRole('button', { name: '도매상 창업하기' }).click();
