@@ -264,6 +264,13 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(store).toBeTruthy();
     expect(store.pixelArt).toEqual(customFoodArt);
     expect(store.pixelArtProductId).toBe('milk_bread');
+    state = await act(student, { type: 'setStoreMenuName', productId: 'milk_bread', name: '경제 특제 식빵' });
+    expect(state.stores.find(entry => entry.id === store.id).menuNames.milk_bread).toBe('경제 특제 식빵');
+    const moneyBeforeMart = playerFrom(state).money;
+    state = await act(student, { type: 'martBuyIngredients', productId: 'milk_bread', amount: 2 });
+    expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(4);
+    expect(playerFrom(state).money).toBe(moneyBeforeMart - 9600);
+    expect(state.stores.find(entry => entry.id === store.id).purchaseHistory.at(-1).source).toBe('마트');
     const companyNotice = new Promise(resolve => student.once('notice', resolve));
     student.emit('action', { type: 'startup', item: '두 번째 회사' });
     expect(await companyNotice).toContain('한 학생은');
@@ -339,6 +346,9 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
       { type: 'setWholesalePrice', productId: 'milk_bread', amount: 1700 }
     );
     expect(wholesalerState.wholesaleShop.inventory.milk_bread.price).toBe(1700);
+    const overpricedNotice = new Promise(resolve => wholesaler.once('notice', resolve));
+    wholesaler.emit('action', { type: 'setWholesalePrice', productId: 'milk_bread', amount: 5000 });
+    expect(await overpricedNotice).toContain('마트 가격보다 최소 100원 저렴');
 
     await new Promise(resolve => {
       student.once('state', resolve);
@@ -358,7 +368,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(2);
     state = await act(student, { type: 'cook', productId: 'milk_bread', score: 80 });
     const cookedStore = state.stores.find(entry => entry.id === store.id);
-    expect(cookedStore.products.milk_bread.ingredients).toBe(1);
+    expect(cookedStore.products.milk_bread.ingredients).toBe(3);
     expect(cookedStore.products.milk_bread.stock).toBeGreaterThan(10);
 
     await new Promise(resolve => {
