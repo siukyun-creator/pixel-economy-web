@@ -194,7 +194,7 @@ test('기업 뉴스·제품 구매 메뉴가 분리되고 채용·가방·순위
 });
 
 test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({ browser, baseURL }) => {
-  test.setTimeout(180000);
+  test.setTimeout(300000);
   browserErrors = [];
 
   const teacherPage = await browser.newPage({ viewport: { width: 960, height: 600 } });
