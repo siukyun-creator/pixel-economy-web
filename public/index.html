@@ -1146,12 +1146,25 @@ function drawCompanyJobsMenu(){
 }
 function drawCompanyMarket(state=latestState){
  const root=$('menuContent');if(!root||menu!=='stocks')return;
- root.querySelector('#companyMarket')?.remove();
  const companies=state?.companies||[],owner=companies.find(company=>company.ownerId===myId);
- const management=owner?'<section class="cookCard"><span class="lessonKicker">우리 회사 · '+esc(owner.sectorName||'기업')+'</span><h3>'+esc(owner.name)+' 경영</h3><div style="display:flex;align-items:center;gap:12px"><img width="72" height="72" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(owner.sector)+'" alt="'+esc(owner.productName)+' 픽셀 그림"><div>'+esc(owner.productName)+' · 보유 재고 '+owner.inventory+'개<br>누적 영업이익 <b>'+Number(owner.operatingProfit||0).toLocaleString('ko-KR')+'원</b></div></div><p>제품 1개 생산비 '+Number(owner.unitCost).toLocaleString('ko-KR')+'원 · 판매가 '+Number(owner.unitPrice).toLocaleString('ko-KR')+'원</p><label for="companyProduceQty">생산 수량 (1~10개)</label><input id="companyProduceQty" type="number" min="1" max="10" value="1"><button onclick="produceCompanyGoods()">제품 생산</button><p class="small">판매액에서 누적 생산비를 뺀 금액이 영업이익이에요. 생산하지 않은 제품은 시장에 나오지 않아요.</p></section>':'';
+ const existing=root.querySelector('#companyMarket');
+ // 주가·서버 상태가 갱신될 때마다 생산 입력칸을 통째로 교체하지 않아요.
+ if(existing&&existing.dataset.ownerId===String(owner?.ownerId||'none')){
+  const inventory=existing.querySelector('.companyInventory');
+  const profit=existing.querySelector('.companyProfit');
+  const clockNode=existing.querySelector('.marketClockLabel');
+  if(owner&&inventory)inventory.textContent=esc(owner.productName)+' · 보유 재고 '+owner.inventory+'개';
+  if(owner&&profit)profit.textContent=Number(owner.operatingProfit||0).toLocaleString('ko-KR')+'원';
+  if(clockNode)clockNode.innerHTML=state?.marketClock?'가상 거래 시각: <b>'+esc(state.marketClock.day)+' '+esc(state.marketClock.time)+'</b> · '+(state.marketClock.marketOpen?'거래 중':'휴장'):'가상 거래일은 월~토예요. 선생님이 거래 시점을 진행하면 주가가 바뀝니다.';
+  const offerRoot=existing.querySelector('.companyOffers');
+  if(offerRoot)offerRoot.innerHTML=companies.filter(company=>company.ownerId!==myId).map(company=>'<article class="stockCard"><img width="64" height="64" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(company.sector)+'" alt="'+esc(company.productName)+' 픽셀 그림"><b>'+esc(company.name)+' · '+esc(company.productName)+'</b><small>재고 '+company.inventory+'개 · '+Number(company.unitPrice).toLocaleString('ko-KR')+'원 / 개</small><button onclick="buyCompanyGoods(&quot;'+esc(company.ticker)+'&quot;)" '+(company.inventory<1?'disabled':'')+'>제품 1개 구매</button></article>').join('');
+  return;
+ }
+ existing?.remove();
+ const management=owner?'<section class="cookCard"><span class="lessonKicker">우리 회사 · '+esc(owner.sectorName||'기업')+'</span><h3>'+esc(owner.name)+' 경영</h3><div style="display:flex;align-items:center;gap:12px"><img width="72" height="72" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(owner.sector)+'" alt="'+esc(owner.productName)+' 픽셀 그림"><div><span class="companyInventory">'+esc(owner.productName)+' · 보유 재고 '+owner.inventory+'개</span><br>누적 영업이익 <b class="companyProfit">'+Number(owner.operatingProfit||0).toLocaleString('ko-KR')+'원</b></div></div><p>제품 1개 생산비 '+Number(owner.unitCost).toLocaleString('ko-KR')+'원 · 판매가 '+Number(owner.unitPrice).toLocaleString('ko-KR')+'원</p><label for="companyProduceQty">생산 수량 (1~10개)</label><input id="companyProduceQty" type="number" min="1" max="10" value="1"><button onclick="produceCompanyGoods()">제품 생산</button><p class="small">판매액에서 누적 생산비를 뺀 금액이 영업이익이에요. 생산하지 않은 제품은 시장에 나오지 않아요.</p></section>':'';
  const offers=companies.filter(company=>company.ownerId!==myId).map(company=>'<article class="stockCard"><img width="64" height="64" style="image-rendering:pixelated" src="/assets/companies/'+companyImage(company.sector)+'" alt="'+esc(company.productName)+' 픽셀 그림"><b>'+esc(company.name)+' · '+esc(company.productName)+'</b><small>재고 '+company.inventory+'개 · '+Number(company.unitPrice).toLocaleString('ko-KR')+'원 / 개</small><button onclick="buyCompanyGoods(&quot;'+esc(company.ticker)+'&quot;)" '+(company.inventory<1?'disabled':'')+'>제품 1개 구매</button></article>').join('');
  const clock=state?.marketClock?'<p class="marketClockLabel">가상 거래 시각: <b>'+esc(state.marketClock.day)+' '+esc(state.marketClock.time)+'</b> · '+(state.marketClock.marketOpen?'거래 중':'휴장')+'</p>':'<p class="marketClockLabel">가상 거래일은 월~토예요. 선생님이 거래 시점을 진행하면 주가가 바뀝니다.</p>';
- const section=document.createElement('section');section.id='companyMarket';section.innerHTML='<h3>🏢 내 기업 관리</h3>'+clock+(owner?management:'<p class="small">아직 운영 중인 내 기업이 없어요. 사업 시작에서 회사를 창업할 수 있어요.</p>');
+ const section=document.createElement('section');section.id='companyMarket';section.dataset.ownerId=String(owner?.ownerId||'none');section.innerHTML='<h3>🏢 내 기업 관리</h3>'+clock+(owner?management:'<p class="small">아직 운영 중인 내 기업이 없어요. 사업 시작에서 회사를 창업할 수 있어요.</p>')+'<div class="companyOffers">'+offers+'</div>';
  root.appendChild(section);
 }
 function produceCompanyGoods(){const amount=Number($('companyProduceQty')?.value||0);if(!Number.isInteger(amount)||amount<1||amount>10){showNotice('생산 수량은 1~10개로 입력해 주세요.');return}socket.emit('action',{type:'produceCompanyGoods',amount})}
