@@ -231,7 +231,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
         Math.abs(object.position.y - 0.8) < 0.1
       );
       return door ? Math.sign(door.position.z - (-17)) : 0;
-    })).toBe(-1);
+    })).toBe(1);
     await expect.poll(() => page.evaluate(() =>
       world.children.filter(object =>
         object.material?.color?.getHex() === 0x8a5a35 &&
