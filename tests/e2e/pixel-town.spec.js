@@ -314,7 +314,10 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
     await wholesalePage.getByRole('button', { name: /기업 제품/ }).click();
     await expect(wholesalePage.locator('.companyProductCard')).toContainText('픽셀 스마트폰');
-    // 실시간 NPC 손님이 재고를 판매하므로 한 번에 충분한 수량을 생산하고 바로 구매한다.
+    // 반드시 두 학생이 접속한 상태에서 확인: 재고 0개면 구매 불가여야 한다.
+    await expect(wholesalePage.locator('.companyProductCard').getByRole('button', { name: '🛒 구매하기' })).toBeDisabled();
+    await expect(wholesalePage.locator('.companyProductStats')).toContainText('재고 0개');
+    // 회사 대표가 제품을 생산한 뒤, 구매자 화면에도 실시간으로 재고가 동기화되어야 한다.
     await page.getByRole('button', { name: '닫기 ✕' }).click();
     await page.getByRole('button', { name: /주식/ }).click();
     const productionPlan = await page.evaluate(() => {
@@ -326,6 +329,8 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await page.locator('#companyProduceQty').fill(String(productionPlan));
     await page.locator('button[onclick="produceCompanyGoods()"]:visible').click();
     await expect.poll(() => page.evaluate(() => latestState.companies[0].inventory)).toBeGreaterThan(0);
+    await expect.poll(() => wholesalePage.evaluate(() => latestState.companies[0].inventory), { timeout: 10000 }).toBeGreaterThan(0);
+    await expect(wholesalePage.locator('.companyProductStats')).not.toContainText('재고 0개');
     const soldBeforePurchase = await page.evaluate(() => latestState.companies[0].soldUnits);
     const inventoryBeforePurchase = await page.evaluate(() => latestState.companies[0].inventory);
     const buyerMoneyBeforePurchase = await wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).money);
