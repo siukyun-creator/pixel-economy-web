@@ -252,7 +252,7 @@ function simulateCompanyCustomers() {
   // Each store gets one virtual customer opportunity every five seconds.
   for (const store of stores) {
     store.lastTurnExpectedVisitors = (store.lastTurnExpectedVisitors || 0) + 1;
-    if (Math.random() * 100 >= storeCustomerRate) continue;
+    if (Math.random() * 100 >= Math.min(100, storeCustomerRate * (1 + Math.max(0, Number(store.customerBoost) || 0)))) continue;
     store.visitorCount = (store.visitorCount || 0) + 1;
     store.lastTurnVisitors = (store.lastTurnVisitors || 0) + 1;
     changed = true;
