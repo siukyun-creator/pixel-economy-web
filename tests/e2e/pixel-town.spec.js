@@ -124,10 +124,6 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button',{name:'이전'}).click();
   await expect(page.locator('#newStoreName')).toHaveValue('단계별 가게');
   await page.getByRole('button',{name:'닫기 ✕'}).click();
-  await page.getByRole('button', { name: /채용·지원/ }).click();
-  await expect(page.locator('.employmentPanel')).toContainText('장애인 고용과 포용적인 일터');
-  await expect(page.locator('.employmentPanel')).toContainText('자발적으로 지원한 학생만 채용');
-  await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /내 가게/ }).click();
   await expect(page.locator('.communityReport')).toContainText('사회공헌과 나눔');
   await expect(page.locator('.communityReport')).toContainText('장애인 고용 지원');
@@ -168,7 +164,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
 });
 
 
-test('기업 뉴스·제품 구매·채용 메뉴가 분리되고 가방과 순위표가 없다', async ({ browser, baseURL }) => {
+test('기업 뉴스·제품 구매 메뉴가 분리되고 채용·가방·순위표가 없다', async ({ browser, baseURL }) => {
   browserErrors = [];
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   collectBrowserErrors(page);
@@ -180,7 +176,7 @@ test('기업 뉴스·제품 구매·채용 메뉴가 분리되고 가방과 순�
   await expect(page.locator('#newsTicker')).toBeVisible();
   await expect(page.getByRole('button', { name: /기업 뉴스/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /기업 제품/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /채용·지원/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /채용·지원/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /가방|순위표/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /새로고침/ })).toHaveCount(0);
 
@@ -193,11 +189,6 @@ test('기업 뉴스·제품 구매·채용 메뉴가 분리되고 가방과 순�
   await page.getByRole('button', { name: /기업 제품/ }).click();
   await expect(page.locator('#menuTitle')).toContainText('기업 제품 구매');
   await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-products.png'), fullPage: true });
-
-  await page.getByRole('button', { name: '닫기 ✕' }).click();
-  await page.getByRole('button', { name: /채용·지원/ }).click();
-  await expect(page.locator('#menuTitle')).toContainText('회사 채용·지원');
-  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-jobs.png'), fullPage: true });
   await page.close();
 });
 
@@ -314,24 +305,6 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await wholesalePage.locator('#room').fill(roomCode);
     await wholesalePage.locator('#joinButton').click();
     await expect(wholesalePage.locator('#lobbyOverlay')).toBeHidden();
-    await wholesalePage.getByRole('button', { name: /채용·지원/ }).click();
-    const companyTicker = await page.evaluate(() => latestState.companies[0].ticker);
-    await wholesalePage.locator('[data-company-employment="' + companyTicker + '"]')
-      .getByRole('button', { name: '회사에 지원하기' }).click();
-    await expect.poll(() => page.evaluate(() => latestState.companies[0].employmentApplications.length)).toBe(1);
-    await page.getByRole('button', { name: /채용·지원/ }).click();
-    await expect(page.locator('[data-company-employment="' + companyTicker + '"]')).toContainText('E2E도매학생');
-    const employeeId = await wholesalePage.evaluate(() => myId);
-    await page.locator('#company-offer-' + employeeId).fill('12000');
-    await page.locator('[data-company-employment="' + companyTicker + '"]')
-      .getByRole('button', { name: '채용하고 월급 정하기' }).click();
-    await expect.poll(() => page.evaluate(() => latestState.companies[0].employees.length)).toBe(1);
-    await expect.poll(() => wholesalePage.evaluate(() => latestState.players.find(player => player.id === myId).job))
-      .toContain('회사 직원');
-    await page.screenshot({
-      path: path.join(resultsDir, 'screenshots', 'pixel-town-company-employment.png'),
-      fullPage: true
-    });
     await wholesalePage.getByRole('button', { name: /사업 시작/ }).click();
     await wholesalePage.locator('#hubWholesaleName').fill('E2E도매');
     await wholesalePage.getByRole('button', { name: '도매상 창업하기' }).click();
