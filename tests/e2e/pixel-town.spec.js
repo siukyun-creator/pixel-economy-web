@@ -84,8 +84,8 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: /주식/ }).click();
-  await expect(page.locator('#menuContent .stockGrid')).toBeVisible();
-  await expect(page.locator('#menuContent .stockCard')).toHaveCount(3);
+  await expect(page.locator('#menuContent')).toContainText('회사가 창업되면 주식이 등록돼요');
+  await expect(page.locator('#menuContent .stockGrid')).toHaveCount(1);
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.getByRole('button', { name: '📦 도매상', exact: true }).click();
