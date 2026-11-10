@@ -99,7 +99,7 @@ let storeFee = 30000;
 let storeCustomerRate = 50;
 const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
-const broadcastEmployment = () => { broadcast(); roomIo.emit('employmentChanged'); };
+const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
 function marketIsOpen(time = marketClock.time) {
@@ -579,7 +579,7 @@ roomIo.on('connection', socket => {
      }
      if(a.type==='wholesaleBuy')return msg(socket,'새 장바구니 결제 기능을 이용해 주세요.');
       if(a.type==='cook'){
-      const st=stores.find(v=>v.ownerId===socket.id||(v.employees||[]).some(employee=>employee.playerId===socket.id));if(!st)return msg(socket,'가게에 채용된 뒤 주방을 이용할 수 있어요.');
+      const st=stores.find(v=>v.ownerId===socket.id);if(!st)return msg(socket,'내 가게 주방에서만 요리할 수 있어요.');
       const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'이 가게에서 만들 수 없는 메뉴예요.');
       const score=bounded(a.score,0,100);
       st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20,ingredients:0}};st.products[productId]=st.products[productId]||{stock:0,price:retailPrices[productId]||3500,ingredients:0};const recipe=st.products[productId];recipe.ingredients=Number(recipe.ingredients)||0;if(recipe.ingredients<1)return msg(socket,'🥕 재료가 없어요! 도매상에서 재료를 먼저 구매해 주세요.');recipe.ingredients--;if(score<35)msg(socket,'🍳 요리가 아쉬워요! '+score+'점 · 재료 1개 사용');else{const made=Math.max(1,Math.floor(score/20));recipe.stock+=made;if(productId===st.productId)st.stock=recipe.stock;msg(socket,'✨ '+product.name+' '+made+'개 완성! 재고 '+recipe.stock+'개 · 남은 재료 '+recipe.ingredients+'개');}broadcast();return;
@@ -871,7 +871,7 @@ roomIo.on('connection', socket => {
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
   const salesTimer = setInterval(() => {
-    if (gameStatus === 'running') { const salesChanged=simulateCompanyCustomers(); const payrollChanged=processAutomaticPayroll(); if(salesChanged||payrollChanged) broadcast(); }
+    if (gameStatus === 'running' && simulateCompanyCustomers()) broadcast();
   }, 5000);
   salesTimer.unref?.();
   const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
