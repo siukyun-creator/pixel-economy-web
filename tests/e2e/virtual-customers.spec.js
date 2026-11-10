@@ -75,12 +75,15 @@ test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·�
       });
       student.emit('action', {
         type: 'createStore', name: '가상손님빵집', sign: '빵집',
-        food: 'bread', productId: 'milk_bread'
+        food: 'bread', productId: 'milk_bread', equipment: ['oven_premium', 'display_premium', 'seat_lounge']
       });
     });
     expect(createdStore.products.milk_bread.stock).toBe(10);
+    expect(createdStore.setupCost).toBe(112000);
+    expect(createdStore.customerBoost).toBeCloseTo(0.40, 5);
+    expect(createdStore.equipment.map(item => item.name)).toEqual(['대형 데크 오븐', '프리미엄 쇼케이스', '베이커리 라운지']);
 
-    const initialMoney = 200000 - 30000;
+    const initialMoney = 200000 - createdStore.setupCost;
     await expect.poll(async () => {
       const state = await requestState(student);
       const store = state.stores.find(item => item.id === createdStore.id);
