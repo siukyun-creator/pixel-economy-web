@@ -41,6 +41,33 @@ let wholesaleShop = null;
 const ingredientCosts={milk_bread:1200,croissant:1400,cake:2600,coffee:900,donut:1000,cookie:700,pizza:3200,burger:2400,fries:900,orange_juice:1100,strawberry_smoothie:1800,lemonade:1000,steak:6500,samgyeopsal:4800,galbi:6200};
 const retailPrices={milk_bread:3500,croissant:3800,cake:6500,coffee:4500,donut:3000,cookie:2500,pizza:15000,burger:6500,fries:3500,orange_juice:4000,strawberry_smoothie:5500,lemonade:4500,steak:19000,samgyeopsal:15000,galbi:18000};
 const foods = { bread:{name:'베이커리',emoji:'🥐'}, cafe:{name:'카페',emoji:'☕'}, pizza:{name:'피자·분식',emoji:'🍕'}, juice:{name:'음료 가게',emoji:'🧃'}, meat:{name:'고깃집',emoji:'🥩'} };
+const STORE_EQUIPMENT = {
+  bread: [
+    {id:'oven',label:'오븐',options:[{id:'oven_basic',name:'소형 오븐',cost:0,boost:0},{id:'oven_pro',name:'컨벡션 오븐',cost:18000,boost:0.10},{id:'oven_premium',name:'대형 데크 오븐',cost:35000,boost:0.18}]},
+    {id:'display',label:'진열대',options:[{id:'display_basic',name:'기본 진열장',cost:0,boost:0},{id:'display_cool',name:'냉장 쇼케이스',cost:12000,boost:0.07},{id:'display_premium',name:'프리미엄 쇼케이스',cost:25000,boost:0.12}]},
+    {id:'seating',label:'손님 공간',options:[{id:'seat_basic',name:'작은 테이블',cost:0,boost:0},{id:'seat_comfort',name:'편안한 좌석',cost:10000,boost:0.05},{id:'seat_lounge',name:'넓은 베이커리 라운지',cost:22000,boost:0.10}]}
+  ],
+  cafe: [
+    {id:'machine',label:'커피 머신',options:[{id:'machine_basic',name:'기본 커피 머신',cost:0,boost:0},{id:'machine_pro',name:'에스프레소 머신',cost:22000,boost:0.12},{id:'machine_premium',name:'프로 바리스타 머신',cost:42000,boost:0.20}]},
+    {id:'ice',label:'제빙·냉장',options:[{id:'ice_basic',name:'소형 냉장고',cost:0,boost:0},{id:'ice_pro',name:'대형 제빙기',cost:16000,boost:0.08},{id:'ice_premium',name:'업소용 제빙 시스템',cost:30000,boost:0.14}]},
+    {id:'seating',label:'손님 공간',options:[{id:'cafe_seat_basic',name:'기본 테이블',cost:0,boost:0},{id:'cafe_seat_pro',name:'감성 테이블 세트',cost:12000,boost:0.06},{id:'cafe_seat_premium',name:'넓은 카페 라운지',cost:26000,boost:0.12}]}
+  ],
+  pizza: [
+    {id:'oven',label:'조리 기계',options:[{id:'pizza_basic',name:'기본 오븐',cost:0,boost:0},{id:'pizza_pro',name:'전문 피자 오븐',cost:20000,boost:0.11},{id:'pizza_premium',name:'대형 화덕 오븐',cost:40000,boost:0.19}]},
+    {id:'prep',label:'조리 설비',options:[{id:'prep_basic',name:'기본 조리대',cost:0,boost:0},{id:'prep_pro',name:'자동 튀김기',cost:14000,boost:0.07},{id:'prep_premium',name:'멀티 조리 시스템',cost:28000,boost:0.13}]},
+    {id:'seating',label:'손님 공간',options:[{id:'pizza_seat_basic',name:'기본 의자',cost:0,boost:0},{id:'pizza_seat_pro',name:'4인 테이블',cost:11000,boost:0.05},{id:'pizza_seat_premium',name:'패밀리 좌석',cost:24000,boost:0.10}]}
+  ],
+  juice: [
+    {id:'blender',label:'음료 기계',options:[{id:'blend_basic',name:'기본 믹서기',cost:0,boost:0},{id:'blend_pro',name:'고속 블렌더',cost:15000,boost:0.10},{id:'blend_premium',name:'업소용 블렌딩 머신',cost:30000,boost:0.18}]},
+    {id:'fridge',label:'냉장 설비',options:[{id:'fridge_basic',name:'소형 냉장고',cost:0,boost:0},{id:'fridge_pro',name:'음료 쇼케이스',cost:13000,boost:0.07},{id:'fridge_premium',name:'대형 냉장 시스템',cost:26000,boost:0.13}]},
+    {id:'seating',label:'손님 공간',options:[{id:'juice_seat_basic',name:'기본 스툴',cost:0,boost:0},{id:'juice_seat_pro',name:'바 테이블',cost:9000,boost:0.05},{id:'juice_seat_premium',name:'테라스 좌석',cost:20000,boost:0.10}]}
+  ],
+  meat: [
+    {id:'grill',label:'고기 구이 기계',options:[{id:'grill_basic',name:'기본 불판',cost:0,boost:0},{id:'grill_pro',name:'연기 흡입 로스터',cost:22000,boost:0.12},{id:'grill_premium',name:'프리미엄 자동 로스터',cost:42000,boost:0.20}]},
+    {id:'vent',label:'환기 설비',options:[{id:'vent_basic',name:'기본 환풍기',cost:0,boost:0},{id:'vent_pro',name:'강력 환기 시스템',cost:18000,boost:0.08},{id:'vent_premium',name:'저소음 공조 시스템',cost:32000,boost:0.14}]},
+    {id:'seating',label:'손님 공간',options:[{id:'meat_seat_basic',name:'기본 테이블',cost:0,boost:0},{id:'meat_seat_pro',name:'편안한 고깃집 좌석',cost:13000,boost:0.06},{id:'meat_seat_premium',name:'프리미엄 룸 좌석',cost:27000,boost:0.12}]}
+  ]
+};
 const foodProducts={milk_bread:{category:'bread',name:'우유 식빵'},croissant:{category:'bread',name:'초코 크루아상'},cake:{category:'bread',name:'딸기 케이크'},coffee:{category:'cafe',name:'아이스 아메리카노'},donut:{category:'cafe',name:'딸기 도넛'},cookie:{category:'cafe',name:'초코 쿠키'},pizza:{category:'pizza',name:'치즈 피자'},burger:{category:'pizza',name:'치즈 버거'},fries:{category:'pizza',name:'감자튀김'},orange_juice:{category:'juice',name:'오렌지 주스'},strawberry_smoothie:{category:'juice',name:'딸기 스무디'},lemonade:{category:'juice',name:'레몬 에이드'},steak:{category:'meat',name:'직화 스테이크'},samgyeopsal:{category:'meat',name:'삼겹살 구이'},galbi:{category:'meat',name:'양념 갈비'}};
 const stockHistory = {};
 const stockOrders = {};
@@ -473,11 +500,16 @@ roomIo.on('connection', socket => {
       if(gameStatus==='paused'||gameStatus==='ended')return msg(socket,'지금은 가게를 만들 수 없어요.');
       if(!shopsEnabled)return msg(socket,'선생님이 가게 만들기를 잠시 꺼 두셨어요.');
       const storeName=String(a.name||'').trim().slice(0,16), sign=String(a.sign||storeName).trim().slice(0,20), food=String(a.food||'bread'), product=foodProducts[String(a.productId||'')];
+      const equipmentOptions=STORE_EQUIPMENT[food]||[];
+      const equipment=(Array.isArray(a.equipment)?a.equipment:[]).map(value=>String(value));
+      const selectedEquipment=equipmentOptions.map(category=>{const option=category.options.find(item=>item.id===equipment.find(id=>category.options.some(candidate=>candidate.id===id)))||category.options[0];return {category:category.id,label:category.label,id:option.id,name:option.name,cost:option.cost,boost:option.boost};});
+      const equipmentCost=selectedEquipment.reduce((sum,item)=>sum+item.cost,0);
+      const customerBoost=selectedEquipment.reduce((sum,item)=>sum+item.boost,0);
       if(p.storeId)return msg(socket,'이미 가게를 운영하고 있어요.');
       if(p.company)return msg(socket,'회사 또는 다른 사업을 창업한 학생은 추가로 가게를 만들 수 없어요.');
       if(wholesaleShop&&wholesaleShop.ownerId===socket.id)return msg(socket,'이미 도매상을 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
-      if(p.money<storeFee)return msg(socket,'가게 개설에는 '+storeFee+'원이 필요해요.');
+      if(p.money<storeFee+equipmentCost)return msg(socket,'가게 개설비와 설비 구매비로 '+(storeFee+equipmentCost).toLocaleString('ko-KR')+'원이 필요해요.');
       const index=stores.length, slot=index<15?{x:-16-7.5*index,z:-15,face:1}:index<30?{x:-33-7.5*(index-15),z:15,face:-1}:{x:-16-7.5*((index-30)%15),z:-25,face:1}, x=slot.x, z=slot.z, face=slot.face;
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
@@ -490,8 +522,8 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee,totalCosts:storeFee,createdAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
-      p.money-=storeFee;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;
