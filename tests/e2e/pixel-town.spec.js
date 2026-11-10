@@ -440,3 +440,67 @@ test('마트와 도매상 가격 비교, 메뉴 이름 편집, 회사별 개별 
   await page.screenshot({path:path.join(resultsDir,'screenshots','mart-wholesale-menu-stock-ui.png'),fullPage:true});
   await page.close();
 });
+
+
+test('요리 타이밍 표시·주방 전체 화면과 가게 창업 단계 구성을 확인한다', async ({ browser, baseURL }) => {
+  test.setTimeout(60000);
+  browserErrors = [];
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  collectBrowserErrors(page);
+  await page.goto(baseURL);
+  await page.locator('#gameArea').evaluate(area => {
+    area.style.display = 'block';
+    document.querySelector('#login').style.display = 'none';
+  });
+
+  await page.evaluate(() => {
+    myId = 'cook-ui-owner';
+    players = [{ id: myId, name: '요리학생', money: 200000, bank: 0, loan: 0, storeId: 'cook-ui-store', connected: true }];
+    latestState = {
+      players,
+      stores: [{
+        id: 'cook-ui-store', ownerId: myId, name: '테스트 베이커리', food: 'bread',
+        productId: 'milk_bread', productName: '우유 식빵', price: 3500, stock: 10,
+        products: { milk_bread: { stock: 10, price: 3500, ingredients: 3 } },
+        menuNames: {}
+      }],
+      companies: [], stocks: {}, stockHistory: {}, taxRate: .05, gameStatus: 'running', storeFee: 30000
+    };
+    openMenu('kitchen');
+  });
+
+  await expect(page.locator('#menuPanel')).toHaveClass(/cook-fullscreen/);
+  await expect(page.locator('body')).toHaveClass(/cookingMode/);
+  await expect(page.locator('#cookGoodZone')).toBeVisible();
+  await expect(page.locator('#cookStart')).toBeVisible();
+  fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-cooking-timing.png'), fullPage: false });
+
+  await page.evaluate(() => startCookGame());
+  await expect(page.locator('#cookStop')).toBeVisible();
+  const firstPosition = await page.locator('#cookMarker').evaluate(marker => marker.style.left);
+  await page.waitForTimeout(450);
+  const nextPosition = await page.locator('#cookMarker').evaluate(marker => marker.style.left);
+  expect(nextPosition).not.toBe(firstPosition);
+  const zoneLeft = await page.locator('#cookGoodZone').evaluate(zone => parseFloat(zone.style.left));
+  expect(zoneLeft).toBeGreaterThanOrEqual(30);
+  expect(zoneLeft).toBeLessThanOrEqual(50);
+  await page.evaluate(() => stopCookGame());
+  await expect(page.locator('#cookResult')).toContainText('요리 점수');
+
+  await page.evaluate(() => {
+    players[0].storeId = null;
+    latestState.stores = [];
+    openMenu('createStore');
+  });
+  const panels = page.locator('.storeWizardPanel');
+  await expect(panels).toHaveCount(3);
+  await expect(panels.nth(0)).toContainText('가게 이름');
+  await expect(panels.nth(0)).toContainText('간판 문구');
+  await expect(panels.nth(0)).toContainText('업종 선택');
+  await expect(panels.nth(0).locator('#newStoreName')).toBeVisible();
+  await expect(panels.nth(1)).toContainText('기계와 물건');
+  await expect(panels.nth(2)).toContainText('가게 개설');
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-store-wizard-fixed.png'), fullPage: false });
+  await page.close();
+});
