@@ -268,7 +268,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     expect(state.stores.find(entry => entry.id === store.id).menuNames.milk_bread).toBe('경제 특제 식빵');
     const moneyBeforeMart = playerFrom(state).money;
     state = await act(student, { type: 'martBuyIngredients', productId: 'milk_bread', amount: 2 });
-    expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(4);
+    expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(2);
     expect(playerFrom(state).money).toBe(moneyBeforeMart - 9600);
     expect(state.stores.find(entry => entry.id === store.id).purchaseHistory.at(-1).source).toBe('마트');
     const companyNotice = new Promise(resolve => student.once('notice', resolve));
@@ -365,7 +365,7 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
     const receiptPromise = new Promise(resolve => student.once('receiptIssued', resolve));
     state = await act(student, { type: 'wholesaleCheckout', items: [{ productId: 'milk_bread', amount: 2 }] });
     expect((await receiptPromise).total).toBe(3400);
-    expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(2);
+    expect(state.stores.find(entry => entry.id === store.id).products.milk_bread.ingredients).toBe(4);
     state = await act(student, { type: 'cook', productId: 'milk_bread', score: 80 });
     const cookedStore = state.stores.find(entry => entry.id === store.id);
     expect(cookedStore.products.milk_bread.ingredients).toBe(3);
