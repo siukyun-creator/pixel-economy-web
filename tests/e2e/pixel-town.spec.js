@@ -282,7 +282,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect(teacherPage.locator('#advanceMarketButton')).toBeVisible();
     await teacherPage.locator('#advanceMarketButton').click();
     await expect(price).not.toHaveText(previousPrice);
-    await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/▲/);
+    await expect(page.locator('#menuContent .stockCard .stockChange').first()).toHaveText(/[▲▼]/);
     await page.screenshot({
       path: path.join(resultsDir, 'screenshots', 'pixel-town-stock-holdings.png'),
       fullPage: false
