@@ -414,3 +414,28 @@ test('학생·선생님 세금 내역과 업종별 가게 3D 디자인을 확인
   await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-sector-store-designs.png'), fullPage: false });
   await page.close();
 });
+
+test('마트와 도매상 가격 비교, 메뉴 이름 편집, 회사별 개별 주가 그래프를 확인한다', async ({ browser, baseURL }) => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(baseURL);
+  await page.locator('#gameArea').evaluate(area => { area.style.display = 'block'; document.querySelector('#login').style.display = 'none'; });
+  const result = await page.evaluate(() => {
+    myId='menu-owner';
+    const catalog=FOOD_PRODUCTS.bread;
+    players=[{id:myId,name:'메뉴사장',money:200000,bank:0,loan:0,taxPaid:0,taxHistory:[],shares:{},inventory:{},connected:true}];
+    latestState={players,stores:[{id:'s1',ownerId:myId,name:'빵집',food:'bread',productId:'milk_bread',stock:4,price:3500,menuNames:{milk_bread:'사장님표 식빵'},products:{milk_bread:{stock:4,price:3500,ingredients:3}}}],wholesaleShop:{name:'도매상',ownerId:'other',owner:'도매사장',inventory:{milk_bread:{stock:20,cost:1200,price:1700}}},stocks:{AAA:{name:'항공회사',price:1000}},stockHistory:{AAA:[1000,1050,1030]},companies:[],taxRate:.05};
+    menu='mart';drawMenu();const martText=document.querySelector('#menuContent').innerText;
+    menu='wholesale';drawMenu();const wholesaleText=document.querySelector('#menuContent').innerText;
+    menu='kitchen';drawMenu();const kitchenText=document.querySelector('#menuContent').innerText;
+    menu='stocks';drawMenu();updateStockCards(latestState);drawStockChart();
+    return {martText,wholesaleText,kitchenText,graphCount:document.querySelectorAll('.companyStockChart').length,customName:storeMenuName(latestState.stores[0],catalog[0])};
+  });
+  expect(result.martText).toContain('PIXEL MART');
+  expect(result.martText).toContain('4,800원');
+  expect(result.wholesaleText).toContain('마트보다 3,100원 저렴해요');
+  expect(result.kitchenText).toContain('사장님표 식빵');
+  expect(result.graphCount).toBe(1);
+  expect(result.customName).toBe('사장님표 식빵');
+  await page.screenshot({path:path.join(resultsDir,'screenshots','mart-wholesale-menu-stock-ui.png'),fullPage:true});
+  await page.close();
+});
