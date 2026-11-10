@@ -224,6 +224,14 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect(page.locator('#game canvas').first()).toBeVisible();
     await expect(page.locator('#lobbyOverlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(0);
+    await expect.poll(() => page.evaluate(() => {
+      const door = world.children.find(object =>
+        object.material?.color?.getHex() === 0x65432c &&
+        Math.abs(object.position.x - 22) < 0.1 &&
+        Math.abs(object.position.y - 0.8) < 0.1
+      );
+      return door ? Math.sign(door.position.z - (-17)) : 0;
+    })).toBe(-1);
     await expect.poll(() => page.evaluate(() =>
       world.children.filter(object =>
         object.material?.color?.getHex() === 0x8a5a35 &&
