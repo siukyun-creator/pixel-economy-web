@@ -616,20 +616,20 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
 .moreMenu>summary{display:flex;align-items:center;justify-content:center;min-height:40px;padding:8px 13px;border:1px solid #e9dfc5;border-radius:12px;background:#fffdf7;color:#544a31;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;list-style:none}
 .moreMenu>summary::-webkit-details-marker{display:none}
 .moreMenu[open]>summary{background:#fff3c8;border-color:#dfc05a}
-.moreMenuList{position:absolute;top:calc(100% + 8px);right:0;z-index:40;display:grid;grid-template-columns:1fr 1fr;gap:7px;width:min(330px,calc(100vw - 24px));padding:10px;border:1px solid #e5d7ae;border-radius:15px;background:#fffef8;box-shadow:0 14px 38px #4e401d30}
+.moreMenuList{position:fixed;top:112px;right:12px;z-index:100;display:grid;grid-template-columns:1fr 1fr;gap:7px;width:min(330px,calc(100vw - 24px));padding:10px;border:1px solid #e5d7ae;border-radius:15px;background:#fffef8;box-shadow:0 14px 38px #4e401d30}
 .moreMenuList button{min-height:44px;padding:10px 9px;background:#fff8df!important;color:#514526!important;border:1px solid #e8d9aa!important;box-shadow:none!important;font-size:12px}
 #teacher:not(.teacherAdvanced) .teacherGrid,
 #teacher:not(.teacherAdvanced) #teacherMarketControls,
-#teacher:not(.teacherAdvanced) .teacherRosterHead,
-#teacher:not(.teacherAdvanced) #roster,
-#teacher:not(.teacherAdvanced) #teacherQuarterRanking{display:none!important}
-#teacher:not(.teacherAdvanced) .teacherActions button:nth-child(n+5){display:none}
-#teacher.teacherAdvanced .teacherGrid{display:grid}
-#teacher.teacherAdvanced .teacherGrid>.teacherCard:first-child{display:none}
-#teacher.teacherAdvanced #teacherMarketControls{display:block}
-#teacher.teacherAdvanced .teacherRosterHead,
-#teacher.teacherAdvanced #roster{display:grid}
-#teacher.teacherAdvanced .teacherActions button:nth-child(n+5){display:inline-flex}
+#teacher:not(.teacherAdvanced) .teacherSection:has(#teacherTaxReport),
+#teacher:not(.teacherAdvanced) .teacherSection:has(#roster),
+#teacher:not(.teacherAdvanced) .teacherStats>div:nth-child(n+5){display:none!important}
+#teacher:not(.teacherAdvanced) .teacherActions button:nth-child(n+5){display:none!important}
+#teacher.teacherAdvanced .teacherGrid{display:grid!important}
+#teacher.teacherAdvanced .teacherGrid>.teacherCard:first-child{display:none!important}
+#teacher.teacherAdvanced #teacherMarketControls{display:block!important}
+#teacher.teacherAdvanced .teacherSection:has(#teacherTaxReport),
+#teacher.teacherAdvanced .teacherSection:has(#roster){display:block!important}
+#teacher.teacherAdvanced .teacherActions button:nth-child(n+5){display:inline-flex!important}
 #teacher .teacherQuickNotice{display:flex;gap:8px;align-items:center;margin-top:10px}
 #teacher .teacherQuickNotice input{flex:1;min-width:0;min-height:44px}
 #teacher .teacherActions button{min-height:46px;padding:10px 16px}
@@ -660,6 +660,7 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
  #jump{bottom:22px}
 }
 @media(min-width:701px) and (max-width:1100px) and (orientation:landscape){
+ .moreMenuList{top:72px;right:12px}
  header{flex-wrap:nowrap}
  .menus{order:initial;flex:1 1 auto}
  #hud{top:76px}
