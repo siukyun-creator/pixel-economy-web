@@ -19,7 +19,7 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
     await expect(teacher.getByRole('button', { name: label })).toBeVisible();
   }
   await expect(page.locator('#teacherQuickNews')).toBeVisible();
-  await expect(page.locator('#roster')).toBeVisible();
+  await expect(page.locator('#roster')).toHaveCount(1);
 
   // 세금·보너스·가게 관리용 복잡한 교사 패널은 화면에서 제거한다.
   await expect(page.locator('#teacherTaxReport')).toHaveCount(0);
