@@ -609,8 +609,79 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
 .storeRentSummary small{display:block;color:#627d91;font-size:11px}
 .storeRentSummary b{display:block;color:#214e6c;font-size:15px;margin-top:4px}
 @media(max-width:600px){.teacherQuickNotice{align-items:stretch;flex-direction:column}.storeRentSummary{grid-template-columns:1fr 1fr}}
+
+/* Simple navigation + tablet-first touch layout */
+.menus{min-width:0;overflow:visible}
+.moreMenu{position:relative;flex:0 0 auto;align-self:center}
+.moreMenu>summary{display:flex;align-items:center;justify-content:center;min-height:40px;padding:8px 13px;border:1px solid #e9dfc5;border-radius:12px;background:#fffdf7;color:#544a31;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;list-style:none}
+.moreMenu>summary::-webkit-details-marker{display:none}
+.moreMenu[open]>summary{background:#fff3c8;border-color:#dfc05a}
+.moreMenuList{position:absolute;top:calc(100% + 8px);right:0;z-index:40;display:grid;grid-template-columns:1fr 1fr;gap:7px;width:min(330px,calc(100vw - 24px));padding:10px;border:1px solid #e5d7ae;border-radius:15px;background:#fffef8;box-shadow:0 14px 38px #4e401d30}
+.moreMenuList button{min-height:44px;padding:10px 9px;background:#fff8df!important;color:#514526!important;border:1px solid #e8d9aa!important;box-shadow:none!important;font-size:12px}
+#teacher:not(.teacherAdvanced) .teacherGrid,
+#teacher:not(.teacherAdvanced) #teacherMarketControls,
+#teacher:not(.teacherAdvanced) .teacherRosterHead,
+#teacher:not(.teacherAdvanced) #roster,
+#teacher:not(.teacherAdvanced) #teacherQuarterRanking{display:none!important}
+#teacher:not(.teacherAdvanced) .teacherActions button:nth-child(n+5){display:none}
+#teacher.teacherAdvanced .teacherGrid{display:grid}
+#teacher.teacherAdvanced .teacherGrid>.teacherCard:first-child{display:none}
+#teacher.teacherAdvanced #teacherMarketControls{display:block}
+#teacher.teacherAdvanced .teacherRosterHead,
+#teacher.teacherAdvanced #roster{display:grid}
+#teacher.teacherAdvanced .teacherActions button:nth-child(n+5){display:inline-flex}
+#teacher .teacherQuickNotice{display:flex;gap:8px;align-items:center;margin-top:10px}
+#teacher .teacherQuickNotice input{flex:1;min-width:0;min-height:44px}
+#teacher .teacherActions button{min-height:46px;padding:10px 16px}
+#teacher .teacherServerBar{flex-wrap:wrap}
+#teacher .teacherServerBar>div{flex:1 1 180px}
+#teacher .teacherStats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(min-width:701px) and (max-width:1100px){
+ header{top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:7px;padding:8px 10px}
+ header h1{font-size:13px}
+ #connection{margin-left:auto}
+ .menus{order:3;flex:1 0 100%;max-width:100%;overflow-x:auto;scrollbar-width:none}
+ .menus::-webkit-scrollbar{display:none}
+ .menus button,.moreMenu>summary{min-height:46px;padding:10px 13px;font-size:13px}
+ #hud{top:116px;left:10px;width:180px;padding:12px}
+ #cameraHint,#moveHint{display:none}
+ #mapPanel{width:clamp(160px,20vw,210px);right:10px;bottom:10px}
+ #touchPad{left:14px;bottom:16px;grid-template-columns:58px 58px 58px;grid-template-rows:58px 58px 58px;gap:5px}
+ #touchPad button{font-size:24px;border-radius:15px;touch-action:none}
+ #jump{right:18px;bottom:22px;width:88px;height:88px;font-size:17px}
+ #menuPanel.menu-fullscreen:not(.cook-fullscreen){max-height:calc(100dvh - 20px)!important}
+}
+@media(min-width:701px) and (max-width:1100px) and (orientation:portrait){
+ header{min-height:100px}
+ #hud{top:120px}
+ #mapPanel{top:120px;bottom:auto;width:160px}
+ #mapPanel .mapLegend{display:none}
+ #touchPad{bottom:16px}
+ #jump{bottom:22px}
+}
+@media(min-width:701px) and (max-width:1100px) and (orientation:landscape){
+ header{flex-wrap:nowrap}
+ .menus{order:initial;flex:1 1 auto}
+ #hud{top:76px}
+ #mapPanel{width:clamp(145px,17vw,190px)}
+ #touchPad{grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px}
+ #jump{width:78px;height:78px}
+}
+@media(max-width:700px){
+ .menus{overflow-x:auto;overflow-y:visible}
+ .moreMenu>summary{min-height:38px;padding:8px 10px;font-size:11px}
+ .moreMenuList{position:fixed;top:100px;right:8px;grid-template-columns:1fr 1fr}
+ #teacher .teacherStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #teacher .teacherServerBar button{min-height:42px}
+}
+@media(hover:none) and (pointer:coarse){
+ button,.moreMenu>summary{touch-action:manipulation}
+ .menus button{min-height:44px}
+ #menuContent button{min-height:44px}
+}
+
 </style></head><body>
-<header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('news')">📰 기업 뉴스</button><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('taxHistory')">🧾 세금 내역</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('companyProducts')">🛍️ 기업 제품</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('mart')">🛒 마트</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도 숨기기</button><button class="refreshBtn" onclick="fullScreenGame()">⛶ 전체 화면</button><span id="connection">서버 연결 중</span></header>
+<header><h1>🌆 PIXEL TOWN</h1><nav class="menus"><button onclick="openMenu('bank')">🏦 은행</button><button onclick="openMenu('stocks')">📈 주식</button><button onclick="openMenu('myStore')">🏪 내 가게</button><button onclick="openMenu('businessHub')">🏗️ 사업 시작</button><button onclick="openMenu('kitchen')">🍳 주방</button><button onclick="openMenu('mart')">🛒 마트</button><details class="moreMenu"><summary>더보기 ▾</summary><div class="moreMenuList"><button onclick="openMenu('news')">📰 기업 뉴스</button><button onclick="openMenu('taxHistory')">🧾 세금 내역</button><button onclick="openMenu('companyProducts')">🛍️ 기업 제품</button><button onclick="openMenu('wholesale')">📦 도매상</button><button onclick="openMenu('economyClass')">📚 경제 교실</button><button onclick="openMenu('settings')">⚙️ 설정</button><button onclick="fullScreenGame()">⛶ 전체 화면</button></div></details></nav><button class="refreshBtn" id="mapToggleBtn" onclick="toggleMap()">🗺️ 지도</button><span id="connection">서버 연결 중</span></header>
 <section id="login"><h2>🏘️ 교실 입장</h2><div class="row"><input id="name" maxlength="12" placeholder="이름 또는 별명"><input id="room" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" style="max-width:112px" placeholder="4자리 코드"><button id="joinButton" onclick="join()">입장</button></div><label for="characterChoice" style="display:block;margin-top:12px;font-weight:800">🧍 입장할 캐릭터 선택</label><select id="characterChoice" style="width:100%;padding:10px;border-radius:9px;background:#fff;color:#20364b" onchange="localStorage.setItem('pixelTownCharacter',this.value);updateCharacterPreview(this.value)"><option value="male-a">남학생 A</option><option value="male-b">남학생 B</option><option value="male-c">남학생 C</option><option value="male-d">남학생 D</option><option value="male-e">남학생 E</option><option value="male-f">남학생 F</option><option value="male-g">남학생 G</option><option value="female-a">여학생 A</option><option value="female-b">여학생 B</option><option value="female-c">여학생 C</option><option value="female-d">여학생 D</option><option value="female-e">여학생 E</option><option value="female-f">여학생 F</option><option value="knight">기사</option><option value="raider">모험가</option></select><div id="characterPreviewWrap" style="margin:10px 0 6px;padding:10px;background:#243b54;border:1px solid #45627d;border-radius:12px;text-align:center"><canvas id="characterPreview" aria-label="선택한 캐릭터 미리보기" style="display:block;width:100%;max-width:280px;height:190px;margin:auto"></canvas><b id="characterPreviewName" style="display:block;margin-top:4px;color:#fff">남학생 A 미리보기</b><small style="color:#c5d8e8">캐릭터를 바꾸면 실제 게임 모델로 미리 보여줘요.</small></div><p class="small">선생님이 알려준 숫자 4자리 교실 코드를 입력하세요. 최대 30명.</p><p class="small" style="color:#9a741b">🔁 다시 들어올 때는 전에 사용한 이름을 똑같이 입력하세요. 기존 돈과 가게가 이어져요.</p><p id="loginNotice" style="color:#ffdf82;min-height:20px"></p><hr><h3>👩‍🏫 교사용</h3><div class="row"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="교사 인증 코드"><button onclick="createClassroom()">＋ 새 교실 만들기</button></div><p class="small">교사 인증 코드를 입력하면 새 교실과 4자리 접속 코드가 만들어져요.</p></section>
 <section id="gameArea"><div id="hud"><div id="turnHud" class="turnHud">턴 준비 중</div><div id="newsTicker" class="newsTicker" aria-live="polite">📰 오늘의 마을 뉴스가 여기에 표시돼요.</div><div class="hudMoney"><span>내 보유 현금</span><b id="cash">500원</b><small id="taxHud">세금 5% · 수입 받을 때 자동 차감</small></div><div class="hudStats"><span>🏦 <b id="bank">0원</b></span><span>💳 <b id="loan">빚 0원</b></span><span>💼 <b id="job">무직</b></span><span>👥 <b id="count">0/30</b></span></div></div><div id="game"></div><div id="mapPanel"><div class="mapHead"><b>🗺️ 실시간 마을 지도</b><button onclick="toggleMapSize()">크게 보기 ⛶</button></div><canvas id="townMap" width="420" height="420" onclick="toggleMapSize()" title="눌러서 크게/작게 보기"></canvas><p class="mapLegend"><span><i class="lgMe"></i>나</span><span><i class="lgFriend"></i>친구</span><span><i class="lgStore"></i>가게</span><span class="lgTip">지도를 누르면 크게 보여요</span></p></div><div id="cameraHint">🖱️ 화면을 드래그해 시점 회전</div><div id="moveHint">WASD / 방향키 이동 · 스페이스 점프</div><button id="storePrompt" onclick="enterNearbyStore()">🚪 가게 들어가기</button><button id="wholesalePrompt" onclick="enterNearbyWholesale()">📦 도매상 들어가기</button><div id="lobbyOverlay"><h2 id="lobbyTitle">⏳ 수업 시작 대기 중</h2><p id="lobbyMessage">선생님이 시작 버튼을 누르면 마을 경제가 시작돼요.</p></div>
 <div id="touchPad"><span class="empty"></span><button data-dir="forward">▲</button><span class="empty"></span><button data-dir="left">◀</button><button data-dir="back">▼</button><button data-dir="right">▶</button></div><button id="jump" onpointerdown="jumpStart()" onpointerup="jumpEnd()" onpointerleave="jumpEnd()">점프</button>
