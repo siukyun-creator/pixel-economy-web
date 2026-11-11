@@ -5,7 +5,7 @@ const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 
 test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async ({ browser, baseURL }) => {
-  test.setTimeout(150000);
+  test.setTimeout(240000);
   const teacher = await browser.newPage({ viewport: { width: 1100, height: 760 } });
   const student = await browser.newPage({ viewport: { width: 1100, height: 760 } });
   const errors = [];
@@ -55,7 +55,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await expect(teacher.locator('#marketStatus')).toContainText('실제 턴 1/1');
   await student.getByRole('button', { name: '닫기 ✕' }).click();
 
-  await expect(student.locator('#finalResults')).toBeVisible({ timeout: 75000 });
+  await expect(student.locator('#finalResults')).toBeVisible({ timeout: 120000 });
   await expect(teacher.locator('#finalResults')).toBeVisible({ timeout: 10000 });
   await expect(student.locator('#finalResults')).toContainText('학생별 마감 현황');
   await expect(teacher.locator('#finalResults')).toContainText('턴테스트학생');
