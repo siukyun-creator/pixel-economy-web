@@ -43,9 +43,10 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
     await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
     await expect(page.locator('#teacher')).toBeVisible();
     await expect(page.locator('#teacherRoomCode')).toHaveText(/^\d{4}$/);
-    await expect(page.locator('#teacherMarketControls')).toBeVisible();
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
     await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-teacher-dashboard.png'), fullPage: true });
+    await page.getByRole('button', { name: '⚙ 추가 설정' }).click();
+    await expect(page.locator('#teacherMarketControls')).toBeVisible();
     await page.locator('#teacherMarketControls details summary').click();
     await page.locator('#marketDay').selectOption('5');
     await page.locator('#marketTime').fill('14:45');
@@ -160,7 +161,17 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   expect(panelBounds.y).toBeGreaterThanOrEqual(0);
   expect(panelBounds.x+panelBounds.width).toBeLessThanOrEqual(panelBounds.viewportWidth);
   expect(panelBounds.y+panelBounds.height).toBeLessThanOrEqual(panelBounds.viewportHeight);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.locator('#touchPad')).toBeVisible();
+  await expect(page.locator('#jump')).toBeVisible();
   await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-shop-tablet.png'),fullPage:false});
+  await page.setViewportSize({width:1024,height:768});
+  const landscapeBounds=await page.locator('#menuPanel').evaluate(panel=>{const{x,y,width,height}=panel.getBoundingClientRect();return{x,y,width,height,viewportWidth:innerWidth,viewportHeight:innerHeight}});
+  expect(landscapeBounds.x).toBeGreaterThanOrEqual(0);
+  expect(landscapeBounds.y).toBeGreaterThanOrEqual(0);
+  expect(landscapeBounds.x+landscapeBounds.width).toBeLessThanOrEqual(landscapeBounds.viewportWidth);
+  expect(landscapeBounds.y+landscapeBounds.height).toBeLessThanOrEqual(landscapeBounds.viewportHeight);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.goto('about:blank');await page.close();
 
 });
