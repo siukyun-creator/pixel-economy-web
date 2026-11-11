@@ -394,7 +394,8 @@ roomIo.on('connection', socket => {
     p.x = Math.max(-140, Math.min(140, Number(d.x) || 0));
     p.z = Math.max(-140, Math.min(140, Number(d.z) || 0));
     p.jump = !!d.jump;
-    broadcast();
+    const now = Date.now();
+    if (now - Number(p._lastMoveBroadcastAt || 0) >= 120) { p._lastMoveBroadcastAt = now; broadcast(); }
   });
   // 이전 버전 호환용 이동 이벤트
   socket.on('move', d => {
@@ -593,7 +594,7 @@ roomIo.on('connection', socket => {
       const productId=String(a.productId||st.productId),product=foodProducts[productId];if(!product||product.category!==st.food)return msg(socket,'판매 메뉴를 찾을 수 없어요.');
       st.products=st.products||{[st.productId]:{stock:st.stock||0,price:st.price||20,ingredients:0}};st.products[productId]=st.products[productId]||{stock:0,price:retailPrices[productId]||3500,ingredients:0};const item=st.products[productId],qty=bounded(a.amount,1,10),cost=item.price*qty;
       if(!Number.isInteger(Number(a.amount))||Number(a.amount)<1||Number(a.amount)>10)return msg(socket,'구매 수량은 1~10개로 입력해 주세요.');if(item.stock<qty)return msg(socket,'재고가 부족해요. 현재 '+item.stock+'개 있어요.');if(p.money<cost)return msg(socket,'돈이 부족해요. 필요 '+cost+'원 · 보유 '+p.money+'원');
-      p.money-=cost;item.stock-=qty;if(productId===st.productId)st.stock=item.stock;st.salesHistory=st.salesHistory||[];st.salesHistory.push({at:Date.now(),amount:cost});if(st.salesHistory.length>30)st.salesHistory.shift();const owner=players.get(st.ownerId);if(owner){owner.money+=cost;owner.earnedTotal=(owner.earnedTotal||0)+cost;}msg(socket,'🛍️ '+product.name+' '+qty+'개 구매 성공! -'+cost.toLocaleString('ko-KR')+'원 · 잔액 '+p.money.toLocaleString('ko-KR')+'원 · 남은 재고 '+item.stock+'개');socket.emit('storePurchaseResult',{store:st});socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:st.name,buyer:p.name,lines:[{productId,name:product.name,quantity:qty,unitPrice:item.price,subtotal:cost}],total:cost,payment:'현금',balance:p.money});
+      p.money-=cost;item.stock-=qty;if(productId===st.productId)st.stock=item.stock;st.salesHistory=st.salesHistory||[];st.salesHistory.push({at:Date.now(),amount:cost});st.revenue=(st.revenue||0)+cost;if(st.salesHistory.length>100)st.salesHistory.shift();const owner=players.get(st.ownerId);if(owner){owner.money+=cost;owner.earnedTotal=(owner.earnedTotal||0)+cost;}msg(socket,'🛍️ '+product.name+' '+qty+'개 구매 성공! -'+cost.toLocaleString('ko-KR')+'원 · 잔액 '+p.money.toLocaleString('ko-KR')+'원 · 남은 재고 '+item.stock+'개');socket.emit('storePurchaseResult',{store:st});socket.emit('receiptIssued',{receiptNo:'PT-'+Date.now().toString().slice(-8),date:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}),seller:st.name,buyer:p.name,lines:[{productId,name:product.name,quantity:qty,unitPrice:item.price,subtotal:cost}],total:cost,payment:'현금',balance:p.money});
     }
         else if(a.type==='storeRestock'){
       const st=stores.find(v=>v.id===String(a.storeId));
@@ -847,7 +848,7 @@ roomIo.on('connection', socket => {
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
-    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){const restarting=gameStatus==='ended';gameStatus='running';finalAwards=null;newsFeed=[];news='마을 경제가 시작됐어요!';setMarketClock(0,'09:00',marketClock.turnMinutes);turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
+    if(c.type==='start' && (gameStatus==='waiting'||gameStatus==='paused'||gameStatus==='ended')){const restarting=gameStatus==='ended';gameStatus='running';finalAwards=null;newsFeed=[];quarterRankings=[];quarterBaseline={companies:{},stores:{}};news='마을 경제가 시작됐어요!';setMarketClock(0,'09:00',marketClock.turnMinutes);turnState.turnNumber=1;turnState.summary=null;turnState.initialAssets={};beginTurn();}
     if(c.type==='pause' && gameStatus==='running'){turnState.remainingMs=Math.max(0,(turnState.endsAt||Date.now())-Date.now());turnState.endsAt=null;gameStatus='paused';}
     if(c.type==='resume' && gameStatus==='paused'){gameStatus='running';turnState.endsAt=Date.now()+(turnState.remainingMs??turnConfig.durationMinutes*60000);turnState.remainingMs=null;}
     if(c.type==='end'){gameStatus='ended';turnState.endsAt=null;turnState.remainingMs=null;finalAwards=calculateFinalAwards();}
