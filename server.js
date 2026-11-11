@@ -100,6 +100,16 @@ let storeFee = 30000;
 let storeCustomerRate = 50;
 const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
+  // Movement events can arrive ~12 times per second per student. Sending the full
+  // state for each one overloads slower tablets, so movement is coalesced to ~8/s.
+  let movePending = null;
+  let lastMoveBroadcast = 0;
+  const broadcastMove = () => {
+    const wait = 120 - (Date.now() - lastMoveBroadcast);
+    if (wait <= 0) { lastMoveBroadcast = Date.now(); broadcast(); return; }
+    if (movePending) return;
+    movePending = setTimeout(() => { movePending = null; lastMoveBroadcast = Date.now(); broadcast(); }, wait);
+  };
 const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
 function bounded(n, lo, hi) { return Math.max(lo, Math.min(hi, Math.floor(Number(n) || 0))); }
@@ -184,16 +194,72 @@ const COMPANY_NEWS = {
     ['품질 인증 획득', '제품 품질을 인정받아 소비자 신뢰가 높아졌어요.'],
     ['유명 매장과 납품 계약', '새로운 판매처가 생겨 고객 방문이 늘어날 전망이에요.'],
     ['친환경 생산 호평', '환경을 생각하는 생산 방식이 좋은 평가를 받았어요.'],
-    ['고객 만족도 상승', '친절한 서비스와 좋은 품질로 단골 고객이 늘었어요.']
+    ['고객 만족도 상승', '친절한 서비스와 좋은 품질로 단골 고객이 늘었어요.'],
+    ['SNS에서 화제가 됐어요', '학생들 사이에서 입소문이 나며 찾는 손님이 늘었어요.'],
+    ['깜짝 할인 행사 대성공', '할인 행사로 하루 판매량이 크게 늘었어요.'],
+    ['마을 신문에 소개됐어요', '마을 신문에 실린 뒤 처음 보는 손님이 많이 찾아왔어요.'],
+    ['새 포장 인기', '예쁜 새 포장이 선물용으로 인기를 끌고 있어요.'],
+    ['생산 효율 개선', '생산 과정을 정리해 같은 시간에 더 많은 제품을 만들 수 있게 됐어요.'],
+    ['단골 감사 이벤트 호응', '단골 고객 감사 이벤트에 많은 학생이 참여했어요.'],
+    ['투자자들이 주목해요', '꾸준한 실적 덕분에 투자자들의 관심이 모이고 있어요.']
   ],
   bad: [
     ['제품 결함 논란', '일부 제품의 품질 문제가 알려져 고객 관심이 줄었어요.'],
     ['원재료 가격 급등', '생산 비용 부담이 커져 수익 전망이 나빠졌어요.'],
     ['배송 지연 발생', '배송이 늦어져 고객 불만이 늘었어요.'],
     ['경쟁사 신제품 등장', '강력한 경쟁 상품이 등장해 고객이 분산되고 있어요.'],
-    ['광고 논란 발생', '홍보 내용에 대한 논란으로 소비자 신뢰가 낮아졌어요.']
-  ]
+    ['광고 논란 발생', '홍보 내용에 대한 논란으로 소비자 신뢰가 낮아졌어요.'],
+    ['재고 관리 실수', '재고 정리가 늦어져 인기 상품이 일찍 품절됐어요.'],
+    ['주문 오류 발생', '주문이 잘못 전달되어 손님이 불편을 겪었어요.'],
+    ['궂은 날씨로 손님 감소', '날씨가 나빠 마을을 찾는 사람이 줄었어요.'],
+    ['가격 인상 불만', '가격이 올랐다는 이야기가 퍼지며 손님이 망설이고 있어요.'],
+    ['포장 불량 후기', '포장 상태가 좋지 않다는 후기가 올라왔어요.'],
+    ['인기 상품 단종 소문', '인기 상품이 더 이상 나오지 않는다는 소문이 돌았어요.'],
+    ['부정적인 후기 확산', '부정적인 후기가 퍼지며 고객 신뢰가 흔들렸어요.']
+  ],
+  sector: {
+    electronics: {
+      good: [
+        ['배터리 성능 개선', '오래 쓸 수 있다는 평가를 받아 주문이 늘었어요.'],
+        ['똑똑한 새 기능 발표', '새 기능이 알려지며 써 보려는 학생이 늘었어요.']
+      ],
+      bad: [
+        ['화면 문제 신고', '일부 제품에서 화면 문제가 보고되어 불안이 커졌어요.'],
+        ['부품 수급 지연', '부품이 늦게 들어와 생산 일정이 밀렸어요.']
+      ]
+    },
+    food: {
+      good: [
+        ['신선한 재료 호평', '신선하고 안전한 재료를 쓴다는 점이 좋은 평가를 받았어요.'],
+        ['건강 간식으로 인기', '당이 적은 간식으로 알려져 인기를 끌고 있어요.']
+      ],
+      bad: [
+        ['유통기한 관리 논란', '유통기한 점검이 철저하지 않다는 지적이 나왔어요.'],
+        ['식재료 가격 상승', '재료 값이 올라 이익이 줄어들 것 같아요.']
+      ]
+    },
+    toys: {
+      good: [
+        ['한정판 완판', '한정판이 나오자마자 모두 팔렸어요.'],
+        ['체험 행사 인기', '체험 행사에서 아이들이 크게 좋아했어요.']
+      ],
+      bad: [
+        ['조립 설명서 불만', '설명서가 어렵다는 의견이 많아 반품이 늘었어요.'],
+        ['비슷한 제품 등장', '비슷한 모양의 제품이 나와 고객이 나뉘고 있어요.']
+      ]
+    }
+  }
 };
+// Pick a headline that fits the company's sector and avoid repeating recent ones.
+function pickCompanyNews(company, positive) {
+  const kind = positive ? 'good' : 'bad';
+  const pool = [...COMPANY_NEWS[kind], ...(COMPANY_NEWS.sector[company.sector]?.[kind] || [])];
+  const recent = new Set(newsFeed.slice(0, 5).map(entry => entry.headline));
+  if (company.lastNews) recent.add(company.lastNews);
+  const fresh = pool.filter(item => !recent.has(item[0]));
+  const list = fresh.length ? fresh : pool;
+  return list[Math.floor(Math.random() * list.length)];
+}
 function generateCompanyNews() {
   if (!companies.length) {
     news = '📰 오늘의 마을 소식: 새로운 기업이 생기면 기업 뉴스가 시작돼요.';
@@ -201,7 +267,7 @@ function generateCompanyNews() {
   }
   const company = companies[Math.floor(Math.random() * companies.length)];
   const positive = Math.random() < 0.5;
-  const item = (positive ? COMPANY_NEWS.good : COMPANY_NEWS.bad)[Math.floor(Math.random() * 5)];
+  const item = pickCompanyNews(company, positive);
   const demandChange = positive ? 20 : -25;
   company.customerDemand = Math.max(30, Math.min(180, (company.customerDemand || 100) + demandChange));
   const stockRate = positive ? 0.05 : -0.06;
@@ -297,6 +363,8 @@ function playerResult(player, baseline) {
 }
 function captureTurnBaseline() {
   turnState.baseline = {};
+  turnState.companyBaseline = {};
+  for (const company of companies) turnState.companyBaseline[company.ticker] = Number(company.operatingProfit) || 0;
   for (const player of players.values()) {
     const value = playerAssetValue(player);
     turnState.baseline[player.name] = value;
@@ -315,8 +383,23 @@ function finishTurn() {
   const todayNews = generateCompanyNews();
   companies.forEach(company => { company.lastTurnCustomers = 0; company.lastTurnExpectedCustomers = 0; company.lastTurnSalesRate = 0; });
   stores.forEach(store => { store.lastTurnVisitors = 0; store.lastTurnExpectedVisitors = 0; });
-  const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
-  turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
+  // Rank students by how much their assets changed this turn (profit ranking).
+  const results = [...players.values()]
+    .map(player => playerResult(player, turnState.baseline[player.name]))
+    .sort((a, b) => b.turnChange - a.turnChange || b.totalAssets - a.totalAssets)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+  const companyRanking = companies
+    .map(company => {
+      const operatingProfit = Number(company.operatingProfit) || 0;
+      return {
+        ticker: company.ticker, name: company.name, owner: company.owner,
+        turnProfit: operatingProfit - (Number(turnState.companyBaseline?.[company.ticker]) || 0),
+        operatingProfit, revenue: Number(company.revenue) || 0
+      };
+    })
+    .sort((a, b) => b.turnProfit - a.turnProfit || b.operatingProfit - a.operatingProfit)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+  turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results, companyRanking };
   turnState.turnNumber = endedTurn + 1;
   if (endedTurn >= turnConfig.totalTurns) {
     gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null;
@@ -411,7 +494,7 @@ roomIo.on('connection', socket => {
     p.x = Math.max(-140, Math.min(140, Number(d.x) || 0));
     p.z = Math.max(-140, Math.min(140, Number(d.z) || 0));
     p.jump = !!d.jump;
-    broadcast();
+    broadcastMove();
   });
   // 이전 버전 호환용 이동 이벤트
   socket.on('move', d => {
@@ -419,7 +502,7 @@ roomIo.on('connection', socket => {
     if (!p || !d || gameStatus !== 'running') return;
     p.x = Math.max(-140, Math.min(140, p.x + Math.max(-1,Math.min(1,Number(d.dx)||0))*0.7));
     p.z = Math.max(-140, Math.min(140, p.z + Math.max(-1,Math.min(1,Number(d.dy)||0))*0.7));
-    broadcast();
+    broadcastMove();
   });
   socket.on('enterStore', storeId => {
     const p=players.get(socket.id), st=stores.find(v=>v.id===String(storeId));
