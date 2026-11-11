@@ -3,7 +3,7 @@
 학생 태블릿은 앱 설치 없이 브라우저에서 접속합니다. 서버는 Node.js + Express + Socket.IO입니다.
 
 ## 포함 기능
-- Phaser 마을 화면, 태블릿 터치 방향키
+- three.js 3D 마을 화면, 태블릿 터치 방향키
 - 실시간 최대 30명 입장 제한
 - 일하기, 상품 구매/판매, 예금/출금, 주식 매매, 부동산 구매, 학생 송금
 - 전자기기·식품·장난감/학용품 회사 창업, 제품 생산·판매, 영업이익 집계
@@ -40,3 +40,6 @@ npm run test:e2e
 ```
 
 테스트는 로컬 게임 서버를 자동으로 실행하고 종료합니다. 스크린샷은 `test-results/screenshots/pixel-town-game.png`, 브라우저/서버 오류 로그는 `test-results/`에 저장됩니다. 30명 테스트는 서버 Socket.IO 접속 한도를 검증하며, 호스팅 환경의 용량 측정은 별도로 해야 합니다. HTML 결과는 `npm run test:e2e:report`로 열 수 있습니다.
+
+## 이미지 출처
+- 하늘 배경(`public/assets/sky/`): [Kenney](https://www.kenney.nl) 제공, CC0 1.0. 하단의 라이선스 문구 영역은 잘라서 사용했습니다.

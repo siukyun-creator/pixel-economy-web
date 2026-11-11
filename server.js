@@ -98,7 +98,25 @@ let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
 let storeCustomerRate = 50;
-const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
+// Shop plots are handed out in creation order along the shop street.
+function storeSlot(index) {
+  return index < 15 ? { x: -16 - 7.5 * index, z: -15, face: 1 }
+    : index < 30 ? { x: -33 - 7.5 * (index - 15), z: 15, face: -1 }
+    : { x: -16 - 7.5 * ((index - 30) % 15), z: -25, face: 1 };
+}
+// The nearest plot costs the base fee set by the teacher. The farther a plot is from the
+// town centre (the crossroads at 0,0), the cheaper its rent, down to 50% at the far end.
+const STORE_NEAR_DISTANCE = 22;
+const STORE_FAR_DISTANCE = 140;
+function storeLocationInfo(index) {
+  const slot = storeSlot(index);
+  const distance = Math.hypot(slot.x, slot.z);
+  const ratio = Math.max(0, Math.min(1, (distance - STORE_NEAR_DISTANCE) / (STORE_FAR_DISTANCE - STORE_NEAR_DISTANCE)));
+  const multiplier = 1 - 0.5 * ratio;
+  const fee = Math.round(storeFee * multiplier / 1000) * 1000;
+  return { slot, distance: Math.round(distance), multiplier, fee };
+}
+const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, nextStoreLocation: (() => { const info = storeLocationInfo(stores.length); return { fee: info.fee, distance: info.distance, multiplier: info.multiplier, minFee: Math.round(storeFee * 0.5 / 1000) * 1000 }; })(), storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
   // Movement events can arrive ~12 times per second per student. Sending the full
   // state for each one overloads slower tablets, so movement is coalesced to ~8/s.
@@ -601,8 +619,8 @@ roomIo.on('connection', socket => {
       if(p.company)return msg(socket,'회사 또는 다른 사업을 창업한 학생은 추가로 가게를 만들 수 없어요.');
       if(wholesaleShop&&wholesaleShop.ownerId===socket.id)return msg(socket,'이미 도매상을 운영하고 있어요. 가게와 도매상 중 하나만 운영할 수 있어요.');
       if(!foods[food]||!product||product.category!==food)return msg(socket,'선택한 업종에 맞는 음식을 골라 주세요.');
-      if(p.money<storeFee+equipmentCost)return msg(socket,'가게 개설비와 설비 구매비로 '+(storeFee+equipmentCost).toLocaleString('ko-KR')+'원이 필요해요.');
-      const index=stores.length, slot=index<15?{x:-16-7.5*index,z:-15,face:1}:index<30?{x:-33-7.5*(index-15),z:15,face:-1}:{x:-16-7.5*((index-30)%15),z:-25,face:1}, x=slot.x, z=slot.z, face=slot.face;
+      const index=stores.length, location=storeLocationInfo(index), locationFee=location.fee, slot=location.slot, x=slot.x, z=slot.z, face=slot.face;
+      if(p.money<locationFee+equipmentCost)return msg(socket,'가게 임대료 '+locationFee.toLocaleString('ko-KR')+'원과 설비 구매비 '+equipmentCost.toLocaleString('ko-KR')+'원, 모두 '+(locationFee+equipmentCost).toLocaleString('ko-KR')+'원이 필요해요.');
       const palette=['#e5a84b','#67b7d8','#d9859b','#8fc27a','#a58bd5','#e0c76a'];
       const color=palette.includes(String(a.color))?String(a.color):palette[index%palette.length];
       const wallPalette=['#f4e3c1','#d8e8f5','#f3d6df','#d9ebd1','#d9d1ef','#e6dcae'];
@@ -614,8 +632,8 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,menuNames:{},pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
-      p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,menuNames:{},pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:locationFee+equipmentCost,totalCosts:locationFee+equipmentCost,locationFee,distanceFromCenter:location.distance,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      p.money-=locationFee+equipmentCost;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;
