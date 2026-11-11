@@ -12,7 +12,7 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
 
   const teacher = page.locator('#teacher');
   await expect(teacher).toBeVisible();
-  await expect(page.locator('#teacherRoomCode')).toHaveText(/^\\d{4}$/);
+  await expect(page.locator('#teacherRoomCode')).toHaveText(/^[0-9]{4}$/);
   await expect(page.locator('#teacherCount')).toBeVisible();
 
   for (const label of ['▶ 시작', '⏸ 일시정지', '▶ 재개', '■ 종료']) {
@@ -26,6 +26,19 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(page.locator('#tax')).toHaveCount(0);
   await expect(page.locator('.teacherGrid')).toHaveCount(0);
   await expect(page.locator('#teacherAdvancedToggle')).toHaveCount(0);
+
+  // 학생은 입장 버튼을 한 번만 눌러도 들어가고, 잔디 바닥이 실제 장면에 있어야 한다.
+  const student = await page.context().newPage();
+  await student.setViewportSize({ width: 1024, height: 768 });
+  await student.goto(baseURL);
+  await student.locator('#name').fill('한번입장학생');
+  await student.locator('#room').fill(await page.locator('#teacherRoomCode').textContent());
+  await student.getByRole('button', { name: '입장', exact: true }).click();
+  await expect(student.locator('#gameArea')).toBeVisible({ timeout: 20000 });
+  await expect(student.locator('#login')).toBeHidden();
+  await expect(student.locator('#game canvas')).toHaveCount(1);
+  await expect.poll(() => student.evaluate(() => Boolean(window.scene?.getObjectByName('town-ground')?.visible))).toBe(true);
+  await student.close();
 
   for (const viewport of [{ width: 820, height: 1024 }, { width: 1024, height: 768 }]) {
     await page.setViewportSize(viewport);
