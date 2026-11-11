@@ -563,3 +563,57 @@ test('Kenney 하늘 배경이 학생의 실제 마을 화면에 표시된다', a
   await page.close();
   await teacherPage.close();
 });
+
+
+test('가게 위치 할인·튼튼한 지붕·가게 나가기 동작을 확인한다', async ({ browser, baseURL }) => {
+  test.setTimeout(90000);
+  const teacherPage = await browser.newPage({ viewport: { width: 960, height: 700 } });
+  await teacherPage.goto(baseURL);
+  await teacherPage.locator('#pin').fill('6582');
+  await teacherPage.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
+  await expect(teacherPage.locator('#teacher')).toBeVisible();
+  const roomCode = (await teacherPage.locator('#teacherRoomCode').textContent()).trim();
+  await teacherPage.getByRole('button', { name: '▶ 시작' }).click();
+  await expect(teacherPage.locator('#teacherCount')).toContainText('진행 중');
+
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(baseURL);
+  await page.locator('#name').fill('가게오류확인');
+  await page.locator('#room').fill(roomCode);
+  await page.locator('#joinButton').click();
+  await expect(page.locator('#lobbyOverlay')).toBeHidden({ timeout: 20000 });
+
+  await page.evaluate(() => socket.emit('action', {
+    type: 'createStore', name: '거리 빵집', sign: '거리 빵집',
+    food: 'bread', productId: 'milk_bread', equipment: []
+  }));
+  await expect.poll(() => page.evaluate(() => latestState?.stores?.length || 0)).toBe(1);
+  const storeState = await page.evaluate(() => {
+    const store = latestState.stores[0];
+    const group = storeVisuals.get(store.id);
+    return {
+      price: store.products[store.productId].price,
+      basePrice: store.basePrice,
+      discount: store.locationDiscount,
+      roofCaps: group?.children.filter(child => child.geometry?.type === 'ShapeGeometry').length || 0
+    };
+  });
+  expect(storeState.discount).toBeGreaterThan(0);
+  expect(storeState.price).toBeLessThan(storeState.basePrice);
+  expect(storeState.roofCaps).toBe(2);
+
+  await page.evaluate(() => {
+    const store = latestState.stores[0];
+    socket.emit('move3d', { x: store.x, z: store.z, jump: false });
+    socket.emit('enterStore', store.id);
+  });
+  await expect.poll(() => page.evaluate(() => selectedStore?.name || '')).toBe('거리 빵집');
+  await expect(page.locator('#menuPanel')).toBeVisible();
+  await page.evaluate(() => closeMenu());
+  await expect.poll(() => page.evaluate(() => selectedStore === null)).toBe(true);
+  await expect.poll(() => page.evaluate(() => latestState.players.find(p => p.id === myId)?.insideStore ?? null)).toBeNull();
+  await expect(page.locator('#menuPanel')).toBeHidden();
+  await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-store-exit-fixed.png'), fullPage: false });
+  await page.close();
+  await teacherPage.close();
+});
