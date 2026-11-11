@@ -756,14 +756,14 @@ const KENNEY_CHARACTER_FILES={'male-a':'character-male-a.glb','male-b':'characte
 let kenneyLoaderPromise=null;
 function loadKenneyCharacter(player,kind){
  const file=KENNEY_CHARACTER_FILES[kind];if(!file)return;
- if(!kenneyLoaderPromise)kenneyLoaderPromise=import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>new GLTFLoader());
+ if(!kenneyLoaderPromise)kenneyLoaderPromise=import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>{const manager=new THREE.LoadingManager();const whitePixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=';manager.setURLModifier(url=>/Textures\/colormap\.png(?:$|\?)/i.test(url)?whitePixel:url);return new GLTFLoader(manager)});
  kenneyLoaderPromise.then(loader=>loader.load('/assets/'+file,gltf=>{
   if(!player.parent)return;
   const model=gltf.scene;model.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   model.scale.setScalar(2.05/Math.max(size.y,0.001));model.updateMatrixWorld(true);
   const fittedBounds=new THREE.Box3().setFromObject(model);model.position.y-=fittedBounds.min.y;
-  model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true}});
+  const avatarTints={'male-a':0x4c83b8,'male-b':0x63965f,'male-c':0xa75f4b,'male-d':0x8b79b7,'male-e':0xc18a3d,'male-f':0x4c9a9a,'male-g':0x6579a8,'female-a':0xd46c91,'female-b':0x946fbd,'female-c':0xd08a53,'female-d':0x5b9a83,'female-e':0x7a8fc9,'female-f':0xc46c69,'knight':0x71839a,'raider':0x9c6848};model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;const mats=Array.isArray(node.material)?node.material:[node.material];mats.forEach(material=>{if(material&&material.color)material.color.multiplyScalar(1);if(material&&material.map&&material.color)material.color.set(avatarTints[kind]||0x8c9db2)})}});
   player.add(model);player.userData.model=model;
   if(player.userData.fallback)player.userData.fallback.visible=false;
  },undefined,error=>console.warn('Kenney character load failed:',file,error))).catch(error=>console.warn('GLTFLoader unavailable; using fallback character',error));
