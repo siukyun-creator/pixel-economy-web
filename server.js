@@ -84,6 +84,8 @@ const properties = [
 ];
 let news = '마을 경제가 시작됐어요!';
 let newsFeed = [];
+let quarterRankings = [];
+let quarterBaseline = { companies: {}, stores: {} };
 let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
 function randomSeat() {
@@ -98,7 +100,7 @@ let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
 let storeCustomerRate = 50;
-const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
+const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, quarterRankings, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
@@ -179,44 +181,21 @@ function applyImmediateStockMove(ticker, rate, reason) {
   if (company) company.price = stock.price;
 }
 const COMPANY_NEWS = {
-  good: [
-    ['신제품 출시 대성공', '새 제품이 큰 관심을 받으며 주문 문의가 늘었어요.'],
-    ['품질 인증 획득', '제품 품질을 인정받아 소비자 신뢰가 높아졌어요.'],
-    ['유명 매장과 납품 계약', '새로운 판매처가 생겨 고객 방문이 늘어날 전망이에요.'],
-    ['친환경 생산 호평', '환경을 생각하는 생산 방식이 좋은 평가를 받았어요.'],
-    ['고객 만족도 상승', '친절한 서비스와 좋은 품질로 단골 고객이 늘었어요.']
-  ],
-  bad: [
-    ['제품 결함 논란', '일부 제품의 품질 문제가 알려져 고객 관심이 줄었어요.'],
-    ['원재료 가격 급등', '생산 비용 부담이 커져 수익 전망이 나빠졌어요.'],
-    ['배송 지연 발생', '배송이 늦어져 고객 불만이 늘었어요.'],
-    ['경쟁사 신제품 등장', '강력한 경쟁 상품이 등장해 고객이 분산되고 있어요.'],
-    ['광고 논란 발생', '홍보 내용에 대한 논란으로 소비자 신뢰가 낮아졌어요.']
-  ]
+ good:[['신제품 출시 대성공','새 제품이 큰 관심을 받으며 주문 문의가 늘었어요.'],['품질 인증 획득','제품 품질을 인정받아 소비자 신뢰가 높아졌어요.'],['유명 매장과 납품 계약','새로운 판매처가 생겼어요.'],['친환경 생산 호평','환경을 생각하는 생산 방식이 좋은 평가를 받았어요.'],['고객 만족도 상승','단골 고객이 늘었어요.'],['온라인 판매 급증','온라인 주문이 크게 늘었어요.'],['신규 지역 진출','새로운 지역에 진출했어요.'],['생산 설비 개선','생산 속도와 품질이 좋아졌어요.'],['인기 상품 품절','대표 상품이 빠르게 팔렸어요.'],['수출 상담 성사','해외 업체와 공급 상담이 진행돼요.'],['고객 추천 행사 성공','신규 고객이 늘었어요.'],['원가 절감 성공','생산 비용 부담이 줄었어요.']],
+ bad:[['제품 결함 논란','일부 제품의 품질 문제가 알려졌어요.'],['원재료 가격 급등','생산 비용 부담이 커졌어요.'],['배송 지연 발생','배송이 늦어져 고객 불만이 늘었어요.'],['경쟁사 신제품 등장','고객이 경쟁사로 분산되고 있어요.'],['광고 논란 발생','소비자 신뢰가 낮아졌어요.'],['생산 설비 고장','생산량이 일시적으로 줄었어요.'],['반품 요청 증가','반품과 문의가 늘었어요.'],['판매처 계약 종료','일부 판매처와 계약이 끝났어요.'],['재고 관리 실패','상품 공급이 늦어졌어요.'],['가격 경쟁 심화','고객 유치가 어려워졌어요.'],['원재료 수급 불안','생산 일정이 밀리고 있어요.'],['소비 심리 위축','주문량이 감소했어요.']]
 };
-function generateCompanyNews() {
-  if (!companies.length) {
-    news = '📰 오늘의 마을 소식: 새로운 기업이 생기면 기업 뉴스가 시작돼요.';
-    return null;
-  }
-  const company = companies[Math.floor(Math.random() * companies.length)];
-  const positive = Math.random() < 0.5;
-  const item = (positive ? COMPANY_NEWS.good : COMPANY_NEWS.bad)[Math.floor(Math.random() * 5)];
-  const demandChange = positive ? 20 : -25;
-  company.customerDemand = Math.max(30, Math.min(180, (company.customerDemand || 100) + demandChange));
-  const stockRate = positive ? 0.05 : -0.06;
-  applyImmediateStockMove(company.ticker, stockRate, positive ? '호재 뉴스' : '악재 뉴스');
-  const entry = {
-    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-    ticker: company.ticker, company: company.name, type: positive ? 'good' : 'bad',
-    headline: item[0], detail: item[1], demand: company.customerDemand,
-    stockPrice: stocks[company.ticker]?.price || company.price || 0, createdAt: Date.now()
-  };
-  company.lastNews = entry.headline;
-  newsFeed.unshift(entry);
-  newsFeed = newsFeed.slice(0, 12);
-  news = (positive ? '🟢 호재' : '🔴 악재') + ' · ' + company.name + ': ' + item[0];
-  return entry;
+const SECTOR_NEWS={electronics:{good:['배터리 효율 개선','신형 칩 성능 호평','스마트 기기 수요 증가'],bad:['부품 공급 부족','기기 호환성 문제','신제품 출시 지연']},food:{good:['건강 간식 인기','새로운 맛 호평','학교 납품 계약'],bad:['원재료 가격 상승','유통기한 관리 논란','식품 포장 문제']},toys:{good:['창의력 교구 인기','신학기 주문 증가','친환경 소재 호평'],bad:['부품 누락 신고','안전 검사 지연','유행 변화로 수요 감소']}};
+function generateCompanyNews(){
+ if(!companies.length){news='📰 오늘의 마을 소식: 새로운 기업이 생기면 기업 뉴스가 시작돼요.';return null;}
+ const company=companies[Math.floor(Math.random()*companies.length)],positive=Math.random()<.5;
+ const pool=(positive?COMPANY_NEWS.good:COMPANY_NEWS.bad).slice(),sectorPool=SECTOR_NEWS[company.sector]?.[positive?'good':'bad']||[];
+ if(sectorPool.length){const headline=sectorPool[Math.floor(Math.random()*sectorPool.length)];pool.push([headline,company.sectorName+' 분야의 시장 변화가 '+(positive?'긍정적인 반응':'걱정')+'을 불러오고 있어요.']);}
+ const item=pool[Math.floor(Math.random()*pool.length)],demandChange=positive?12+Math.floor(Math.random()*13):-(12+Math.floor(Math.random()*16));
+ company.customerDemand=Math.max(30,Math.min(180,(company.customerDemand||100)+demandChange));
+ const stockRate=positive?.025+Math.random()*.025:-(.03+Math.random()*.03);
+ applyImmediateStockMove(company.ticker,stockRate,positive?'호재 뉴스':'악재 뉴스');
+ const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),ticker:company.ticker,company:company.name,sector:company.sectorName||company.sector,type:positive?'good':'bad',headline:item[0],detail:item[1],demand:company.customerDemand,stockPrice:stocks[company.ticker]?.price||company.price||0,createdAt:Date.now()};
+ company.lastNews=entry.headline;newsFeed.unshift(entry);newsFeed=newsFeed.slice(0,30);news=(positive?'🟢 호재':'🔴 악재')+' · '+company.name+': '+item[0];return entry;
 }
 function simulateCompanyCustomers() {
   let changed = false;
@@ -303,8 +282,11 @@ function captureTurnBaseline() {
     if (!Object.prototype.hasOwnProperty.call(turnState.initialAssets, player.name)) turnState.initialAssets[player.name] = value;
   }
 }
+function captureQuarterBaseline(){quarterBaseline={companies:Object.fromEntries(companies.map(v=>[v.ticker,{revenue:Number(v.revenue)||0,costs:Number(v.costs)||0}])),stores:Object.fromEntries(stores.map(v=>[v.id,{revenue:Number(v.revenue)||0,costs:Number(v.totalCosts||v.setupCost)||0}]))};}
+function calculateQuarterRanking(quarter,endedTurn){const rows=[...companies.map(v=>{const b=quarterBaseline.companies[v.ticker]||{revenue:0,costs:0},revenue=Math.max(0,(Number(v.revenue)||0)-b.revenue),costs=Math.max(0,(Number(v.costs)||0)-b.costs);return{id:v.ticker,type:'기업',name:v.name,owner:v.owner,revenue,costs,profit:revenue-costs};}),...stores.map(v=>{const b=quarterBaseline.stores[v.id]||{revenue:0,costs:0},revenue=Math.max(0,(Number(v.revenue)||0)-b.revenue),costs=Math.max(0,(Number(v.totalCosts||v.setupCost)||0)-b.costs);return{id:v.id,type:'가게',name:v.name,owner:v.owner,revenue,costs,profit:revenue-costs};})].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue);const result={quarter,endedTurn,createdAt:Date.now(),results:rows.map((v,i)=>({...v,rank:i+1}))};quarterRankings.unshift(result);quarterRankings=quarterRankings.slice(0,8);return result;}
 function beginTurn() {
   captureTurnBaseline();
+  if ((turnState.turnNumber - 1) % 3 === 0) captureQuarterBaseline();
   turnState.endsAt = Date.now() + turnConfig.durationMinutes * 60 * 1000;
   turnState.remainingMs = null;
 }
@@ -317,6 +299,7 @@ function finishTurn() {
   stores.forEach(store => { store.lastTurnVisitors = 0; store.lastTurnExpectedVisitors = 0; });
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
   turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
+  if (endedTurn % 3 === 0 || endedTurn >= turnConfig.totalTurns) calculateQuarterRanking(Math.ceil(endedTurn / 3), endedTurn);
   turnState.turnNumber = endedTurn + 1;
   if (endedTurn >= turnConfig.totalTurns) {
     gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null;
@@ -428,7 +411,7 @@ roomIo.on('connection', socket => {
     if(Math.hypot(p.x-st.x,p.z-st.z)>10)return msg(socket,'가게 입구까지 걸어와 주세요.');
     p.insideStore=st.id;p.x=st.x;p.z=st.z;socket.emit('storeEntered',{...st});broadcast();
   });
-  socket.on('exitStore',()=>{const p=players.get(socket.id);if(!p)return;p.insideStore=null;socket.emit('storeExited');broadcast()});
+  socket.on('exitStore',()=>{const p=players.get(socket.id);if(!p)return;const st=stores.find(value=>value.id===p.insideStore);if(st){p.x=st.x;p.z=st.z+7*(st.face||1);}p.insideStore=null;socket.emit('storeExited');broadcast()});
   socket.on('enterWholesale',()=>{const p=players.get(socket.id);if(!p)return;if(gameStatus!=='running')return msg(socket,'수업이 시작된 뒤 이용할 수 있어요.');if(Math.hypot(p.x+22,p.z-17)>11)return msg(socket,'도매상 입구까지 걸어와 주세요.');p.insideWholesale=true;p.insideStore=null;p.x=-22;p.z=17;socket.emit('wholesaleEntered');broadcast()});
   socket.on('exitWholesale',()=>{const p=players.get(socket.id);if(!p)return;p.insideWholesale=false;socket.emit('wholesaleExited');broadcast()});
   socket.on('action', a => {
@@ -532,7 +515,7 @@ roomIo.on('connection', socket => {
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
       const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,menuNames:{},pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
-      p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=retailPrices[st.productId]||3500;st.products[st.productId].price=st.price;stores.push(st);
+      const distanceFromCenter=Math.hypot(x,z),locationDiscount=Math.min(.30,Math.floor(distanceFromCenter/20)*.05),baseRetailPrice=retailPrices[st.productId]||3500;st.locationDistance=Math.round(distanceFromCenter);st.locationDiscount=locationDiscount;st.basePrice=baseRetailPrice;p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=Math.max(500,Math.round(baseRetailPrice*(1-locationDiscount)/100)*100);st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;
@@ -860,7 +843,7 @@ roomIo.on('connection', socket => {
     if(c.type==='shopPrice'){const price=bounded(c.value,500,50000);stores.forEach(st=>{st.price=price;st.products[st.productId].price=price;});}
     if(c.type==='startingMoney'){startingMoney=bounded(c.value,0,5000000);players.forEach(p=>p.money=startingMoney);}
     if(c.type==='storeFee'){storeFee=bounded(c.value,0,500000);}
-    if(c.type==='resetEconomy'){newsFeed=[];news='마을 경제가 시작됐어요!';players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.taxHistory=[];p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){delete stocks[ticker];delete stockHistory[ticker];delete stockOrders[ticker];}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
+    if(c.type==='resetEconomy'){newsFeed=[];quarterRankings=[];quarterBaseline={companies:{},stores:{}};news='마을 경제가 시작됐어요!';players.forEach(p=>{p.money=200000;p.bank=0;p.taxPaid=0;p.taxHistory=[];p.loan=0;p.earnedTotal=0;p.socialDonated=0;p.donations=emptyDonations();p.taxRelief=0;p.inventory={apple:0,bread:0,toy:0};p.shares={};p.company=null;p.storeId=null;p.employerStoreId=null;p.job='무직';p.insideStore=null;p.insideWholesale=false;});stores.splice(0,stores.length);wholesaleShop=null;for(const ticker of Object.keys(stocks)){delete stocks[ticker];delete stockHistory[ticker];delete stockOrders[ticker];}companies.splice(0,companies.length);taxRate=.05;shopsEnabled=true;startingMoney=200000;storeFee=30000;}
     if(c.type==='news')news=String(c.value||'').slice(0,100);
     if(c.type==='bonus'){const v=bounded(c.value,0,1000000);players.forEach(p=>p.money+=v);}
     if(c.type==='tax')taxRate=Math.max(0,Math.min(.5,Number(c.value)||0));
