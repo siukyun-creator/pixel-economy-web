@@ -96,7 +96,7 @@ test('선생님이 정한 100% 확률로 가상 손님이 방문하고 재고·�
     expect(finalStore.visitorCount).toBeGreaterThanOrEqual(1);
     expect(finalStore.products.milk_bread.stock).toBeLessThan(10);
     expect(finalStore.soldUnits).toBeGreaterThanOrEqual(1);
-    expect(finalStore.revenue).toBeGreaterThanOrEqual(3500);
+    expect(finalStore.revenue).toBeGreaterThanOrEqual(finalStore.price);
     expect(finalStore.nextCustomerAt).toBeGreaterThan(Date.now() + 50000);
     expect(owner.money).toBeGreaterThan(initialMoney);
     await page.screenshot({ path: 'test-results/virtual-customer-store.png', fullPage: true });
