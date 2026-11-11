@@ -756,7 +756,7 @@ const KENNEY_CHARACTER_FILES={'male-a':'character-male-a.glb','male-b':'characte
 let kenneyLoaderPromise=null;
 function loadKenneyCharacter(player,kind){
  const file=KENNEY_CHARACTER_FILES[kind];if(!file)return;
- if(!kenneyLoaderPromise)kenneyLoaderPromise=import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>{const manager=new THREE.LoadingManager();const whitePixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=';manager.setURLModifier(url=>/Textures\/colormap\.png(?:$|\?)/i.test(url)?whitePixel:url);return new GLTFLoader(manager)});
+ if(!kenneyLoaderPromise)kenneyLoaderPromise=import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>{const manager=new THREE.LoadingManager();const whitePixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVQImWNgYGD4DwABBAEAHnOcQAAAAABJRU5ErkJggg==';manager.setURLModifier(url=>/Textures\/colormap\.png(?:$|\?)/i.test(url)?whitePixel:url);return new GLTFLoader(manager)});
  kenneyLoaderPromise.then(loader=>loader.load('/assets/'+file,gltf=>{
   if(!player.parent)return;
   const model=gltf.scene;model.updateMatrixWorld(true);
