@@ -37,7 +37,7 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(student.locator('#gameArea')).toBeVisible({ timeout: 20000 });
   await expect(student.locator('#login')).toBeHidden();
   await expect(student.locator('#game canvas')).toHaveCount(1);
-  await expect.poll(() => student.evaluate(() => Boolean(window.scene?.getObjectByName('town-ground')?.visible))).toBe(true);
+  await expect.poll(() => student.evaluate(() => typeof scene !== 'undefined' && Boolean(scene.getObjectByName('town-ground')?.visible))).toBe(true);
   await student.close();
 
   for (const viewport of [{ width: 820, height: 1024 }, { width: 1024, height: 768 }]) {
