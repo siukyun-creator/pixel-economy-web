@@ -88,6 +88,7 @@ let quarterRankings = [];
 let quarterBaseline = { companies: {}, stores: {} };
 let taxRate = 0.05;
 let gameStatus = 'waiting'; // waiting, running, paused, ended
+let worldTimeOfDay = 'day';
 function randomSeat() {
   const cells=[];
   for(let x=-20;x<=20;x+=4) for(let z=-6;z<=6;z+=3) cells.push({x,z});
@@ -100,7 +101,7 @@ let shopsEnabled = true;
 let startingMoney = 200000;
 let storeFee = 30000;
 let storeCustomerRate = 50;
-const snapshot = () => ({ serverTime: Date.now(), players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, quarterRankings, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
+const snapshot = () => ({ serverTime: Date.now(), worldTimeOfDay, players: [...players.values()].map(p => ({...p})), market, stocks, stockHistory, companies, stores, wholesaleShop, properties, news, newsFeed, quarterRankings, taxRate, gameStatus, shopsEnabled, startingMoney, storeFee, storeCustomerRate, marketClock, turnConfig, turnState, finalAwards });
 const broadcast = () => roomIo.emit('state', snapshot());
 const broadcastEmployment = () => broadcast();
 const msg = (s, t) => s.emit('notice', t);
@@ -818,6 +819,7 @@ roomIo.on('connection', socket => {
       broadcast();
       console.log('[PIXEL TOWN] Classroom room code changed: ' + previousRoom + ' -> ' + ROOM);
     }
+    if(c.type==='timeOfDay')worldTimeOfDay=c.value==='night'?'night':'day';
     if(c.type==='shops')shopsEnabled=!!c.value;
     if(c.type==='storeCustomerRate')storeCustomerRate=bounded(c.value,0,100);
     if(c.type==='marketTime'){
