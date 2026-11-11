@@ -286,7 +286,7 @@ function captureQuarterBaseline(){quarterBaseline={companies:Object.fromEntries(
 function calculateQuarterRanking(quarter,endedTurn){const rows=[...companies.map(v=>{const b=quarterBaseline.companies[v.ticker]||{revenue:0,costs:0},revenue=Math.max(0,(Number(v.revenue)||0)-b.revenue),costs=Math.max(0,(Number(v.costs)||0)-b.costs);return{id:v.ticker,type:'기업',name:v.name,owner:v.owner,revenue,costs,profit:revenue-costs};}),...stores.map(v=>{const b=quarterBaseline.stores[v.id]||{revenue:0,costs:0},revenue=Math.max(0,(Number(v.revenue)||0)-b.revenue),costs=Math.max(0,(Number(v.totalCosts||v.setupCost)||0)-b.costs);return{id:v.id,type:'가게',name:v.name,owner:v.owner,revenue,costs,profit:revenue-costs};})].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue);const result={quarter,endedTurn,createdAt:Date.now(),results:rows.map((v,i)=>({...v,rank:i+1}))};quarterRankings.unshift(result);quarterRankings=quarterRankings.slice(0,8);return result;}
 function beginTurn() {
   captureTurnBaseline();
-  if ((turnState.turnNumber - 1) % 3 === 0) captureQuarterBaseline();
+  captureQuarterBaseline();
   turnState.endsAt = Date.now() + turnConfig.durationMinutes * 60 * 1000;
   turnState.remainingMs = null;
 }
@@ -300,7 +300,7 @@ function finishTurn() {
   stores.forEach(store => { const owner=players.get(store.ownerId),due=Math.max(0,Math.floor(Number(store.rentPerTurn)||0)); if(!owner||!due)return; const paid=Math.min(Math.max(0,Number(owner.money)||0),due); owner.money-=paid; store.rentPaid=(Number(store.rentPaid)||0)+paid; store.lastRentPaid=paid; store.totalCosts=(Number(store.totalCosts)||0)+paid; });
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
   turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
-  if (endedTurn % 3 === 0 || endedTurn >= turnConfig.totalTurns) calculateQuarterRanking(Math.ceil(endedTurn / 3), endedTurn);
+  calculateQuarterRanking(endedTurn, endedTurn);
   turnState.turnNumber = endedTurn + 1;
   if (endedTurn >= turnConfig.totalTurns) {
     gameStatus = 'ended'; turnState.endsAt = null; turnState.remainingMs = null;
