@@ -171,6 +171,8 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   expect(landscapeBounds.y).toBeGreaterThanOrEqual(0);
   expect(landscapeBounds.x+landscapeBounds.width).toBeLessThanOrEqual(landscapeBounds.viewportWidth);
   expect(landscapeBounds.y+landscapeBounds.height).toBeLessThanOrEqual(landscapeBounds.viewportHeight);
+  const mapAndJump=await page.evaluate(()=>{const map=document.querySelector('#mapPanel').getBoundingClientRect();const jump=document.querySelector('#jump').getBoundingClientRect();return{mapBottom:map.bottom,jumpTop:jump.top}});
+  expect(mapAndJump.mapBottom).toBeLessThan(mapAndJump.jumpTop);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.goto('about:blank');await page.close();
 
