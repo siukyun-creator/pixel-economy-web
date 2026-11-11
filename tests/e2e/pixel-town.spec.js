@@ -88,6 +88,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#menuContent .stockGrid')).toHaveCount(1);
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.locator('.moreMenu > summary').click();
   await page.getByRole('button', { name: '📦 도매상', exact: true }).click();
   await expect(page.locator('#menuContent .wholesaleHero')).toBeVisible();
 
@@ -175,6 +176,7 @@ test('기업 뉴스·제품 구매 메뉴가 분리되고 채용·가방·순위
     document.querySelector('#login').style.display = 'none';
   });
   await expect(page.locator('#newsTicker')).toBeVisible();
+  await page.locator('.moreMenu > summary').click();
   await expect(page.getByRole('button', { name: /기업 뉴스/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /기업 제품/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /채용·지원/ })).toHaveCount(0);
