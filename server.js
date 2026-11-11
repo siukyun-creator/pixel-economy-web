@@ -297,6 +297,7 @@ function finishTurn() {
   const todayNews = generateCompanyNews();
   companies.forEach(company => { company.lastTurnCustomers = 0; company.lastTurnExpectedCustomers = 0; company.lastTurnSalesRate = 0; });
   stores.forEach(store => { store.lastTurnVisitors = 0; store.lastTurnExpectedVisitors = 0; });
+  stores.forEach(store => { const owner=players.get(store.ownerId),due=Math.max(0,Math.floor(Number(store.rentPerTurn)||0)); if(!owner||!due)return; const paid=Math.min(Math.max(0,Number(owner.money)||0),due); owner.money-=paid; store.rentPaid=(Number(store.rentPaid)||0)+paid; store.lastRentPaid=paid; store.totalCosts=(Number(store.totalCosts)||0)+paid; });
   const results = [...players.values()].map(player => playerResult(player, turnState.baseline[player.name]));
   turnState.summary = { turnNumber: endedTurn, day: marketClock.day, totalTurns: turnConfig.totalTurns, endedAt: Date.now(), news: todayNews, results };
   if (endedTurn % 3 === 0 || endedTurn >= turnConfig.totalTurns) calculateQuarterRanking(Math.ceil(endedTurn / 3), endedTurn);
@@ -351,6 +352,8 @@ roomIo.on('connection', socket => {
     const reply = (ok, message) => { if (typeof ack === 'function') ack({ok, message}); if (!ok) msg(socket, message); };
     if (!data || data.room !== ROOM) return reply(false, '방 코드가 올바르지 않아요. 선생님이 알려준 최신 코드를 확인해 주세요.');
     const name = safeName(data.name);
+    const allowedCharacters = new Set(['male-a','male-b','male-c','male-d','male-e','male-f','male-g','female-a','female-b','female-c','female-d','female-e','female-f','alien','robot','knight','worker','zombie','soldier','raider']);
+    const character = allowedCharacters.has(String(data.character || '')) ? String(data.character) : 'male-a';
     if (!String(data.name || '').trim()) return reply(false, '이름을 입력해 주세요.');
     const saved = [...players.values()].find(v => v.name.toLocaleLowerCase('ko-KR') === name.toLocaleLowerCase('ko-KR'));
     if (saved && saved.connected) return reply(false, '같은 이름의 학생이 이미 접속 중이에요.');
@@ -361,6 +364,7 @@ roomIo.on('connection', socket => {
       players.delete(oldId);
       saved.id = socket.id;
       saved.connected = true;
+      saved.character = character;
       saved.insideStore = null;
       saved.insideWholesale = false;
       p = saved;
@@ -378,7 +382,7 @@ roomIo.on('connection', socket => {
       if (wholesaleShop && wholesaleShop.owner === name) wholesaleShop.ownerId = socket.id;
     } else {
       const seat = randomSeat();
-      p = { id: socket.id, name, connected: true, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, taxHistory: [], loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {}, shareCostBasis: {}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
+      p = { id: socket.id, name, connected: true, character, x: seat.x, z: seat.z, jump: false, money: startingMoney, bank: 0, taxPaid: 0, taxHistory: [], loan:0, earnedTotal:0, socialDonated:0, donations:emptyDonations(), taxRelief:0, job: '무직', employerStoreId: null, inventory: {apple:0,bread:0,toy:0}, companyGoods: {}, shares: {}, shareCostBasis: {}, property: [], company: null, storeId: null, insideStore: null, insideWholesale: false };
     }
     players.set(socket.id, p);
     if (gameStatus === 'running' && !Object.prototype.hasOwnProperty.call(turnState.baseline, p.name)) { const value = playerAssetValue(p); turnState.baseline[p.name] = value; turnState.initialAssets[p.name] ??= value; }
@@ -515,8 +519,8 @@ roomIo.on('connection', socket => {
       const decor=['none','plant','flower','lamp'].includes(String(a.decor))?String(a.decor):'plant';
       const pixels=Array.isArray(a.pixelArt)&&a.pixelArt.length===144?a.pixelArt.map(v=>/^#[0-9a-fA-F]{6}$/.test(String(v))?String(v):'#fff0cf'):Array(144).fill('#fff0cf');
       const pixelArtProductId=String(a.pixelArtProductId||'')===String(a.productId)?String(a.productId):null;
-      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,menuNames:{},pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
-      const distanceFromCenter=Math.hypot(x,z),locationDiscount=Math.min(.30,Math.floor(distanceFromCenter/20)*.05),baseRetailPrice=retailPrices[st.productId]||3500;st.locationDistance=Math.round(distanceFromCenter);st.locationDiscount=locationDiscount;st.basePrice=baseRetailPrice;p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=Math.max(500,Math.round(baseRetailPrice*(1-locationDiscount)/100)*100);st.products[st.productId].price=st.price;stores.push(st);
+      const st={id:'store-'+socket.id+'-'+Date.now(),ownerId:socket.id,owner:p.name,name:storeName,sign,food,productId:String(a.productId),productName:product.name,menuNames:{},pixelArt:pixels,pixelArtProductId,price:20,stock:10,products:{[String(a.productId)]:{stock:10,price:20,ingredients:0}},employees:[],employmentApplications:[],payrollMonth:null,setupCost:storeFee+equipmentCost,totalCosts:storeFee+equipmentCost,equipment:selectedEquipment,customerBoost,createdAt:Date.now(),nextCustomerAt:Date.now(),salesHistory:[],visitorCount:0,lastTurnVisitors:0,lastTurnExpectedVisitors:0,customerCount:0,soldUnits:0,revenue:0,rentPerTurn:0,rentPaid:0,color,wallColor,signColor,signStyle,awningStyle,decor,x,z,face};
+      const distanceFromCenter=Math.hypot(x,z),locationDiscount=Math.min(.30,Math.floor(distanceFromCenter/20)*.05),baseRetailPrice=retailPrices[st.productId]||3500;st.locationDistance=Math.round(distanceFromCenter);st.locationDiscount=locationDiscount;st.rentPerTurn=Math.max(4000,30000-Math.floor(distanceFromCenter/20)*4000);st.basePrice=baseRetailPrice;p.money-=storeFee+equipmentCost;p.storeId=st.id;st.price=Math.max(500,Math.round(baseRetailPrice*(1-locationDiscount)/100)*100);st.products[st.productId].price=st.price;stores.push(st);
       socket.emit('storeCreated',{ok:true,store:st,money:p.money});
       msg(socket,'🏪 가게 개설 성공! '+storeName+' · '+product.name+' 10개 준비 · 잔액 '+p.money+'원');
       broadcast();return;

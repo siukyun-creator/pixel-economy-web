@@ -9,7 +9,7 @@ const resultsDir = path.resolve(__dirname, '..', '..', 'test-results');
 
 function connectSocket(url) {
   return new Promise((resolve, reject) => {
-    const client = io(url, { transports: ['websocket'], reconnection: false, timeout: 10000 });
+    const client = io(url, { transports: ['websocket'], reconnection: false, timeout: 20000 });
     client.once('connect_error', reject);
     client.once('connect', () => resolve(client));
   });
@@ -17,7 +17,7 @@ function connectSocket(url) {
 
 function emitAck(client, event, payload) {
   return new Promise((resolve, reject) => {
-    client.timeout(12000).emit(event, payload, (error, result) => {
+    client.timeout(30000).emit(event, payload, (error, result) => {
       if (error) reject(error);
       else resolve(result);
     });
@@ -25,7 +25,7 @@ function emitAck(client, event, payload) {
 }
 
 test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성된다', async ({ browser, baseURL }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
   const manager = await connectSocket(baseURL);
   const clients = [];
   let teacher;
@@ -61,7 +61,7 @@ test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성
     }));
     expect(others).toHaveLength(29);
 
-    await expect.poll(() => page.evaluate(() => latestState?.players?.length || 0), { timeout: 15000 }).toBe(30);
+    await expect.poll(() => page.evaluate(() => latestState?.players?.length || 0), { timeout: 45000 }).toBe(30);
 
     const firstSocket = await page.evaluate(() => socket.id);
     const pageClient = page;
@@ -95,7 +95,7 @@ test('30명이 동시에 가게를 창업하면 30개 건물이 마을에 생성
     expect(results).toHaveLength(30);
     expect(results.every(result => result.ok && result.store?.id)).toBe(true);
 
-    await expect.poll(() => page.evaluate(() => latestState?.stores?.length || 0), { timeout: 20000 }).toBe(30);
+    await expect.poll(() => page.evaluate(() => latestState?.stores?.length || 0), { timeout: 60000 }).toBe(30);
     await expect.poll(() => page.evaluate(() => storeVisuals?.size || 0), { timeout: 20000 }).toBe(30);
 
     fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });

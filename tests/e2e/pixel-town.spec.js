@@ -225,19 +225,25 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect(page.locator('#game canvas').first()).toBeVisible();
     await expect(page.locator('#lobbyOverlay')).toBeHidden();
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(0);
-    await expect.poll(() => page.evaluate(() => {
-      const door = world.children.find(object =>
-        object.material?.color?.getHex() === 0x65432c &&
-        Math.abs(object.position.x - 22) < 0.1 &&
-        Math.abs(object.position.y - 0.8) < 0.1 &&
-        Math.abs(object.position.z - (-11.92)) < 0.1
+    const storefront = await page.evaluate(() => {
+      syncStoreBuildings([{ id: 'e2e-front-check', name: '테스트 가게', sign: '테스트 가게', food: 'bread', x: 22, z: -12, face: 1 }]);
+      const group = storeVisuals.get('e2e-front-check');
+      const meshes = group.children.filter(object => object.isMesh);
+      const door = meshes.some(object =>
+        object.material?.color?.getHex() === 0x78472c &&
+        Math.abs(object.position.x) < 0.1 &&
+        Math.abs(object.position.y - 1.2) < 0.1 &&
+        Math.abs(object.position.z - 3.12) < 0.1
       );
-      const windows = world.children.filter(object =>
-        object.material?.color?.getHex() === 0x9cdbed &&
-        Math.abs(object.position.z - (-11.93)) < 0.1
-      );
-      return { doorExists: Boolean(door), frontWindows: windows.length };
-    })).toEqual({ doorExists: true, frontWindows: 2 });
+      const windows = meshes.filter(object =>
+        object.material?.color?.getHex() === 0x9ddcf0 &&
+        Math.abs(Math.abs(object.position.x) - 2.05) < 0.1 &&
+        Math.abs(object.position.z - 3.16) < 0.1
+      ).length;
+      syncStoreBuildings([]);
+      return { door, frontWindows: windows };
+    });
+    expect(storefront).toEqual({ door: true, frontWindows: 2 });
     await expect.poll(() => page.evaluate(() =>
       world.children.filter(object =>
         object.material?.color?.getHex() === 0x8a5a35 &&
