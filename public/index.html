@@ -664,9 +664,9 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
  header{flex-wrap:nowrap}
  .menus{order:initial;flex:1 1 auto}
  #hud{top:76px}
- #mapPanel{width:clamp(145px,17vw,190px)}
+ #mapPanel{top:76px;bottom:auto;width:clamp(145px,17vw,190px);max-height:calc(100dvh - 160px);overflow:auto}
  #touchPad{grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px}
- #jump{width:78px;height:78px}
+ #jump{right:18px;bottom:18px;width:78px;height:78px}
 }
 @media(max-width:700px){
  .menus{overflow-x:auto;overflow-y:visible}
