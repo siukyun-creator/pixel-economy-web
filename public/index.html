@@ -597,7 +597,7 @@ button.secondary:hover,.lessonTabs button:hover,.lessonChoice:hover{background:#
 }
 
 /* Teacher quick view and storefront front-wall reinforcement */
-#teacher .teacherGrid,#teacher .teacherSection:has(#roster){display:none!important}
+#teacher .teacherGrid,#teacher .teacherSection:has(#roster),#teacher:not(.teacherAdvanced)>.teacherSection:nth-of-type(n+6){display:none!important}
 #teacher.teacherAdvanced .teacherGrid{display:grid!important}
 #teacher.teacherAdvanced .teacherSection:has(#roster){display:block!important}
 .teacherQuickNotice{display:flex;gap:7px;align-items:center;margin-top:10px;padding:10px;background:#fff;border:1px solid #c8dfed;border-radius:12px}
