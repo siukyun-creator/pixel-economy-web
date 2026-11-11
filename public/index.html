@@ -753,13 +753,27 @@ managerSocket.on('connect',()=>$('connection').textContent='서버 연결됨');
 function applyTimeOfDay(mode){skyMode=mode==='night'?'night':'day';localStorage.setItem('pixelTownSkyMode',skyMode);const night=skyMode==='night';if(scene){scene.background=night?new THREE.Color(0x101a35):(skyTexture||new THREE.Color(0x9bd7f5));scene.fog.color.setHex(night?0x182441:0x9bd7f5);if(hemisphereLight)hemisphereLight.intensity=night?.62:2.15;if(sunLight){sunLight.intensity=night?.18:2.4;sunLight.color.setHex(night?0x9db8ff:0xfff1d6)}if(renderer)renderer.toneMappingExposure=night?.82:1.12;}const choice=$('timeOfDayChoice');if(choice)choice.value=skyMode;return skyMode}
 function makeBlock(w,h,d,color,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.82,metalness:.02}));o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;(activeBuildGroup||world).add(o);return o}
 // Kenney Mini Characters (CC0) 공개 GLB 미러를 사용한다. 모델 안의 상대 텍스처 경로( Textures/colormap.png )도 같은 폴더에서 자동으로 찾는다.
-const KENNEY_ASSET_BASE='https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/';
-const KENNEY_MODEL_KINDS=new Set(['male-a','male-b','male-c','male-d','male-e','male-f','female-a','female-b','female-c','female-d','female-e','female-f']);
+const KENNEY_MODEL_URLS={
+ 'male-a':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-a.glb',
+ 'male-b':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-b.glb',
+ 'male-c':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-c.glb',
+ 'male-d':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-d.glb',
+ 'male-e':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-e.glb',
+ 'male-f':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-male-f.glb',
+ 'male-g':'https://raw.githubusercontent.com/teacher-svb/Edugame-Godot/main/assets/3D/characters/Mini%20Characters%201/Models/GLB%20format/character-male-g.glb',
+ 'female-a':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-a.glb',
+ 'female-b':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-b.glb',
+ 'female-c':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-c.glb',
+ 'female-d':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-d.glb',
+ 'female-e':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-e.glb',
+ 'female-f':'https://raw.githubusercontent.com/shorepine/kenney/main/3d/mini-characters/character-female-f.glb',
+ 'knight':'https://raw.githubusercontent.com/ashermemon/cat-computer-game-godot/main/Assets/Models/Enemies/character-knight.glb',
+ 'raider':'https://raw.githubusercontent.com/ashermemon/cat-computer-game-godot/main/Assets/Models/Enemies/character-raider.glb'
+};
 window.__kenneyModulesPromise ||= Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/utils/SkeletonUtils.js')]).then(([loaderModule,skeletonModule])=>({GLTFLoader:loaderModule.GLTFLoader,clone:skeletonModule.clone}));
 window.__kenneyModelCache ||= new Map();
 function loadKenneyCharacter(player,kind){
- if(!KENNEY_MODEL_KINDS.has(kind))return;
- const url=KENNEY_ASSET_BASE+'character-'+kind+'.glb';
+ const url=KENNEY_MODEL_URLS[kind];if(!url)return;
  let pending=window.__kenneyModelCache.get(kind);
  if(!pending){
   pending=window.__kenneyModulesPromise.then(({GLTFLoader})=>new GLTFLoader().loadAsync(url));
