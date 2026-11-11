@@ -506,41 +506,60 @@ test('요리 타이밍 표시·주방 전체 화면과 가게 창업 단계 구�
 });
 
 
-test('Kenney 하늘 배경 이미지가 3D 마을에 정상 적용된다', async ({ browser, baseURL }) => {
+test('Kenney 하늘 배경이 학생의 실제 마을 화면에 표시된다', async ({ browser, baseURL }) => {
   test.setTimeout(90000);
   browserErrors = [];
+
+  const teacherPage = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  collectBrowserErrors(teacherPage);
+  await teacherPage.goto(baseURL);
+  await teacherPage.locator('#pin').fill('6582');
+  await teacherPage.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
+  await expect(teacherPage.locator('#teacher')).toBeVisible();
+  const roomCode = await teacherPage.locator('#teacherRoomCode').textContent();
+  await teacherPage.getByRole('button', { name: '▶ 시작' }).click();
+  await expect(teacherPage.locator('#teacherCount')).toContainText('진행 중');
+
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   collectBrowserErrors(page);
-
   const skyboxResponsePromise = page.waitForResponse(response =>
     response.url().includes('/assets/skyboxes/kenney_skyboxes/Skyboxes/skybox-day.png')
   );
   await page.goto(baseURL);
-  await page.locator('#pin').fill('6582');
-  await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
+  await page.locator('#name').fill('하늘배경확인');
+  await page.locator('#room').fill(roomCode.trim());
+  await page.locator('#joinButton').click();
 
   const skyboxResponse = await skyboxResponsePromise;
   expect(skyboxResponse.status(), 'Kenney skybox PNG HTTP 상태').toBe(200);
   expect(skyboxResponse.headers()['content-type']).toContain('image/png');
-  await expect(page.locator('#teacher')).toBeVisible();
   await expect(page.locator('#game canvas')).toBeVisible();
+  await expect(page.locator('#lobbyOverlay')).toBeHidden({ timeout: 20000 });
   await page.waitForFunction(() =>
     typeof scene !== 'undefined' &&
-    scene.background &&
-    scene.background.isTexture === true
-  , null, { timeout: 15000 });
+    scene.background?.isTexture === true &&
+    scene.background.mapping === THREE.EquirectangularReflectionMapping &&
+    scene.background.image?.width > 0 &&
+    scene.background.image?.height > 0
+  , null, { timeout: 20000 });
 
-  const canvasSize = await page.locator('#game canvas').evaluate(canvas => ({
-    width: canvas.width,
-    height: canvas.height
+  const renderState = await page.evaluate(() => ({
+    width: scene.background.image.width,
+    height: scene.background.image.height,
+    mapping: scene.background.mapping,
+    canvasWidth: renderer.domElement.width,
+    canvasHeight: renderer.domElement.height
   }));
-  expect(canvasSize.width).toBeGreaterThan(0);
-  expect(canvasSize.height).toBeGreaterThan(0);
+  expect(renderState.width).toBeGreaterThan(0);
+  expect(renderState.height).toBeGreaterThan(0);
+  expect(renderState.canvasWidth).toBeGreaterThan(0);
+  expect(renderState.canvasHeight).toBeGreaterThan(0);
 
   fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
   await page.screenshot({
-    path: path.join(resultsDir, 'screenshots', 'pixel-town-kenney-skybox.png'),
+    path: path.join(resultsDir, 'screenshots', 'pixel-town-kenney-skybox-student.png'),
     fullPage: false
   });
   await page.close();
+  await teacherPage.close();
 });
