@@ -504,3 +504,43 @@ test('요리 타이밍 표시·주방 전체 화면과 가게 창업 단계 구�
   await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-store-wizard-fixed.png'), fullPage: false });
   await page.close();
 });
+
+
+test('Kenney 하늘 배경 이미지가 3D 마을에 정상 적용된다', async ({ browser, baseURL }) => {
+  test.setTimeout(90000);
+  browserErrors = [];
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  collectBrowserErrors(page);
+
+  const skyboxResponsePromise = page.waitForResponse(response =>
+    response.url().includes('/assets/skyboxes/kenney_skyboxes/Skyboxes/skybox-day.png')
+  );
+  await page.goto(baseURL);
+  await page.locator('#pin').fill('6582');
+  await page.getByRole('button', { name: '＋ 새 교실 만들기' }).click();
+
+  const skyboxResponse = await skyboxResponsePromise;
+  expect(skyboxResponse.status(), 'Kenney skybox PNG HTTP 상태').toBe(200);
+  expect(skyboxResponse.headers()['content-type']).toContain('image/png');
+  await expect(page.locator('#teacher')).toBeVisible();
+  await expect(page.locator('#game canvas')).toBeVisible();
+  await page.waitForFunction(() =>
+    typeof scene !== 'undefined' &&
+    scene.background &&
+    scene.background.isTexture === true
+  , null, { timeout: 15000 });
+
+  const canvasSize = await page.locator('#game canvas').evaluate(canvas => ({
+    width: canvas.width,
+    height: canvas.height
+  }));
+  expect(canvasSize.width).toBeGreaterThan(0);
+  expect(canvasSize.height).toBeGreaterThan(0);
+
+  fs.mkdirSync(path.join(resultsDir, 'screenshots'), { recursive: true });
+  await page.screenshot({
+    path: path.join(resultsDir, 'screenshots', 'pixel-town-kenney-skybox.png'),
+    fullPage: false
+  });
+  await page.close();
+});
