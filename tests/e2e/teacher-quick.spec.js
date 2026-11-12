@@ -44,6 +44,10 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(student.locator('#login')).toBeHidden();
   await expect(student.locator('#game canvas')).toHaveCount(1);
   await expect.poll(() => student.evaluate(() => typeof scene !== 'undefined' && Boolean(scene.getObjectByName('town-ground')?.visible))).toBe(true);
+  // 선생님 명단에는 학생별 세금과 보유 건물 정보가 표시되어야 한다.
+  const studentRow = page.locator('.studentRow').filter({ hasText: '한번입장학생' });
+  await expect(studentRow).toContainText('세금 0원');
+  await expect(studentRow).toContainText('보유 건물 없음');
   await student.close();
 
   for (const viewport of [{ width: 820, height: 1024 }, { width: 1024, height: 768 }]) {
