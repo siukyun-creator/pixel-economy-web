@@ -176,12 +176,16 @@ test('소득·소비·저축·대출·기부·투자·창업 경제 계약을 �
       student.emit('sync');
     });
 
+    const taxSetting = await teacherCommand('tax', 0.12);
+    expect(taxSetting.ok).toBe(true);
+    state = await syncStudent();
+    expect(state.taxRate).toBe(0.12);
     const initialMoney = playerFrom(state).money;
     state = await act(student, { type: 'work' });
-    expect(playerFrom(state).money).toBe(initialMoney + 9500);
-    expect(playerFrom(state).taxPaid).toBe(500);
-    expect(playerFrom(state).earnedTotal).toBe(9500);
-    expect(playerFrom(state).taxHistory.at(-1)).toMatchObject({ source: '마을 아르바이트', gross: 10000, tax: 500, net: 9500 });
+    expect(playerFrom(state).money).toBe(initialMoney + 8800);
+    expect(playerFrom(state).taxPaid).toBe(1200);
+    expect(playerFrom(state).earnedTotal).toBe(8800);
+    expect(playerFrom(state).taxHistory.at(-1)).toMatchObject({ source: '마을 아르바이트', gross: 10000, rate: 0.12, tax: 1200, net: 8800 });
 
     state = await act(student, { type: 'deposit', amount: 1 });
     expect(playerFrom(state).bank).toBe(10000);
