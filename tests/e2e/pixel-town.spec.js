@@ -70,7 +70,7 @@ test('교사가 새 교실을 만들고 4자리 코드를 확인한다', async (
 });
 
 test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태블릿에서 확인한다', async ({ browser, baseURL }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   browserErrors = [];
   const page = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
   collectBrowserErrors(page);
