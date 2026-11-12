@@ -913,7 +913,7 @@ roomIo.on('connection', socket => {
   socket.on('disconnect',()=>{const p=players.get(socket.id);if(p){p.connected=false;p.insideStore=null;p.insideWholesale=false;broadcast();}});
 });
   const salesTimer = setInterval(() => {
-    if (gameStatus === 'running' && (simulateCompanyCustomers() || simulateHalfTurnConsumption())) broadcast();
+    if (gameStatus === 'running') { const customerChanged=simulateCompanyCustomers(); const consumptionChanged=simulateHalfTurnConsumption(); if(customerChanged||consumptionChanged) broadcast(); }
   }, 5000);
   salesTimer.unref?.();
   const turnTimer = setInterval(() => { if (gameStatus === 'running' && turnState.endsAt && Date.now() >= turnState.endsAt) finishTurn(); }, 500);
