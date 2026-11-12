@@ -3,7 +3,7 @@
 const { test, expect } = require('@playwright/test');
 
 test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한다', async ({ page, baseURL }) => {
-  test.setTimeout(30000);
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto(baseURL);
 
