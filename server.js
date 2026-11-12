@@ -264,40 +264,47 @@ function simulateCompanyCustomers() {
   return changed;
 }
 function simulateHalfTurnConsumption() {
-  if (gameStatus !== 'running' || turnState.halfwayConsumptionTurn === turnState.turnNumber) return false;
-  if (!turnState.endsAt || Date.now() < turnState.endsAt - turnConfig.durationMinutes * 30000) return false;
-  turnState.halfwayConsumptionTurn = turnState.turnNumber;
-  let remaining = 100000, changed = false;
-  const availableStores = stores.filter(store => players.has(store.ownerId));
-  for (const store of availableStores) {
+  if (gameStatus !== 'running' || !turnState.endsAt) return false;
+  const now = Date.now();
+  if (turnState.halfwayConsumptionTurn !== turnState.turnNumber) {
+    if (now < turnState.endsAt - turnConfig.durationMinutes * 30000) return false;
+    turnState.halfwayConsumptionTurn = turnState.turnNumber;
+    turnState.halfwayConsumptionAmount = 0;
+  }
+  if (turnState.halfwayConsumptionAmount >= 100000 || now >= turnState.endsAt) return false;
+  let remaining = 100000 - Number(turnState.halfwayConsumptionAmount || 0);
+  let changed = false;
+  for (const store of stores.filter(value => players.has(value.ownerId))) {
     if (remaining <= 0) break;
     const productId = String(store.productId || '');
-    const product = foodProducts[productId];
-    if (!product) continue;
+    if (!foodProducts[productId]) continue;
     const item = store.products?.[productId];
     if (!item) continue;
     const price = Math.max(500, Math.floor(Number(item.price || store.price) || retailPrices[productId] || 3500));
-    const quantity = Math.ceil(remaining / price);
+    const stock = Math.max(0, Math.floor(Number(item.stock) || 0));
+    if (stock < 1) continue;
+    const quantity = Math.min(stock, Math.ceil(remaining / price));
     const amount = quantity * price;
-    const productionCost = (ingredientCosts[productId] || 1000) * quantity;
-    // Half-turn demand is guaranteed: NPCs buy freshly prepared stock, with its ingredient cost recorded.
-    store.totalCosts = (Number(store.totalCosts || store.setupCost) || 0) + productionCost;
+    item.stock = stock - quantity;
+    if (productId === store.productId) store.stock = item.stock;
+    store.totalCosts = (Number(store.totalCosts || store.setupCost) || 0) + (ingredientCosts[productId] || 1000) * quantity;
     store.revenue = (Number(store.revenue) || 0) + amount;
     store.soldUnits = (Number(store.soldUnits) || 0) + quantity;
     store.customerCount = (Number(store.customerCount) || 0) + quantity;
     store.lastTurnVisitors = (Number(store.lastTurnVisitors) || 0) + quantity;
     store.salesHistory = store.salesHistory || [];
-    store.salesHistory.push({ at: Date.now(), amount, quantity, source: 'halfTurnNpcConsumption' });
+    store.salesHistory.push({ at: now, amount, quantity, source: 'halfTurnNpcConsumption' });
     if (store.salesHistory.length > 100) store.salesHistory.shift();
     const owner = players.get(store.ownerId);
     owner.money += amount;
     owner.earnedTotal = (owner.earnedTotal || 0) + amount;
+    turnState.halfwayConsumptionAmount = Number(turnState.halfwayConsumptionAmount || 0) + amount;
     remaining -= amount;
     changed = true;
   }
-  if (changed) {
-    news = '🛍️ 턴 중간 소비가 발생했어요! NPC 손님들이 가게에서 총 100,000원 이상 구매했어요.';
-    console.log('[PIXEL TOWN] Half-turn NPC consumption completed: at least 100000 KRW');
+  if (changed && turnState.halfwayConsumptionAmount >= 100000) {
+    news = '🛍️ 턴 중간 NPC 소비 목표 달성! 손님들이 가게에서 총 100,000원 이상 구매했어요.';
+    console.log('[PIXEL TOWN] Half-turn NPC consumption reached 100000 KRW using available stock');
   }
   return changed;
 }
