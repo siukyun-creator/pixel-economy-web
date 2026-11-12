@@ -21,9 +21,15 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(page.locator('#teacherQuickNews')).toBeVisible();
   await expect(page.locator('#roster')).toHaveCount(1);
 
-  // 세금·보너스·가게 관리용 복잡한 교사 패널은 화면에서 제거한다.
-  await expect(page.locator('#teacherTaxReport')).toHaveCount(0);
-  await expect(page.locator('#tax')).toHaveCount(0);
+  // 세금 설정은 선생님 기본 화면에서 바로 조절할 수 있어야 한다.
+  await expect(page.locator('#teacherTaxSettings')).toBeVisible();
+  await expect(page.locator('#teacherTaxReport')).toBeVisible();
+  await expect(page.locator('#tax')).toHaveValue('5');
+  await page.locator('#tax').fill('12');
+  await page.getByRole('button', { name: '세율 저장' }).click();
+  await expect.poll(() => page.evaluate(() => latestState?.taxRate)).toBe(0.12);
+  await expect(page.locator('#teacherCount')).toContainText('세율 12%');
+  await expect(page.locator('#teacherTaxReport')).toContainText('현재 세율 12%');
   await expect(page.locator('.teacherGrid')).toHaveCount(0);
   await expect(page.locator('#teacherAdvancedToggle')).toHaveCount(0);
 
