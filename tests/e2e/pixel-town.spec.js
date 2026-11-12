@@ -94,6 +94,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('#menuContent .wholesaleHero')).toBeVisible();
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.locator('.moreMenu > summary').click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await expect(page.locator('.businessChoice')).toHaveCount(3);
   await expect(page.locator('.businessChoice')).toContainText(['우리 동네 가게', '식자재 도매상', '주식회사']);
@@ -206,6 +207,7 @@ test('기업 뉴스·제품 구매 메뉴가 분리되고 채용·가방·순위
   await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-news.png'), fullPage: true });
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.locator('.moreMenu > summary').click();
   await page.getByRole('button', { name: /기업 제품/ }).click();
   await expect(page.locator('#menuTitle')).toContainText('기업 제품 구매');
   await page.screenshot({ path: path.join(resultsDir, 'screenshots', 'pixel-town-company-products.png'), fullPage: true });
@@ -361,6 +363,7 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
     await expect.poll(() => page.evaluate(() => businessVisuals.size)).toBe(2);
     await expect(wholesalePage.locator('.businessChoice').nth(1)).toContainText('내 도매상을 운영');
     await wholesalePage.getByRole('button', { name: '닫기 ✕' }).click();
+    await wholesalePage.locator('.moreMenu > summary').click();
     await wholesalePage.getByRole('button', { name: /기업 제품/ }).click();
     await expect(wholesalePage.locator('.companyProductCard')).toContainText('픽셀 스마트폰');
     // 반드시 두 학생이 접속한 상태에서 확인: 재고 0개면 구매 불가여야 한다.
