@@ -613,6 +613,7 @@ test('가게 위치 할인·튼튼한 지붕·가게 나가기 동작을 확인�
   await page.locator('#room').fill(roomCode);
   await page.locator('#joinButton').click();
   await expect(page.locator('#lobbyOverlay')).toBeHidden({ timeout: 20000 });
+  await expect.poll(() => page.evaluate(() => Boolean(socket?.connected)), { timeout: 20000 }).toBe(true);
 
   await page.evaluate(() => socket.emit('action', {
     type: 'createStore', name: '거리 빵집', sign: '거리 빵집',
