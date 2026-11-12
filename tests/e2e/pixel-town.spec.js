@@ -166,6 +166,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   expect(panelBounds.x+panelBounds.width).toBeLessThanOrEqual(panelBounds.viewportWidth);
   expect(panelBounds.y+panelBounds.height).toBeLessThanOrEqual(panelBounds.viewportHeight);
   await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-shop-tablet.png'),fullPage:false});
+  await page.locator('.moreMenu').evaluate(menu => { menu.open = false; });
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await expect(page.locator('#touchPad')).toBeVisible();
   await expect(page.locator('#jump')).toBeVisible();
