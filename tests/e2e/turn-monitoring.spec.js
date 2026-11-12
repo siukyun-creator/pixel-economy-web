@@ -70,6 +70,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   fs.mkdirSync(screenshotDir, { recursive: true });
   await teacher.screenshot({ path: path.join(screenshotDir, 'pixel-town-teacher-news-monitor.png'), fullPage: true });
   await student.locator('#finalResults button').first().click();
+  await student.locator('.moreMenu > summary').click();
   await student.getByRole('button', { name: /기업 뉴스/ }).click();
   await expect(student.locator('.newsCard').first()).toBeVisible();
   await student.screenshot({ path: path.join(screenshotDir, 'pixel-town-random-company-news.png'), fullPage: true });
