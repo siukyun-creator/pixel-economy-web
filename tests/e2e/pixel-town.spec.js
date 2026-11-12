@@ -226,6 +226,8 @@ test('학생이 4자리 코드로 입장해 키보드로 이동한다', async ({
   const roomCode = await teacherPage.locator('#teacherRoomCode').textContent();
   await teacherPage.getByRole('button', { name: '▶ 시작' }).click();
   await expect(teacherPage.locator('#teacherCount')).toContainText('진행 중');
+  // 간단 화면에서 추가 설정을 열어 테스트에 필요한 턴 설정을 조정한다.
+  await teacherPage.getByRole('button', { name: '⚙ 추가 설정' }).click();
   // 이 테스트는 입장·기업 거래 흐름을 검증하므로 중간에 자동 턴이 끝나지 않게 한다.
   await teacherPage.locator('#teacherMarketControls details').evaluate(details => { details.open = true; });
   await teacherPage.locator('#turnDurationMinutes').selectOption('60');
