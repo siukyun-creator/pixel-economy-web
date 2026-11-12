@@ -20,6 +20,7 @@ test('자동 턴 종료와 학생·교사 결과 화면을 확인한다', async 
   await expect(teacher.locator('#teacher')).toBeVisible();
   const roomCode = await teacher.locator('#teacherRoomCode').textContent();
 
+  await teacher.getByRole('button', { name: '⚙ 추가 설정' }).click();
   await teacher.locator('#turnDurationMinutes').selectOption('1');
   await teacher.locator('#totalTurns').selectOption('1');
   await teacher.getByRole('button', { name: '설정 저장' }).click();
