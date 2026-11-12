@@ -106,3 +106,42 @@ test('권한·잘못된 금액·중복 접속·재접속 시 학생 데이터 �
     }
   }
 });
+
+test('접속 중인 학생 30명 제한과 퇴장 후 새 학생 입장을 검사한다', async ({ baseURL }) => {
+  test.setTimeout(150000);
+  let manager;
+  const students = [];
+  let rejected;
+  let replacement;
+  try {
+    const room = await createRoom(baseURL);
+    manager = room.manager;
+
+    let state;
+    for (let i = 1; i <= 30; i += 1) {
+      const student = connect(room.namespace);
+      students.push(student);
+      state = await join(student, '동시접속학생' + String(i).padStart(2, '0'), room.roomCode);
+    }
+    expect(state.players.filter(player => player.connected)).toHaveLength(30);
+
+    rejected = connect(room.namespace);
+    await connected(rejected);
+    const denied = await ack(rejected, 'join', { name: '31번째학생', room: room.roomCode });
+    expect(denied.ok).toBe(false);
+    expect(denied.message).toContain('30명');
+
+    students[0].disconnect();
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    replacement = connect(room.namespace);
+    state = await join(replacement, '새로입장학생', room.roomCode);
+    expect(state.players.filter(player => player.connected)).toHaveLength(30);
+    expect(state.players.find(player => player.name === '새로입장학생')?.connected).toBe(true);
+    expect(state.players.find(player => player.name === '동시접속학생01')?.connected).toBe(false);
+  } finally {
+    for (const socket of [...students, replacement, rejected, manager]) {
+      if (socket) socket.disconnect();
+    }
+  }
+});

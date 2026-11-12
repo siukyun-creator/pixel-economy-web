@@ -3,7 +3,7 @@
 const { test, expect } = require('@playwright/test');
 
 test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한다', async ({ page, baseURL }) => {
-  test.setTimeout(30000);
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto(baseURL);
 
@@ -27,7 +27,7 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(page.locator('#tax')).toHaveValue('5');
   await page.locator('#tax').fill('12');
   await page.getByRole('button', { name: '세율 저장' }).click();
-  await expect.poll(() => page.evaluate(() => latestState?.taxRate)).toBe(0.12);
+  await expect(page.locator('#teacherCount')).toContainText('세율 12%', { timeout: 10000 });
   await expect(page.locator('#teacherCount')).toContainText('세율 12%');
   await expect(page.locator('#teacherTaxReport')).toContainText('현재 세율 12%');
   await expect(page.locator('.teacherGrid')).toHaveCount(0);

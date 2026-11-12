@@ -357,7 +357,7 @@ roomIo.on('connection', socket => {
     if (!String(data.name || '').trim()) return reply(false, '이름을 입력해 주세요.');
     const saved = [...players.values()].find(v => v.name.toLocaleLowerCase('ko-KR') === name.toLocaleLowerCase('ko-KR'));
     if (saved && saved.connected) return reply(false, '같은 이름의 학생이 이미 접속 중이에요.');
-    if (!saved && players.size >= MAX) return reply(false, '등록된 학생이 30명이에요. 선생님께 문의해 주세요.');
+    if (!saved && [...players.values()].filter(player => player.connected).length >= MAX) return reply(false, '접속 중인 학생이 30명이에요. 선생님께 문의해 주세요.');
     let p;
     if (saved) {
       const oldId = saved.id;
