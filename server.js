@@ -585,7 +585,7 @@ roomIo.on('connection', socket => {
     const n=bounded(a.amount,1,10),item=String(a.item||'');
 
     if(a.type==='wholesaleStockUp'){
-       if(!wholesaleShop||wholesaleShop.ownerId!==socket.id||!p.insideWholesale)return msg(socket,'내 도매상 안에서만 재고를 들여올 수 있어요.');
+       if(!wholesaleShop||wholesaleShop.ownerId!==socket.id)return msg(socket,'내 도매상 주인만 재고를 입고할 수 있어요.');
        const id=String(a.productId||''),product=foodProducts[id],qty=Number(a.amount),item=wholesaleShop.inventory[id];
        if(!product||!item)return msg(socket,'상품을 확인해 주세요.');
        if(!Number.isInteger(qty)||qty<1||qty>100)return msg(socket,'입고 수량은 1~100개로 입력해 주세요.');
