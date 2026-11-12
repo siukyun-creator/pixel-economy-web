@@ -96,8 +96,6 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await page.locator('.moreMenu > summary').click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
-  // 드롭다운이 열린 채로 남으면 창업 패널의 닫기 버튼을 가릴 수 있어 접는다.
-  await page.locator('.moreMenu').evaluate(menu => { menu.open = false; });
   await expect(page.locator('.businessChoice')).toHaveCount(3);
   await expect(page.locator('.businessChoice')).toContainText(['우리 동네 가게', '식자재 도매상', '주식회사']);
   await expect(page.locator('#hubCompanySector')).toHaveValue('electronics');
@@ -166,7 +164,6 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   expect(panelBounds.x+panelBounds.width).toBeLessThanOrEqual(panelBounds.viewportWidth);
   expect(panelBounds.y+panelBounds.height).toBeLessThanOrEqual(panelBounds.viewportHeight);
   await page.screenshot({path:path.join(resultsDir,'screenshots','pixel-town-shop-tablet.png'),fullPage:false});
-  await page.locator('.moreMenu').evaluate(menu => { menu.open = false; });
   await page.getByRole('button', { name: '닫기 ✕' }).click();
   await expect(page.locator('#touchPad')).toBeVisible();
   await expect(page.locator('#jump')).toBeVisible();
