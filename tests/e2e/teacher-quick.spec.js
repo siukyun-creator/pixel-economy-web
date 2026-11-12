@@ -31,7 +31,7 @@ test('선생님 화면 핵심 기능과 태블릿 표시만 빠르게 확인한�
   await expect(page.locator('#teacherCount')).toContainText('세율 12%');
   await expect(page.locator('#teacherTaxReport')).toContainText('현재 세율 12%');
   await expect(page.locator('.teacherGrid')).toHaveCount(0);
-  await expect(page.locator('#teacherAdvancedToggle')).toHaveCount(0);
+  await expect(page.locator('#teacherAdvancedToggle')).toBeVisible();
 
   // 학생은 입장 버튼을 한 번만 눌러도 들어가고, 잔디 바닥이 실제 장면에 있어야 한다.
   const student = await page.context().newPage();
