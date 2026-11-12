@@ -137,6 +137,7 @@ test('상점·은행·주식·도매 메뉴와 음식 픽셀 아트를 PC·태�
   await expect(page.locator('.communityReport')).toContainText('실제 기관이나 공공사업으로 전달되지 않아요.');
 
   await page.getByRole('button', { name: '닫기 ✕' }).click();
+  await page.locator('.moreMenu > summary').click();
   await page.getByRole('button', { name: /사업 시작/ }).click();
   await page.getByRole('button', { name: '가게 만들기' }).click();
   await page.locator('#newStoreName').fill('테스트 가게');
